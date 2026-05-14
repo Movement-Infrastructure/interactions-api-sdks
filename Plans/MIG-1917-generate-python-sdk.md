@@ -14,10 +14,12 @@ Build the generation workflow in stages, similar to MIG-1916, so each piece can 
 
 Confirm `openapi-generator` produces a Python SDK from the committed spec on a developer machine. No CI yet.
 
-- [ ] Pick the generator version to pin. (Latest stable `openapi-generator-cli` release at time of work; record the exact version in the workflow.)
-- [ ] Pick the Python generator. Default to `python` (the newer pydantic-based generator); fall back to `python-legacy` if it produces friction. Document the choice.
-- [ ] Decide generator configuration: `packageName`, `projectName`, `packageVersion`, library (urllib3 vs asyncio), and any global properties. Stored alongside the workflow as `sdks/python/v1/openapi-generator-config.yaml` for reuse.
-- [ ] Run locally against the bootstrap spec (once MIG-1916 lands a real `openapi/v1/swagger.json`) and inspect the output: import works, package metadata looks right.
+- [x] Generator pinned to `openapitools/openapi-generator-cli:v7.10.0` (Docker image; same artifact will be used in CI in stage 2).
+- [x] Using the `python` generator (pydantic v2 + urllib3). `python-legacy` was not needed.
+- [x] Config committed at `sdks/python/v1/openapi-generator-config.yaml`. Sets `packageName`, `projectName`, `packageVersion=0.0.0` (placeholder for milestone 4), `library=urllib3`, and `gitUserId`/`gitRepoId`/`packageUrl` for correct repo links in generated docs.
+- [x] Local run against `reference/mercury.json` from `mig-readme-docs` succeeds: 18+ model files, two API clients (`authentication_details_api`, `interactions_api`), pyproject.toml has correct repo URL and version.
+
+**Open finding (not blocking):** the Python generator pulls the `authors` field in pyproject.toml from the spec's `info.contact` block. `reference/mercury.json` doesn't set one, so it falls back to "OpenAPI Generator Community". Fix is an upstream change in `mig-readme-docs` (add `info.contact`), not a generator config override. Track as a follow-up before going public.
 
 ### Stage 2 — CI workflow that regenerates on PR
 

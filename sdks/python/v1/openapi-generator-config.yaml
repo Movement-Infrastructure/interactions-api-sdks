@@ -1,0 +1,34 @@
+# openapi-generator config for the Python v1 SDK.
+#
+# Invoked by .github/workflows/generate-python-sdk.yml as:
+#   openapi-generator generate \
+#     -i openapi/v1/swagger.json \
+#     -g python \
+#     -o sdks/python/v1 \
+#     -c sdks/python/v1/openapi-generator-config.yaml
+#
+# Generator pinned to v7.10.0; see the workflow for the cached jar.
+
+# Pythonic snake_case import name. Provisional — revisit before publishing.
+packageName: mi_interactions_api
+
+# Project/PyPI name (kebab-case). Provisional — revisit before publishing.
+projectName: mi-interactions-api
+
+# Placeholder; the version-bump workflow (milestone 4) will rewrite this on
+# each sync PR based on the patch/minor/major label.
+packageVersion: 0.0.0
+
+# urllib3-based synchronous client. Async (asyncio) variant is available if
+# we end up needing it.
+library: urllib3
+
+# Identity fields that flow into pyproject.toml, setup.py, README, etc.
+gitUserId: Movement-Infrastructure
+gitRepoId: interactions-api-sdks
+packageUrl: https://github.com/Movement-Infrastructure/interactions-api-sdks
+# Note: the Python generator pulls the `authors` field from the spec's
+# `info.contact` block. mercury.json doesn't currently set one, so authors
+# defaults to "OpenAPI Generator Community". Fix is an upstream change in
+# mig-readme-docs (add info.contact to reference/mercury.json), not a
+# generator config override.
