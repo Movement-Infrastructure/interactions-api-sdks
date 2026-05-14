@@ -1,0 +1,45 @@
+name: Verify mig-readme-docs sync auth
+
+# Stage 1 of MIG-1916. Confirms the GitHub App credentials can mint a token
+# and read reference/mercury.json from mig-readme-docs. No diff, no commit,
+# no PR. Manual trigger only.
+#
+# Once stages 2+ land in sync-spec.yml, this file can be deleted.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Mint installation token for mig-readme-docs
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.READMEDOCS_SYNC_APP_ID }}
+          private-key: ${{ secrets.READMEDOCS_SYNC_PRIVATE_KEY }}
+          owner: Movement-Infrastructure
+          repositories: mig-readme-docs
+
+      - name: Read reference/mercury.json from mig-readme-docs
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          response=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            repos/Movement-Infrastructure/mig-readme-docs/contents/reference/mercury.json)
+
+          blob_sha=$(echo "$response" | jq -r '.sha')
+          size=$(echo "$response" | jq -r '.size')
+          content=$(echo "$response" | jq -r '.content' | base64 -d)
+
+          echo "Blob SHA: $blob_sha"
+          echo "Size (bytes): $size"
+          echo "Top-level keys:"
+          echo "$content" | jq -r 'keys[]' | sed 's/^/  /'
+          echo "openapi version: $(echo "$content" | jq -r '.openapi // "(missing)"')"
+          echo "info.title: $(echo "$content" | jq -r '.info.title // "(missing)"')"
