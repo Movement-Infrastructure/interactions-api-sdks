@@ -12,7 +12,7 @@ Credentials are provisioned in MIG-1915. Three Actions secrets are available: `R
 
 Build the workflow in stages so each piece can be verified independently before the full automation is trusted to run on a schedule.
 
-**Iteration trigger:** the workflow runs on every push to this feature branch (`push: branches: [sam/mig-1916-scheduled-spec-sync]`), since `workflow_dispatch` doesn't register until the workflow file is on the default branch. The push trigger stays in place through stage 4 so we can keep iterating after the cron addition is deferred (see the final checkbox in stage 4).
+**Iteration trigger:** the workflow runs on every push to any feature branch (unfiltered `push:`), since `workflow_dispatch` doesn't register until the workflow file is on the default branch. The push trigger is intentionally left in place; cron scheduling and the eventual cleanup (rename, remove push, add `schedule:` + `workflow_dispatch:`) are split out into [MIG-1920](https://linear.app/movementinfrastructure/issue/MIG-1920/schedule-sync-workflow-and-clean-up-dev-triggers).
 
 ### Stage 1 — Manual auth verification
 
@@ -39,15 +39,11 @@ Extend the workflow so it compares the upstream file against the committed `open
 - [x] App token used only for reading from `mig-readme-docs`. Default `GITHUB_TOKEN` (with `contents: write` + `pull-requests: write` granted via the job `permissions:` block) is used for branch push and PR creation in this repo.
 - [x] PR title `Sync OpenAPI spec from mig-readme-docs@<short-sha>`. Body includes the upstream commit URL, change reason (`bootstrap` / `upstream-changed`), and an added/removed line count for `openapi/v1/swagger.json`.
 
-### Stage 4 — Schedule
+### Stage 4 — Scheduling and cleanup
 
-- [ ] Add `workflow_dispatch:` trigger for ad-hoc manual runs.
-- [ ] Observe a few real runs via push/dispatch; confirm idempotency by re-running and seeing the existing PR get updated rather than duplicated.
-- [ ] **Cron deferred.** Once stages 2–3 are merged and have been exercised manually for confidence, add `schedule: cron: '17 * * * *'` and remove the temporary `push:` trigger. Tracked here so we don't forget.
+Tracked separately in [MIG-1920](https://linear.app/movementinfrastructure/issue/MIG-1920/schedule-sync-workflow-and-clean-up-dev-triggers). MIG-1916 ships with the push trigger in place; the cron + rename + push-trigger removal lands in MIG-1920 once we've exercised the sync manually for confidence.
 
 ## Notes / open questions
 
-- **Schedule cadence**: hourly seems fine for the PoC; readme docs change infrequently. Could relax to every few hours later.
-- **Workflow name**: `sync-spec.yml` once unified, or keep the verify file as a separate stub for future debugging? Decide at stage 2.
 - **PR labels**: should the sync PRs auto-apply `interactions-api-minor` by default? The version-bump label semantics come into play in milestone 4. Park this until then.
 - **Failure visibility**: scheduled workflows fail silently unless someone watches the Actions tab. Worth adding a Slack notification or similar in a follow-up.

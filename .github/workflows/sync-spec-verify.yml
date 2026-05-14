@@ -3,20 +3,14 @@ name: Sync OpenAPI spec from mig-readme-docs
 # MIG-1916. Pulls reference/mercury.json from mig-readme-docs, compares against
 # the committed openapi/v1/swagger.json, and opens a PR if they differ.
 #
-# Stages 1 (auth), 2 (diff), and 3 (PR opening) are in place. Stage 4 (cron
-# schedule) is pending — see the plan file:
-# Plans/MIG-1916-scheduled-spec-sync.md.
-#
-# This file is named sync-spec-verify.yml during development; will be renamed
-# to sync-spec.yml at stage 4 cleanup.
+# Currently runs on every push to any branch (PoC trigger). Cron scheduling,
+# the rename to sync-spec.yml, and removal of the push trigger are tracked in
+# MIG-1920. See Plans/MIG-1916-scheduled-spec-sync.md.
 
 on:
-  workflow_dispatch:
-  # TEMP: remove in stage 4 cleanup. Lets us iterate on the workflow without
-  # needing it on the default branch for workflow_dispatch to register.
+  # Runs on every push to any branch during the milestone-2 PoC. Replaced by
+  # `schedule:` + `workflow_dispatch:` in MIG-1920 once the sync is trusted.
   push:
-    branches:
-      - sam/mig-1916-scheduled-spec-sync
 
 jobs:
   sync:
