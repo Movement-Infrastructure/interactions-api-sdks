@@ -1,11 +1,10 @@
 name: Sync OpenAPI spec from mig-readme-docs
 
 # MIG-1916. Pulls reference/mercury.json from mig-readme-docs, compares against
-# the committed openapi/v1/swagger.json, and (in later stages) opens a PR if
-# they differ.
+# the committed openapi/v1/swagger.json, and opens a PR if they differ.
 #
-# Stage 1 (auth verification) and stage 2 (diff detection) are in place.
-# Stages 3 (PR opening) and 4 (schedule) are pending. See the plan file:
+# Stages 1 (auth), 2 (diff), and 3 (PR opening) are in place. Stage 4 (cron
+# schedule) is pending — see the plan file:
 # Plans/MIG-1916-scheduled-spec-sync.md.
 #
 # This file is named sync-spec-verify.yml during development; will be renamed
@@ -23,7 +22,8 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
-      contents: read  # bumped to `write` in stage 3 for branch push
+      contents: write       # push the sync branch
+      pull-requests: write  # open the sync PR
     steps:
       - name: Check out SDK repo
         uses: actions/checkout@v4
@@ -81,7 +81,124 @@ jobs:
             echo "reason=upstream-changed" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Find upstream commit SHA that last touched the spec
+        id: upstream
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          sha=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/Movement-Infrastructure/mig-readme-docs/commits?path=reference/mercury.json&per_page=1" \
+            | jq -r '.[0].sha')
+
+          short_sha="${sha:0:7}"
+
+          echo "Upstream commit SHA: $sha"
+          echo "Short SHA: $short_sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$short_sha" >> "$GITHUB_OUTPUT"
+          echo "branch=sync/mercury-$short_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if a PR already exists for this upstream SHA
+        id: existing-pr
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.upstream.outputs.branch }}
+        run: |
+          set -euo pipefail
+
+          existing=$(gh pr list \
+            --head "$BRANCH" \
+            --state open \
+            --json number,url \
+            --jq '.[0]')
+
+          if [ -n "$existing" ] && [ "$existing" != "null" ]; then
+            number=$(echo "$existing" | jq -r '.number')
+            url=$(echo "$existing" | jq -r '.url')
+            echo "Existing open PR #$number for $BRANCH: $url"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No existing open PR for $BRANCH."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compute diff-stat for PR body
+        id: diffstat
+        if: steps.diff.outputs.changed == 'true' && steps.existing-pr.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+
+          local_path=openapi/v1/swagger.json
+          if [ -f "$local_path" ]; then
+            added=$(diff "$local_path" upstream-mercury.json | grep -c '^>' || true)
+            removed=$(diff "$local_path" upstream-mercury.json | grep -c '^<' || true)
+          else
+            added=$(wc -l < upstream-mercury.json | tr -d ' ')
+            removed=0
+          fi
+
+          echo "added=$added" >> "$GITHUB_OUTPUT"
+          echo "removed=$removed" >> "$GITHUB_OUTPUT"
+
+      - name: Create sync branch and commit
+        if: steps.diff.outputs.changed == 'true' && steps.existing-pr.outputs.skip == 'false'
+        env:
+          BRANCH: ${{ steps.upstream.outputs.branch }}
+          SHORT_SHA: ${{ steps.upstream.outputs.short_sha }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Branch off the commit we checked out (PR base will be develop).
+          git checkout -B "$BRANCH"
+
+          mkdir -p openapi/v1
+          mv upstream-mercury.json openapi/v1/swagger.json
+
+          git add openapi/v1/swagger.json
+          git commit -m "Sync mercury.json from mig-readme-docs@${SHORT_SHA}"
+          git push --force-with-lease origin "$BRANCH"
+
+      - name: Open sync PR
+        if: steps.diff.outputs.changed == 'true' && steps.existing-pr.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.upstream.outputs.branch }}
+          SHORT_SHA: ${{ steps.upstream.outputs.short_sha }}
+          SHA: ${{ steps.upstream.outputs.sha }}
+          ADDED: ${{ steps.diffstat.outputs.added }}
+          REMOVED: ${{ steps.diffstat.outputs.removed }}
+          REASON: ${{ steps.diff.outputs.reason }}
+        run: |
+          set -euo pipefail
+
+          cat > /tmp/pr-body.md <<EOF
+          Automated sync from \`mig-readme-docs\`.
+
+          - Upstream commit: [\`${SHORT_SHA}\`](https://github.com/Movement-Infrastructure/mig-readme-docs/commit/${SHA})
+          - Reason: \`${REASON}\`
+          - \`openapi/v1/swagger.json\`: +${ADDED} / -${REMOVED} lines
+
+          Opened automatically by \`.github/workflows/sync-spec-verify.yml\` (MIG-1916).
+          EOF
+
+          gh pr create \
+            --base develop \
+            --head "$BRANCH" \
+            --title "Sync OpenAPI spec from mig-readme-docs@${SHORT_SHA}" \
+            --body-file /tmp/pr-body.md
+
       - name: Summary
         run: |
           echo "changed=${{ steps.diff.outputs.changed }}"
           echo "reason=${{ steps.diff.outputs.reason }}"
+          echo "upstream_sha=${{ steps.upstream.outputs.sha }}"
+          echo "branch=${{ steps.upstream.outputs.branch }}"
+          echo "skipped_existing=${{ steps.existing-pr.outputs.skip }}"

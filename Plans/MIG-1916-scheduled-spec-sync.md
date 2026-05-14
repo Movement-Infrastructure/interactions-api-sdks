@@ -33,11 +33,11 @@ Extend the workflow so it compares the upstream file against the committed `open
 
 ### Stage 3 — PR opening with idempotency
 
-- [ ] On change, derive an idempotency key from the upstream commit SHA touching the file (`gh api repos/.../commits?path=reference/mercury.json&per_page=1`).
-- [ ] Branch name: `sync/mercury-<short-sha>`. If branch exists on remote, update it; else create.
-- [ ] Commit message: `Sync mercury.json from mig-readme-docs@<short-sha>`.
-- [ ] Use the default `GITHUB_TOKEN` (not the App token) for the push and PR open — App has read-only on the readme repo, no permissions here.
-- [ ] Open PR with title `Sync OpenAPI spec from mig-readme-docs@<short-sha>` and a body containing the upstream commit URL and a diff-stat-style summary.
+- [x] On change, derive an idempotency key from the upstream commit SHA touching the file (`gh api repos/.../commits?path=reference/mercury.json&per_page=1`).
+- [x] Branch name: `sync/mercury-<short-sha>`. Idempotency implemented at the PR layer: if an open PR already exists for the branch, skip everything; otherwise create the branch with `git checkout -B` and `--force-with-lease` push (handles stale branches from prior unclean runs).
+- [x] Commit message: `Sync mercury.json from mig-readme-docs@<short-sha>`.
+- [x] App token used only for reading from `mig-readme-docs`. Default `GITHUB_TOKEN` (with `contents: write` + `pull-requests: write` granted via the job `permissions:` block) is used for branch push and PR creation in this repo.
+- [x] PR title `Sync OpenAPI spec from mig-readme-docs@<short-sha>`. Body includes the upstream commit URL, change reason (`bootstrap` / `upstream-changed`), and an added/removed line count for `openapi/v1/swagger.json`.
 
 ### Stage 4 — Schedule
 
