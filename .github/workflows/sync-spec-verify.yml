@@ -22,7 +22,8 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    permissions: {}
+    permissions:
+      contents: read  # bumped to `write` in stage 3 for branch push
     steps:
       - name: Check out SDK repo
         uses: actions/checkout@v4
