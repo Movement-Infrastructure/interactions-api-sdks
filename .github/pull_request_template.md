@@ -30,5 +30,8 @@
 - [ ] CI passes
 - [ ] Generated SDK installed in a clean environment and smoke-tested (if applicable)
 
+### AI Disclosure (optional)
+<!-- If parts of this PR were significantly AI-assisted (e.g. Claude Code), note which areas so reviewers can apply appropriate scrutiny. Delete this section if not applicable. -->
+
 ### Notes
 <!-- Anything reviewers should know. -->
