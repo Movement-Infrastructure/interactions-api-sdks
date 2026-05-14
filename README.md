@@ -45,7 +45,7 @@ Three secrets are required on this repo, under `Settings → Secrets and variabl
 | Secret | Contents |
 | --- | --- |
 | `READMEDOCS_SYNC_APP_ID` | The App ID, shown on the App's settings page. |
-| `READMEDOCS_SYNC_INSTALLATION_ID` | The Installation ID of the App on `mig-readme-docs` (the trailing number in `https://github.com/organizations/Movement-Infrastructure/settings/installations/<id>`). |
+| `READMEDOCS_SYNC_INSTALLATION_ID` | The Installation ID of the App on `mig-readme-docs` (the trailing number in `https://github.com/organizations/Movement-Infrastructure/settings/installations/<id>`). **Not currently consumed by the workflow** — the `actions/create-github-app-token` action discovers the installation automatically from the App ID and target repo. Retained for now; safe to drop later if it stays unused. |
 | `READMEDOCS_SYNC_PRIVATE_KEY` | The full contents of the `.pem` private key generated from the App's settings page, including the `-----BEGIN RSA PRIVATE KEY-----` and `-----END RSA PRIVATE KEY-----` lines. |
 
 Backup copies of all three values are stored in 1Password (**Eng Admin** vault).
