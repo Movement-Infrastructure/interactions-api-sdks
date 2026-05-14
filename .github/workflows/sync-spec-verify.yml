@@ -23,7 +23,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v1
         with:
-          app-id: ${{ secrets.READMEDOCS_SYNC_APP_ID }}
+          app-id: ${{ vars.READMEDOCS_SYNC_APP_ID }}
           private-key: ${{ secrets.READMEDOCS_SYNC_PRIVATE_KEY }}
           owner: Movement-Infrastructure
           repositories: mig-readme-docs
