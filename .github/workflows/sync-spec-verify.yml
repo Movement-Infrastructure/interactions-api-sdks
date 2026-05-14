@@ -8,6 +8,11 @@ name: Verify mig-readme-docs sync auth
 
 on:
   workflow_dispatch:
+  # TEMP: remove before merge. Lets us iterate on the workflow without
+  # needing it on the default branch for workflow_dispatch to register.
+  push:
+    branches:
+      - sam/mig-1916-scheduled-spec-sync
 
 jobs:
   verify:
