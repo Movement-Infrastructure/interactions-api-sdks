@@ -32,9 +32,15 @@ Each language directory contains a generated SDK produced by [`openapi-generator
 
 ## Sync credentials
 
-The scheduled sync workflow reads `reference/mercury.json` from the private `mig-readme-docs` repo via a GitHub App (`interactions-api-sdk-sync`). The App is installed on `mig-readme-docs` with `Contents: Read`. At runtime the workflow mints a short-lived installation token, so there is no long-lived API token to rotate.
+### What the secrets access
 
-Three secrets are required on this repo (`Settings → Secrets and variables → Actions`):
+The scheduled sync workflow reads `reference/mercury.json` from the private [`mig-readme-docs`](https://github.com/Movement-Infrastructure/mig-readme-docs) repo. Access is via the `interactions-api-sdk-sync` GitHub App, installed on `mig-readme-docs` with `Contents: Read` only. The App has no other permissions and no access to any other repo.
+
+At runtime the workflow mints a short-lived installation token (~1 hour) using the App credentials, so there is no long-lived API token to rotate.
+
+### Where the secrets are stored
+
+Three secrets are required on this repo, under `Settings → Secrets and variables → Actions`:
 
 | Secret | Contents |
 | --- | --- |
@@ -42,7 +48,18 @@ Three secrets are required on this repo (`Settings → Secrets and variables →
 | `READMEDOCS_SYNC_INSTALLATION_ID` | The Installation ID of the App on `mig-readme-docs` (the trailing number in `https://github.com/organizations/Movement-Infrastructure/settings/installations/<id>`). |
 | `READMEDOCS_SYNC_PRIVATE_KEY` | The full contents of the `.pem` private key generated from the App's settings page, including the `-----BEGIN RSA PRIVATE KEY-----` and `-----END RSA PRIVATE KEY-----` lines. |
 
-Backup copies of all three values are stored in 1Password (**Eng Admin** vault). To rotate the private key, generate a new one from the App settings page, update the secret here and the 1Password entry, then delete the old key in the App settings.
+Backup copies of all three values are stored in 1Password (**Eng Admin** vault).
+
+### How to rotate
+
+- **App ID and Installation ID** do not rotate. They change only if the App is recreated or reinstalled.
+- **Private key** rotation:
+  1. Generate a new private key on the App's settings page. Download the `.pem` file.
+  2. Update `READMEDOCS_SYNC_PRIVATE_KEY` on this repo and the matching 1Password entry.
+  3. Confirm the sync workflow runs green with the new key.
+  4. Delete the old private key from the App's settings page.
+
+No fixed rotation cadence is required, since installation tokens are minted fresh each run. Rotate immediately if the private key is suspected to be compromised.
 
 ## Status
 
