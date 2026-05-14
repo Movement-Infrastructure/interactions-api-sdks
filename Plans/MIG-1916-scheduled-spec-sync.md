@@ -12,6 +12,8 @@ Credentials are provisioned in MIG-1915. Three Actions secrets are available: `R
 
 Build the workflow in stages so each piece can be verified independently before the full automation is trusted to run on a schedule.
 
+**Iteration trigger:** the workflow runs on every push to this feature branch (`push: branches: [sam/mig-1916-scheduled-spec-sync]`), since `workflow_dispatch` doesn't register until the workflow file is on the default branch. The push trigger stays in place through stage 4 so we can keep iterating after the cron addition is deferred (see the final checkbox in stage 4).
+
 ### Stage 1 — Manual auth verification
 
 A `workflow_dispatch`-only workflow that confirms the App token mints correctly and can read `reference/mercury.json` from `mig-readme-docs`. No diff logic, no commits, no PRs. Output is just a log line.
@@ -39,8 +41,9 @@ Extend (or fold into) the workflow so it compares the upstream file against the 
 
 ### Stage 4 — Schedule
 
-- [ ] Add `schedule: cron: '17 * * * *'` (hourly at :17) alongside `workflow_dispatch`.
-- [ ] Observe a few real runs; confirm idempotency by re-running and seeing the existing PR get updated rather than duplicated.
+- [ ] Add `workflow_dispatch:` trigger for ad-hoc manual runs.
+- [ ] Observe a few real runs via push/dispatch; confirm idempotency by re-running and seeing the existing PR get updated rather than duplicated.
+- [ ] **Cron deferred.** Once stages 2–3 are merged and have been exercised manually for confidence, add `schedule: cron: '17 * * * *'` and remove the temporary `push:` trigger. Tracked here so we don't forget.
 
 ## Notes / open questions
 
