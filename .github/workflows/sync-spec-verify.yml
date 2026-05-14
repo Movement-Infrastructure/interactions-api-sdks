@@ -1,24 +1,32 @@
-name: Verify mig-readme-docs sync auth
+name: Sync OpenAPI spec from mig-readme-docs
 
-# Stage 1 of MIG-1916. Confirms the GitHub App credentials can mint a token
-# and read reference/mercury.json from mig-readme-docs. No diff, no commit,
-# no PR. Manual trigger only.
+# MIG-1916. Pulls reference/mercury.json from mig-readme-docs, compares against
+# the committed openapi/v1/swagger.json, and (in later stages) opens a PR if
+# they differ.
 #
-# Once stages 2+ land in sync-spec.yml, this file can be deleted.
+# Stage 1 (auth verification) and stage 2 (diff detection) are in place.
+# Stages 3 (PR opening) and 4 (schedule) are pending. See the plan file:
+# Plans/MIG-1916-scheduled-spec-sync.md.
+#
+# This file is named sync-spec-verify.yml during development; will be renamed
+# to sync-spec.yml at stage 4 cleanup.
 
 on:
   workflow_dispatch:
-  # TEMP: remove before merge. Lets us iterate on the workflow without
+  # TEMP: remove in stage 4 cleanup. Lets us iterate on the workflow without
   # needing it on the default branch for workflow_dispatch to register.
   push:
     branches:
       - sam/mig-1916-scheduled-spec-sync
 
 jobs:
-  verify:
+  sync:
     runs-on: ubuntu-latest
     permissions: {}
     steps:
+      - name: Check out SDK repo
+        uses: actions/checkout@v4
+
       - name: Mint installation token for mig-readme-docs
         id: app-token
         uses: actions/create-github-app-token@v1
@@ -28,7 +36,7 @@ jobs:
           owner: Movement-Infrastructure
           repositories: mig-readme-docs
 
-      - name: Read reference/mercury.json from mig-readme-docs
+      - name: Fetch reference/mercury.json from mig-readme-docs
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
@@ -38,13 +46,41 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             repos/Movement-Infrastructure/mig-readme-docs/contents/reference/mercury.json)
 
+          echo "$response" | jq -r '.content' | base64 -d > upstream-mercury.json
+
           blob_sha=$(echo "$response" | jq -r '.sha')
           size=$(echo "$response" | jq -r '.size')
-          content=$(echo "$response" | jq -r '.content' | base64 -d)
 
-          echo "Blob SHA: $blob_sha"
+          echo "Upstream blob SHA: $blob_sha"
           echo "Size (bytes): $size"
-          echo "Top-level keys:"
-          echo "$content" | jq -r 'keys[]' | sed 's/^/  /'
-          echo "openapi version: $(echo "$content" | jq -r '.openapi // "(missing)"')"
-          echo "info.title: $(echo "$content" | jq -r '.info.title // "(missing)"')"
+          echo "openapi version: $(jq -r '.openapi // "(missing)"' upstream-mercury.json)"
+          echo "info.title: $(jq -r '.info.title // "(missing)"' upstream-mercury.json)"
+
+      - name: Compare against committed openapi/v1/swagger.json
+        id: diff
+        run: |
+          set -euo pipefail
+
+          local_path=openapi/v1/swagger.json
+
+          if [ ! -f "$local_path" ]; then
+            echo "No local spec at $local_path; treating as initial-bootstrap diff."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "reason=bootstrap" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if cmp -s upstream-mercury.json "$local_path"; then
+            echo "No change vs committed spec."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Upstream spec differs from committed spec."
+            diff -u "$local_path" upstream-mercury.json | head -40 || true
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "reason=upstream-changed" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Summary
+        run: |
+          echo "changed=${{ steps.diff.outputs.changed }}"
+          echo "reason=${{ steps.diff.outputs.reason }}"
