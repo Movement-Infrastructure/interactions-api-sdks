@@ -12,15 +12,15 @@ Credentials are provisioned in MIG-1915. Three Actions secrets are available: `R
 
 Build the workflow in stages so each piece can be verified independently before the full automation is trusted to run on a schedule.
 
-### Stage 1 — Manual auth verification (this stage)
+### Stage 1 — Manual auth verification
 
 A `workflow_dispatch`-only workflow that confirms the App token mints correctly and can read `reference/mercury.json` from `mig-readme-docs`. No diff logic, no commits, no PRs. Output is just a log line.
 
-- [ ] `.github/workflows/sync-spec-verify.yml`
-  - `on: workflow_dispatch` only.
-  - Mint token via `actions/create-github-app-token@v1` using the three secrets.
-  - Fetch `reference/mercury.json` via `gh api repos/Movement-Infrastructure/mig-readme-docs/contents/reference/mercury.json` using the minted token.
-  - Log file size, upstream blob SHA, and the first few keys to confirm the content is a valid OpenAPI doc.
+- [x] `.github/workflows/sync-spec-verify.yml`
+  - `on: workflow_dispatch` only (plus a temporary `push:` trigger on the feature branch for iteration, removed before merge).
+  - Mints token via `actions/create-github-app-token@v1` using `vars.READMEDOCS_SYNC_APP_ID` and `secrets.READMEDOCS_SYNC_PRIVATE_KEY`. `INSTALLATION_ID` is discovered automatically from owner/repos.
+  - Fetches `reference/mercury.json` via `gh api repos/Movement-Infrastructure/mig-readme-docs/contents/reference/mercury.json` using the minted token.
+  - Logs blob SHA, size, top-level keys, openapi version, and `info.title` to confirm the content is a valid OpenAPI doc.
 
 ### Stage 2 — Diff detection
 
