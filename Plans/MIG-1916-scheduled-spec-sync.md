@@ -26,10 +26,10 @@ A `workflow_dispatch`-only workflow that confirms the App token mints correctly 
 
 ### Stage 2 — Diff detection
 
-Extend (or fold into) the workflow so it compares the upstream file against the committed `openapi/v1/swagger.json` and exits with a clear "changed" / "unchanged" signal. Still manual trigger only.
+Extend the workflow so it compares the upstream file against the committed `openapi/v1/swagger.json` and exits with a clear "changed" / "unchanged" signal.
 
-- [ ] Compare via plain hash/diff (no normalization).
-- [ ] Handle the "no local file yet" case as a diff (first-run bootstrap).
+- [x] Compare via plain `cmp` (no normalization).
+- [x] Handle the "no local file yet" case as a diff (`reason=bootstrap`); upstream-vs-local differences emit `reason=upstream-changed`. Result exposed as the `changed` and `reason` step outputs for stage 3 to consume.
 
 ### Stage 3 — PR opening with idempotency
 
