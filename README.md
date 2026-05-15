@@ -4,6 +4,8 @@ Auto-generated SDKs for the [Movement Infrastructure Interactions API](https://a
 
 This repository is **private** during development and will be made public when the first SDK is ready to publish to a public package registry.
 
+This readme of devloper details will need to move to a new home before that time.
+
 ## Layout
 
 ```
@@ -48,7 +50,6 @@ All credentials are stored on this repo under `Settings → Secrets and variable
 | Name | Type | Belongs to | Contents |
 | --- | --- | --- | --- |
 | `READMEDOCS_SYNC_APP_ID` | Variable | `interactions-api-sdk-sync` | App ID, shown on the App's settings page. |
-| `READMEDOCS_SYNC_INSTALLATION_ID` | Variable | `interactions-api-sdk-sync` | Installation ID on `mig-readme-docs`. **Not currently consumed** by the workflow — `actions/create-github-app-token` discovers it from the App ID. Retained; safe to drop later. |
 | `READMEDOCS_SYNC_PRIVATE_KEY` | Secret | `interactions-api-sdk-sync` | Full contents of the `.pem` private key, including the `-----BEGIN/END RSA PRIVATE KEY-----` lines. |
 | `SDK_GENERATOR_APP_ID` | Variable | `interactions-api-sdk-generator-bot` | App ID, shown on the App's settings page. |
 | `SDK_GENERATOR_PRIVATE_KEY` | Secret | `interactions-api-sdk-generator-bot` | Full contents of the `.pem` private key, including the `-----BEGIN/END RSA PRIVATE KEY-----` lines. |
