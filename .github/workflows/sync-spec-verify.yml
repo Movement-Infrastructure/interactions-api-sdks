@@ -31,15 +31,35 @@ jobs:
           owner: Movement-Infrastructure
           repositories: mig-readme-docs
 
+      - name: Resolve upstream ref
+        id: ref
+        env:
+          OVERRIDE_REF: ${{ vars.READMEDOCS_SYNC_REF }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "${OVERRIDE_REF:-}" ]; then
+            echo "Using override ref from vars.READMEDOCS_SYNC_REF: $OVERRIDE_REF"
+            echo "ref=$OVERRIDE_REF" >> "$GITHUB_OUTPUT"
+            echo "query=?ref=$OVERRIDE_REF" >> "$GITHUB_OUTPUT"
+            echo "sha_param=&sha=$OVERRIDE_REF" >> "$GITHUB_OUTPUT"
+          else
+            echo "No override ref set; using mig-readme-docs default branch."
+            echo "ref=(default branch)" >> "$GITHUB_OUTPUT"
+            echo "query=" >> "$GITHUB_OUTPUT"
+            echo "sha_param=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Fetch reference/mercury.json from mig-readme-docs
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          QUERY: ${{ steps.ref.outputs.query }}
         run: |
           set -euo pipefail
 
           response=$(gh api \
             -H "Accept: application/vnd.github+json" \
-            repos/Movement-Infrastructure/mig-readme-docs/contents/reference/mercury.json)
+            "repos/Movement-Infrastructure/mig-readme-docs/contents/reference/mercury.json${QUERY}")
 
           echo "$response" | jq -r '.content' | base64 -d > upstream-mercury.json
 
@@ -80,12 +100,13 @@ jobs:
         if: steps.diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SHA_PARAM: ${{ steps.ref.outputs.sha_param }}
         run: |
           set -euo pipefail
 
           sha=$(gh api \
             -H "Accept: application/vnd.github+json" \
-            "repos/Movement-Infrastructure/mig-readme-docs/commits?path=reference/mercury.json&per_page=1" \
+            "repos/Movement-Infrastructure/mig-readme-docs/commits?path=reference/mercury.json&per_page=1${SHA_PARAM}" \
             | jq -r '.[0].sha')
 
           short_sha="${sha:0:7}"
