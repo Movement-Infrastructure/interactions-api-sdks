@@ -63,7 +63,7 @@ No fixed rotation cadence is required, since installation tokens are minted fres
 
 ### Testing against a non-default branch of `mig-readme-docs`
 
-By default the sync pulls from `mig-readme-docs`' default branch. To validate the workflow against an in-flight branch (e.g. a pre-release branch with a new endpoint), set the repository variable `READMEDOCS_SYNC_REF` under `Settings → Secrets and variables → Actions → Variables` to the branch, tag, or commit SHA. The workflow logs the resolved ref at the top of each run. Unset the variable to revert to the default branch.
+By default the sync pulls from `mig-readme-docs`' default branch. To validate the workflow against an in-flight branch (e.g. a pre-release branch with a new endpoint), set the repository variable `READMEDOCS_SYNC_BRANCH` under `Settings → Secrets and variables → Actions → Variables` to the branch name (a tag or commit SHA also works). The workflow logs the resolved value at the top of each run. Unset the variable to revert to the default branch.
 
 ## Status
 
