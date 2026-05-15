@@ -19,12 +19,28 @@ jobs:
       contents: write       # push the sync branch
       pull-requests: write  # open the sync PR
     steps:
+      # Mint a short-lived (~1h) installation token via the
+      # interactions-api-sdk-generator-bot App, which has Contents:Write +
+      # Pull requests:Write on this repo. Used by `actions/checkout` below
+      # (so subsequent `git push` operations are authenticated as the bot)
+      # and by `gh pr create` later. Authoring under this App instead of
+      # the default GITHUB_TOKEN is what lets downstream workflows (e.g.
+      # MIG-1917's generate-python-sdk) fire on the resulting events.
+      - name: Mint installation token for this repo
+        id: bot-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.SDK_GENERATOR_APP_ID }}
+          private-key: ${{ secrets.SDK_GENERATOR_PRIVATE_KEY }}
+
       - name: Check out SDK repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ steps.bot-token.outputs.token }}
 
-      # Mint a short-lived (~1h) installation token via the
-      # interactions-api-sdk-sync GitHub App. The App has Contents:Read on
-      # mig-readme-docs only — see README "Sync credentials" for details.
+      # Mint a separate token via the interactions-api-sdk-sync App.
+      # That App is scoped to Contents:Read on mig-readme-docs only — see
+      # README "Internal developer setup" for details.
       - name: Mint installation token for mig-readme-docs
         id: app-token
         uses: actions/create-github-app-token@v1
@@ -149,7 +165,7 @@ jobs:
         id: existing-pr
         if: steps.diff.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.bot-token.outputs.token }}
           BRANCH: ${{ steps.upstream.outputs.branch }}
         run: |
           set -euo pipefail
@@ -215,7 +231,7 @@ jobs:
       - name: Open sync PR
         if: steps.diff.outputs.changed == 'true' && steps.existing-pr.outputs.skip == 'false'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.bot-token.outputs.token }}
           BRANCH: ${{ steps.upstream.outputs.branch }}
           SHORT_SHA: ${{ steps.upstream.outputs.short_sha }}
           SHA: ${{ steps.upstream.outputs.sha }}

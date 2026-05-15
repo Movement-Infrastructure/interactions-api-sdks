@@ -30,40 +30,45 @@ Each language directory contains a generated SDK produced by [`openapi-generator
 3. CI on the PR regenerates each language SDK and bumps the package version based on PR labels (`interactions-api-patch`, `interactions-api-minor`, `interactions-api-major`).
 4. Once merged, CI publishes the updated packages to their respective registries.
 
-## Sync credentials
+## Internal developer setup
 
-### What the secrets access
+Everything an internal developer needs to operate and modify the sync/generate pipeline. None of this is relevant to SDK consumers.
 
-The scheduled sync workflow reads `reference/mercury.json` from the private [`mig-readme-docs`](https://github.com/Movement-Infrastructure/mig-readme-docs) repo. Access is via the `interactions-api-sdk-sync` GitHub App, installed on `mig-readme-docs` with `Contents: Read` only. The App has no other permissions and no access to any other repo.
+### GitHub Apps
 
-At runtime the workflow mints a short-lived installation token (~1 hour) using the App credentials, so there is no long-lived API token to rotate.
+Two GitHub Apps power the automation. Each authenticates at workflow runtime by minting a short-lived installation token (~1h) from its private key, so there is no long-lived API token to rotate.
 
-### Where the secrets are stored
+- **`interactions-api-sdk-sync`** — installed on `mig-readme-docs` with `Contents: Read` only. The scheduled sync workflow uses it to read `reference/mercury.json`. No other access on `mig-readme-docs`; no access to any other repo.
+- **`interactions-api-sdk-generator-bot`** — installed on `interactions-api-sdks` with `Contents: Write` and `Pull requests: Write`. Used by the sync workflow to open sync PRs, and by the generate workflow to commit regenerated SDKs back to PR branches. Authoring under this App (instead of the default `GITHUB_TOKEN`) is what lets downstream workflows fire on its commits.
 
-Three secrets are required on this repo, under `Settings → Secrets and variables → Actions`:
+### Credentials storage
 
-| Secret | Contents |
-| --- | --- |
-| `READMEDOCS_SYNC_APP_ID` | The App ID, shown on the App's settings page. |
-| `READMEDOCS_SYNC_INSTALLATION_ID` | The Installation ID of the App on `mig-readme-docs` (the trailing number in `https://github.com/organizations/Movement-Infrastructure/settings/installations/<id>`). **Not currently consumed by the workflow** — the `actions/create-github-app-token` action discovers the installation automatically from the App ID and target repo. Retained for now; safe to drop later if it stays unused. |
-| `READMEDOCS_SYNC_PRIVATE_KEY` | The full contents of the `.pem` private key generated from the App's settings page, including the `-----BEGIN RSA PRIVATE KEY-----` and `-----END RSA PRIVATE KEY-----` lines. |
+All credentials are stored on this repo under `Settings → Secrets and variables → Actions`. Backup copies of every value are kept in 1Password (**Eng Admin** vault).
 
-Backup copies of all three values are stored in 1Password (**Eng Admin** vault).
+| Name | Type | Belongs to | Contents |
+| --- | --- | --- | --- |
+| `READMEDOCS_SYNC_APP_ID` | Variable | `interactions-api-sdk-sync` | App ID, shown on the App's settings page. |
+| `READMEDOCS_SYNC_INSTALLATION_ID` | Variable | `interactions-api-sdk-sync` | Installation ID on `mig-readme-docs`. **Not currently consumed** by the workflow — `actions/create-github-app-token` discovers it from the App ID. Retained; safe to drop later. |
+| `READMEDOCS_SYNC_PRIVATE_KEY` | Secret | `interactions-api-sdk-sync` | Full contents of the `.pem` private key, including the `-----BEGIN/END RSA PRIVATE KEY-----` lines. |
+| `SDK_GENERATOR_APP_ID` | Variable | `interactions-api-sdk-generator-bot` | App ID, shown on the App's settings page. |
+| `SDK_GENERATOR_PRIVATE_KEY` | Secret | `interactions-api-sdk-generator-bot` | Full contents of the `.pem` private key, including the `-----BEGIN/END RSA PRIVATE KEY-----` lines. |
 
-### How to rotate
+### Rotation
 
-- **App ID and Installation ID** do not rotate. They change only if the App is recreated or reinstalled.
-- **Private key** rotation:
+- **App IDs and Installation IDs** do not rotate. They only change if the App is recreated or reinstalled.
+- **Private key** rotation (same procedure for either App):
   1. Generate a new private key on the App's settings page. Download the `.pem` file.
-  2. Update `READMEDOCS_SYNC_PRIVATE_KEY` on this repo and the matching 1Password entry.
-  3. Confirm the sync workflow runs green with the new key.
+  2. Update the corresponding `*_PRIVATE_KEY` secret on this repo and the matching 1Password entry.
+  3. Confirm the sync/generate workflows run green with the new key.
   4. Delete the old private key from the App's settings page.
 
-No fixed rotation cadence is required, since installation tokens are minted fresh each run. Rotate immediately if the private key is suspected to be compromised.
+No fixed rotation cadence is required, since installation tokens are minted fresh each run. Rotate immediately if a private key is suspected to be compromised.
 
-### Testing against a non-default branch of `mig-readme-docs`
+### Configuration toggles
 
-By default the sync pulls from `mig-readme-docs`' default branch. To validate the workflow against an in-flight branch (e.g. a pre-release branch with a new endpoint), set the repository variable `READMEDOCS_SYNC_BRANCH` under `Settings → Secrets and variables → Actions → Variables` to the branch name (a tag or commit SHA also works). The workflow logs the resolved value at the top of each run. Unset the variable to revert to the default branch.
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `READMEDOCS_SYNC_BRANCH` | unset (default branch) | Override which branch of `mig-readme-docs` the sync workflow reads `reference/mercury.json` from. Useful for validating the sync against in-flight branches. Set to a branch name; a tag or commit SHA also works. The workflow logs the resolved value at the top of each run. |
 
 ## Status
 
