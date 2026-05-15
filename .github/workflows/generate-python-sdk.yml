@@ -1,0 +1,70 @@
+name: Generate Python SDK
+
+# MIG-1917. On every PR open/sync that touches openapi/v1/swagger.json,
+# regenerates sdks/python/v1/ via openapi-generator and commits the result
+# back to the PR branch.
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - openapi/v1/swagger.json
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          # Use a PAT so the push back to the PR branch triggers downstream
+          # checks. The default GITHUB_TOKEN push is silently ignored by GHA
+          # for push-triggered workflows on the same branch.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Cache openapi-generator jar
+        id: cache-generator
+        uses: actions/cache@v4
+        with:
+          path: .cache/openapi-generator-cli.jar
+          key: openapi-generator-7.10.0
+
+      - name: Download openapi-generator jar
+        if: steps.cache-generator.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .cache
+          curl -sSL \
+            https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/7.10.0/openapi-generator-cli-7.10.0.jar \
+            -o .cache/openapi-generator-cli.jar
+
+      - name: Generate Python SDK
+        run: |
+          java -jar .cache/openapi-generator-cli.jar generate \
+            -i openapi/v1/swagger.json \
+            -g python \
+            -o sdks/python/v1 \
+            -c sdks/python/v1/openapi-generator-config.yaml
+
+      - name: Commit generated SDK if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add sdks/python/v1
+
+          if git diff --cached --quiet; then
+            echo "No changes to generated SDK — skipping commit."
+          else
+            git commit -m "chore: regenerate Python SDK from openapi/v1/swagger.json"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
