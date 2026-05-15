@@ -43,10 +43,10 @@ Extend the workflow so it compares the upstream file against the committed `open
 
 The fetch currently hardcodes the readme repo's default branch, which makes it hard to validate the sync against an in-flight branch of `mig-readme-docs` (e.g. a pre-release branch with a new endpoint). Add an opt-in override so we can point the sync at a specific ref without faking changes upstream.
 
-- [ ] Read `vars.READMEDOCS_SYNC_REF` (repository variable). If set, fetch `reference/mercury.json` from that ref instead of the default branch. If unset/empty, behave as today.
-- [ ] Pass the ref through to both API calls: the `contents` fetch and the `commits?path=...` lookup that produces the idempotency key.
-- [ ] Log the resolved ref at the top of the workflow run so it's obvious which branch a given run pulled from.
-- [ ] README "Sync credentials" section: brief mention of the variable as a testing toggle.
+- [x] Read `vars.READMEDOCS_SYNC_REF` (repository variable). If set, fetch `reference/mercury.json` from that ref instead of the default branch. If unset/empty, behave as today.
+- [x] Pass the ref through to both API calls: the `contents` fetch and the `commits?path=...` lookup that produces the idempotency key.
+- [x] Log the resolved ref at the top of the workflow run so it's obvious which branch a given run pulled from.
+- [x] README "Sync credentials" section: brief mention of the variable as a testing toggle.
 
 Long-term shape (deferred to MIG-1920): also expose this as a `workflow_dispatch:` input that wins over the variable when present. For the PoC, variable-only is enough.
 
