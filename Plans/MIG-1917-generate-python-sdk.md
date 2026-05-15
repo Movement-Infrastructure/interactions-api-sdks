@@ -29,8 +29,9 @@ A workflow triggered on PRs that change `openapi/v1/swagger.json`. Pulls the spe
   - `on: pull_request:` with a `paths:` filter on `openapi/v1/swagger.json`.
   - Pin `openapi-generator-cli` via a setup step (cache the jar between runs).
   - Run the generator with the config from stage 1, output into `sdks/python/v1/`.
-  - If the generator produced changes, commit them to the PR branch as the `github-actions[bot]` user. If not, exit cleanly.
-- [ ] Workflow uses default `GITHUB_TOKEN` with `contents: write` so it can push to PR branches.
+  - **Run MIG-1918 smoke tests against the freshly generated SDK before committing** (combined workflow approach). If tests fail, workflow fails and branch protection blocks the merge; no push happens.
+  - If the generator produced changes and tests passed, commit them to the PR branch as the `github-actions[bot]` user. If no diff, exit cleanly.
+- [ ] Workflow uses default `GITHUB_TOKEN` with `contents: write` so it can push to PR branches. No PAT or new GitHub App needed: tests run pre-push, so the `GITHUB_TOKEN`-suppresses-downstream-workflows limitation is moot.
 - [ ] Temporary `push:` trigger on this branch for iteration; removed once the `pull_request:` trigger is exercised against a real sync PR.
 
 ### Stage 3 — Loop with MIG-1916
@@ -44,6 +45,6 @@ End-to-end verification with a real sync PR from MIG-1916: open a sync PR, watch
 
 - **Generator version source of truth**: pin in the workflow YAML, or in a `.tool-versions`/`mise.toml`? Workflow YAML is simpler for the PoC; revisit when Node/C#/etc. are added.
 - **Generated diff size**: the first regeneration will likely produce a large diff. Acceptable as long as commit message clearly attributes it.
-- **Loop prevention**: filter the workflow to skip if the latest commit author is `github-actions[bot]` and the commit message starts with the generator's prefix. Simpler than a separate token.
+- **Loop prevention**: the bot only commits to `sdks/python/v1/`, but the workflow only triggers on `openapi/v1/swagger.json` changes via the `paths:` filter — so the bot's commit can't retrigger the workflow against itself.
 - **Where to put generator config**: alongside the workflow vs. inside `sdks/python/v1/`. Lean toward inside `sdks/python/v1/` so each language owns its config.
 - **Package version**: comes from milestone 4 (version-bump workflow). For now, leave `packageVersion` as a fixed `0.0.0` placeholder; milestone 4 replaces it.
