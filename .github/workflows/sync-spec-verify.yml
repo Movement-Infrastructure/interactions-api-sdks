@@ -10,7 +10,10 @@ name: Sync OpenAPI spec from mig-readme-docs
 on:
   # Runs on every push to any branch during the milestone-2 PoC. Replaced by
   # `schedule:` + `workflow_dispatch:` in MIG-1920 once the sync is trusted.
+  # `sync/**` excluded so the bot's own sync-branch push doesn't recurse.
   push:
+    branches-ignore:
+      - 'sync/**'
 
 jobs:
   sync:
