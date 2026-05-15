@@ -32,7 +32,7 @@ A workflow triggered on PRs that change `openapi/v1/swagger.json`. Pulls the spe
   - **Run MIG-1918 smoke tests against the freshly generated SDK before committing** (combined workflow approach). If tests fail, workflow fails and branch protection blocks the merge; no push happens.
   - If the generator produced changes and tests passed, commit them to the PR branch as the `github-actions[bot]` user. If no diff, exit cleanly.
 - [ ] Workflow uses default `GITHUB_TOKEN` with `contents: write` so it can push to PR branches. No PAT or new GitHub App needed: tests run pre-push, so the `GITHUB_TOKEN`-suppresses-downstream-workflows limitation is moot.
-- [ ] Temporary `push:` trigger on this branch for iteration; removed once the `pull_request:` trigger is exercised against a real sync PR.
+- [x] Temporary `push:` trigger (with the same `paths:` filter on `openapi/v1/swagger.json`) for iteration before MIG-1917 merges to develop. Removed alongside MIG-1920's cleanup of MIG-1916's equivalent push trigger.
 
 ### Stage 3 — Loop with MIG-1916
 

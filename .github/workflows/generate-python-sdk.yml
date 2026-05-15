@@ -1,12 +1,19 @@
 name: Generate Python SDK
 
-# MIG-1917. On every PR open/sync that touches openapi/v1/swagger.json,
-# regenerates sdks/python/v1/ via openapi-generator and commits the result
-# back to the PR branch.
+# MIG-1917. On every PR open/sync (or push to a feature branch) that touches
+# openapi/v1/swagger.json, regenerates sdks/python/v1/ via openapi-generator
+# and commits the result back to the PR / feature branch.
+#
+# The `push:` trigger is a temporary PoC convenience for iterating on the
+# workflow before MIG-1917 merges to develop — removed before merge alongside
+# MIG-1920's cleanup of MIG-1916's equivalent push trigger.
 
 on:
   pull_request:
     types: [opened, synchronize]
+    paths:
+      - openapi/v1/swagger.json
+  push:
     paths:
       - openapi/v1/swagger.json
 
@@ -17,13 +24,12 @@ jobs:
       contents: write
 
     steps:
-      - name: Check out PR branch
+      # `github.head_ref` is only set on pull_request events; fall back to
+      # `github.ref_name` so the same workflow works for push triggers.
+      - name: Check out branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
-          # Use a PAT so the push back to the PR branch triggers downstream
-          # checks. The default GITHUB_TOKEN push is silently ignored by GHA
-          # for push-triggered workflows on the same branch.
+          ref: ${{ github.head_ref || github.ref_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Java
@@ -66,5 +72,5 @@ jobs:
             echo "No changes to generated SDK — skipping commit."
           else
             git commit -m "chore: regenerate Python SDK from openapi/v1/swagger.json"
-            git push origin HEAD:${{ github.head_ref }}
+            git push origin HEAD:${{ github.head_ref || github.ref_name }}
           fi
