@@ -25,21 +25,21 @@ Confirm `openapi-generator` produces a Python SDK from the committed spec on a d
 
 A workflow triggered on PRs that change `openapi/v1/swagger.json`. Pulls the spec, runs the generator, commits any diff back to the PR branch.
 
-- [ ] `.github/workflows/generate-python-sdk.yml`
+- [x] `.github/workflows/generate-python-sdk.yml`
   - `on: pull_request:` with a `paths:` filter on `openapi/v1/swagger.json`.
   - Pin `openapi-generator-cli` via a setup step (cache the jar between runs).
   - Run the generator with the config from stage 1, output into `sdks/python/v1/`.
-  - **Run MIG-1918 smoke tests against the freshly generated SDK before committing** (combined workflow approach). If tests fail, workflow fails and branch protection blocks the merge; no push happens.
-  - If the generator produced changes and tests passed, commit them to the PR branch as the `github-actions[bot]` user. If no diff, exit cleanly.
-- [ ] Workflow uses default `GITHUB_TOKEN` with `contents: write` so it can push to PR branches. No PAT or new GitHub App needed: tests run pre-push, so the `GITHUB_TOKEN`-suppresses-downstream-workflows limitation is moot.
-- [ ] Temporary `push:` trigger on this branch for iteration; removed once the `pull_request:` trigger is exercised against a real sync PR.
+  - **Run MIG-1918 smoke tests against the freshly generated SDK before committing** — pending in [MIG-1918](https://linear.app/movementinfrastructure/issue/MIG-1918/add-python-sdk-smoke-test-suite-blocking-merge); will be added as additional steps in this workflow.
+  - If the generator produced changes, commit them to the PR branch as the `github-actions[bot]` user. If no diff, exit cleanly.
+- [x] Workflow uses default `GITHUB_TOKEN` with `contents: write` for the push-back. This is fine because MIG-1916's sync PR is authored by the `interactions-api-sdk-generator-bot` App (so MIG-1917 fires on the PR), and MIG-1918's tests will run pre-push inside this workflow (so we don't need the push-back itself to trigger downstream workflows).
+- [x] Temporary `push:` trigger added during PoC iteration and removed before MIG-1917 merged to develop.
 
 ### Stage 3 — Loop with MIG-1916
 
 End-to-end verification with a real sync PR from MIG-1916: open a sync PR, watch this workflow regenerate the Python SDK, confirm the resulting commit is sensible.
 
-- [ ] Trigger via a manual MIG-1916 dispatch (or a real upstream spec change) and observe the full chain.
-- [ ] Confirm we don't get a push loop: the generator's own commit must not retrigger the generator workflow against itself.
+- [x] Triggered via push to develop with `READMEDOCS_SYNC_BRANCH=v1.1-mig-1916-test-sdks-trigger`. Full chain verified on sync PR #12: two commits (`Sync mercury.json…` from MIG-1916, then `chore: regenerate Python SDK…` from MIG-1917) with the regenerated `sdks/python/v1/` tree.
+- [x] No push loop: MIG-1917's `pull_request:` trigger has `paths: openapi/v1/swagger.json`, and the bot commits only touch `sdks/python/v1/`. MIG-1916's `push:` trigger now also excludes `sync/**` branches to prevent it from recursing into its own sync-branch push.
 
 ## Notes / open questions
 

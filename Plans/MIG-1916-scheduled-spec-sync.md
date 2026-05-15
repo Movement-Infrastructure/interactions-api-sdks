@@ -36,7 +36,7 @@ Extend the workflow so it compares the upstream file against the committed `open
 - [x] On change, derive an idempotency key from the upstream commit SHA touching the file (`gh api repos/.../commits?path=reference/mercury.json&per_page=1`).
 - [x] Branch name: `sync/mercury-<short-sha>`. Idempotency implemented at the PR layer: if an open PR already exists for the branch, skip everything; otherwise create the branch with `git checkout -B` and `--force-with-lease` push (handles stale branches from prior unclean runs).
 - [x] Commit message: `Sync mercury.json from mig-readme-docs@<short-sha>`.
-- [x] App token used only for reading from `mig-readme-docs`. Default `GITHUB_TOKEN` (with `contents: write` + `pull-requests: write` granted via the job `permissions:` block) is used for branch push and PR creation in this repo.
+- [x] Two App tokens are minted: `interactions-api-sdk-sync` (read on `mig-readme-docs`) for the spec fetch, and `interactions-api-sdk-generator-bot` (write + PR on `interactions-api-sdks`) for the branch push and PR creation. The bot App is required so MIG-1917 actually fires on sync PRs — `GITHUB_TOKEN`-authored PRs don't propagate downstream workflow events. The job `permissions:` block also grants `contents: write` + `pull-requests: write` to be explicit, though the App token is what carries the real auth.
 - [x] PR title `Sync OpenAPI spec from mig-readme-docs@<short-sha>`. Body includes the upstream commit URL, change reason (`bootstrap` / `upstream-changed`), and an added/removed line count for `openapi/v1/swagger.json`.
 
 ### Stage 3.5 — Configurable upstream ref for testing
