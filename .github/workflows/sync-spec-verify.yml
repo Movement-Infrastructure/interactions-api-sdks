@@ -1,0 +1,253 @@
+name: Sync OpenAPI spec from mig-readme-docs
+
+# MIG-1916. Pulls reference/mercury.json from mig-readme-docs, compares against
+# the committed openapi/v1/swagger.json, and opens a PR if they differ.
+#
+# Currently runs on every push to any branch (PoC trigger). Cron scheduling,
+# the rename to sync-spec.yml, and removal of the push trigger are tracked in
+# MIG-1920. See Plans/MIG-1916-scheduled-spec-sync.md.
+
+on:
+  # Runs on every push to any branch during the milestone-2 PoC. Replaced by
+  # `schedule:` + `workflow_dispatch:` in MIG-1920 once the sync is trusted.
+  push:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # push the sync branch
+      pull-requests: write  # open the sync PR
+    steps:
+      - name: Check out SDK repo
+        uses: actions/checkout@v4
+
+      # Mint a short-lived (~1h) installation token via the
+      # interactions-api-sdk-sync GitHub App. The App has Contents:Read on
+      # mig-readme-docs only — see README "Sync credentials" for details.
+      - name: Mint installation token for mig-readme-docs
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.READMEDOCS_SYNC_APP_ID }}
+          private-key: ${{ secrets.READMEDOCS_SYNC_PRIVATE_KEY }}
+          owner: Movement-Infrastructure
+          repositories: mig-readme-docs
+
+      # By default the sync follows mig-readme-docs' default branch (which
+      # tracks the current API version). Setting the repo variable
+      # READMEDOCS_SYNC_BRANCH to a branch, tag, or SHA overrides that — used
+      # to validate the sync against in-flight branches of mig-readme-docs
+      # without faking changes upstream. The resolved value is threaded into
+      # both downstream API calls (contents fetch + commits lookup).
+      - name: Resolve upstream branch
+        id: upstream-branch
+        env:
+          OVERRIDE_BRANCH: ${{ vars.READMEDOCS_SYNC_BRANCH }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "${OVERRIDE_BRANCH:-}" ]; then
+            echo "Using override branch from vars.READMEDOCS_SYNC_BRANCH: $OVERRIDE_BRANCH"
+            echo "label=$OVERRIDE_BRANCH" >> "$GITHUB_OUTPUT"
+            # Query-string fragments for the two GitHub API calls below.
+            # contents endpoint takes `?ref=`; commits endpoint takes `&sha=`.
+            echo "contents_query=?ref=$OVERRIDE_BRANCH" >> "$GITHUB_OUTPUT"
+            echo "commits_query=&sha=$OVERRIDE_BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "No override branch set; using mig-readme-docs default branch."
+            echo "label=(default branch)" >> "$GITHUB_OUTPUT"
+            echo "contents_query=" >> "$GITHUB_OUTPUT"
+            echo "commits_query=" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Pulls the current spec from mig-readme-docs as a base64-encoded blob
+      # via the contents API, then decodes it to a local file for comparison.
+      # The contents endpoint accepts an optional ?ref= query string (threaded
+      # in via CONTENTS_QUERY); omitted when no override is set.
+      - name: Fetch reference/mercury.json from mig-readme-docs
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          CONTENTS_QUERY: ${{ steps.upstream-branch.outputs.contents_query }}
+        run: |
+          set -euo pipefail
+
+          response=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/Movement-Infrastructure/mig-readme-docs/contents/reference/mercury.json${CONTENTS_QUERY}")
+
+          echo "$response" | jq -r '.content' | base64 -d > upstream-mercury.json
+
+          blob_sha=$(echo "$response" | jq -r '.sha')
+          size=$(echo "$response" | jq -r '.size')
+
+          echo "Upstream blob SHA: $blob_sha"
+          echo "Size (bytes): $size"
+          echo "openapi version: $(jq -r '.openapi // "(missing)"' upstream-mercury.json)"
+          echo "info.title: $(jq -r '.info.title // "(missing)"' upstream-mercury.json)"
+
+      # Byte-level comparison via `cmp`. No normalization: the upstream file is
+      # human-edited and committed, so key order is stable. If the local copy
+      # is missing entirely (first run on a fresh repo) we treat that as a
+      # bootstrap diff so the rest of the workflow can create the initial PR.
+      - name: Compare against committed openapi/v1/swagger.json
+        id: diff
+        run: |
+          set -euo pipefail
+
+          local_path=openapi/v1/swagger.json
+
+          if [ ! -f "$local_path" ]; then
+            echo "No local spec at $local_path; treating as initial-bootstrap diff."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "reason=bootstrap" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if cmp -s upstream-mercury.json "$local_path"; then
+            echo "No change vs committed spec."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Upstream spec differs from committed spec."
+            diff -u "$local_path" upstream-mercury.json | head -40 || true
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "reason=upstream-changed" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The latest commit on mig-readme-docs that touched reference/mercury.json
+      # is the idempotency key: we name the sync branch after its short SHA so
+      # re-runs against the same upstream state are no-ops. The commits
+      # endpoint accepts an optional &sha= query string (threaded in via
+      # COMMITS_QUERY) to scope the lookup to the resolved branch.
+      - name: Find upstream commit SHA that last touched the spec
+        id: upstream
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          COMMITS_QUERY: ${{ steps.upstream-branch.outputs.commits_query }}
+        run: |
+          set -euo pipefail
+
+          sha=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/Movement-Infrastructure/mig-readme-docs/commits?path=reference/mercury.json&per_page=1${COMMITS_QUERY}" \
+            | jq -r '.[0].sha')
+
+          short_sha="${sha:0:7}"
+
+          echo "Upstream commit SHA: $sha"
+          echo "Short SHA: $short_sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$short_sha" >> "$GITHUB_OUTPUT"
+          echo "branch=sync/mercury-$short_sha" >> "$GITHUB_OUTPUT"
+
+      # Idempotency at the PR layer: if an open PR already exists for this
+      # upstream SHA's sync branch, skip the create steps below. The branch
+      # itself may also exist from a prior unclean run — that's handled by
+      # the `--force-with-lease` push later.
+      - name: Skip if a PR already exists for this upstream SHA
+        id: existing-pr
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.upstream.outputs.branch }}
+        run: |
+          set -euo pipefail
+
+          existing=$(gh pr list \
+            --head "$BRANCH" \
+            --state open \
+            --json number,url \
+            --jq '.[0]')
+
+          if [ -n "$existing" ] && [ "$existing" != "null" ]; then
+            number=$(echo "$existing" | jq -r '.number')
+            url=$(echo "$existing" | jq -r '.url')
+            echo "Existing open PR #$number for $BRANCH: $url"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No existing open PR for $BRANCH."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Cheap line-count diff for the PR body. Not used for the actual sync
+      # decision (that's the cmp above) — purely cosmetic so reviewers see a
+      # size signal in the PR description.
+      - name: Compute diff-stat for PR body
+        id: diffstat
+        if: steps.diff.outputs.changed == 'true' && steps.existing-pr.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+
+          local_path=openapi/v1/swagger.json
+          if [ -f "$local_path" ]; then
+            added=$(diff "$local_path" upstream-mercury.json | grep -c '^>' || true)
+            removed=$(diff "$local_path" upstream-mercury.json | grep -c '^<' || true)
+          else
+            added=$(wc -l < upstream-mercury.json | tr -d ' ')
+            removed=0
+          fi
+
+          echo "added=$added" >> "$GITHUB_OUTPUT"
+          echo "removed=$removed" >> "$GITHUB_OUTPUT"
+
+      - name: Create sync branch and commit
+        if: steps.diff.outputs.changed == 'true' && steps.existing-pr.outputs.skip == 'false'
+        env:
+          BRANCH: ${{ steps.upstream.outputs.branch }}
+          SHORT_SHA: ${{ steps.upstream.outputs.short_sha }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Branch off the commit we checked out (PR base will be develop).
+          git checkout -B "$BRANCH"
+
+          mkdir -p openapi/v1
+          mv upstream-mercury.json openapi/v1/swagger.json
+
+          git add openapi/v1/swagger.json
+          git commit -m "Sync mercury.json from mig-readme-docs@${SHORT_SHA}"
+          git push --force-with-lease origin "$BRANCH"
+
+      - name: Open sync PR
+        if: steps.diff.outputs.changed == 'true' && steps.existing-pr.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.upstream.outputs.branch }}
+          SHORT_SHA: ${{ steps.upstream.outputs.short_sha }}
+          SHA: ${{ steps.upstream.outputs.sha }}
+          ADDED: ${{ steps.diffstat.outputs.added }}
+          REMOVED: ${{ steps.diffstat.outputs.removed }}
+          REASON: ${{ steps.diff.outputs.reason }}
+        run: |
+          set -euo pipefail
+
+          cat > /tmp/pr-body.md <<EOF
+          Automated sync from \`mig-readme-docs\`.
+
+          - Upstream commit: [\`${SHORT_SHA}\`](https://github.com/Movement-Infrastructure/mig-readme-docs/commit/${SHA})
+          - Reason: \`${REASON}\`
+          - \`openapi/v1/swagger.json\`: +${ADDED} / -${REMOVED} lines
+
+          Opened automatically by \`.github/workflows/sync-spec-verify.yml\` (MIG-1916).
+          EOF
+
+          gh pr create \
+            --base develop \
+            --head "$BRANCH" \
+            --title "Sync OpenAPI spec from mig-readme-docs@${SHORT_SHA}" \
+            --body-file /tmp/pr-body.md
+
+      # Final log line for at-a-glance debugging from the Actions UI without
+      # having to expand individual steps.
+      - name: Summary
+        run: |
+          echo "upstream_branch=${{ steps.upstream-branch.outputs.label }}"
+          echo "changed=${{ steps.diff.outputs.changed }}"
+          echo "reason=${{ steps.diff.outputs.reason }}"
+          echo "upstream_sha=${{ steps.upstream.outputs.sha }}"
+          echo "branch=${{ steps.upstream.outputs.branch }}"
+          echo "skipped_existing=${{ steps.existing-pr.outputs.skip }}"
