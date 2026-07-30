@@ -1,7 +1,5 @@
 name: Python SDK tests
 
-# MIG-1918. Required status check that blocks PR merge.
-#
 # On every PR to develop, regenerate sdks/python/v1/ from
 # openapi/v1/swagger.json, install it, and run the smoke + happy-path suite in
 # sdks/python/v1/tests/.

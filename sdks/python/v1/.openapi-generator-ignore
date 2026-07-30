@@ -8,3 +8,16 @@
 tests/**
 requirements-test.txt
 .openapi-generator-ignore
+
+
+# The python generator emits these supporting files, but we don't use them (we
+# have our own CI and test suite). Not generating them keeps them out of the
+# repo and out of any sdist/source archive. The wheel already excludes test
+# code because the generated setup.py uses find_packages(exclude=["test",
+# "tests"]). Ignoring a file the generator wouldn't emit anyway is harmless.
+.travis.yml
+.gitlab-ci.yml
+.github/workflows/python.yml
+tox.ini
+git_push.sh
+test-requirements.txt
