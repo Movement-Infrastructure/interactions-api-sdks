@@ -1,0 +1,10 @@
+# openapi-generator ignore file (MIG-1918).
+#
+# Files listed here are NOT written or overwritten when the SDK is regenerated
+# (.github/workflows/generate-python-sdk.yml and python-sdk-tests.yml both run
+# the generator into this directory). This protects the hand-written smoke-test
+# suite and its supporting files from being clobbered by regeneration.
+
+tests/**
+requirements-test.txt
+.openapi-generator-ignore
