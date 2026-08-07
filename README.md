@@ -29,7 +29,7 @@ Each language directory contains a generated SDK produced by [`openapi-generator
 
 1. A scheduled GitHub Action (`.github/workflows/sync-spec.yml`, hourly at :17) fetches the current `reference/mercury.json` from `mig-readme-docs`.
 2. If it differs from the committed `openapi/v1/swagger.json`, a PR is opened against this repo.
-3. CI on the PR regenerates each language SDK and bumps the package version based on PR labels (`interactions-api-patch`, `interactions-api-minor`, `interactions-api-major`).
+3. CI on the PR regenerates each language SDK and bumps the package version — patch if the PR carries `interactions-api-patch`, minor otherwise. See [Versioning](#versioning).
 4. Once merged, CI publishes the updated packages to their respective registries.
 
 ## Internal developer setup
@@ -76,6 +76,38 @@ No fixed rotation cadence is required, since installation tokens are minted fres
 `sync-spec.yml` runs hourly at :17, and can also be triggered from **Actions → Sync OpenAPI spec from mig-readme-docs → Run workflow**. The optional `upstream_ref` input overrides which ref of `mig-readme-docs` that run reads from, and takes precedence over `READMEDOCS_SYNC_BRANCH` — use it for a one-off check against an in-flight branch without leaving a repo variable set.
 
 Re-running the sync is safe. The branch name (`sync/mercury-<short-sha>`) is derived from the upstream commit that last touched the spec, so a run that finds an open PR for that SHA leaves it alone rather than opening a duplicate.
+
+### Versioning
+
+Package versions live in each SDK's `openapi-generator-config.yaml` as `packageVersion`, and flow from there into the generated manifest (`pyproject.toml` / `setup.py` for Python). That config field is the source of truth — nothing edits the generated manifest directly.
+
+`generate-python-sdk.yml` rewrites it on every sync PR via `scripts/bump_version.py`, before running the generator, so the bump and the code it produced land in one commit.
+
+| Label | Effect |
+| --- | --- |
+| `interactions-api-patch` | Bumps patch (C). The only label the tooling reads. |
+| `interactions-api-minor` | None. Minor (B) is the default when no patch label is present. |
+| `interactions-api-major` | None. Major (A) bumps are manual (MIG-1926); the label flags PRs that needed one. A PR carrying it without a manual bump gets an Actions warning. |
+
+Two properties worth knowing:
+
+- **The bump is computed from the base branch**, not the PR branch. Pushing again or toggling a label recomputes the same version rather than stacking a second bump — a PR always lands exactly one bump ahead of its base.
+- **Major bumps are not label-driven.** Run the script by hand with `--force-bump major` as part of the process in MIG-1926.
+
+Dry-run the script against any config without writing:
+
+```bash
+python scripts/bump_version.py \
+  --current-config sdks/python/v1/openapi-generator-config.yaml \
+  --labels-json '["interactions-api-patch"]'
+```
+
+Its unit tests run on every PR via `tooling-tests.yml`:
+
+```bash
+pip install -r scripts/requirements-test.txt
+pytest scripts/tests -q
+```
 
 ## Status
 

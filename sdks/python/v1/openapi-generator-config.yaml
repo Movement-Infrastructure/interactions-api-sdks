@@ -10,7 +10,7 @@
 # Generator pinned to v7.10.0; see the workflow for the cached jar.
 
 # Pythonic snake_case import name. Provisional — revisit before publishing.
-packageName: mi_interactions_api
+packageName: mig_interactions_api
 
 # Project/PyPI name (kebab-case). Provisional — revisit before publishing.
 projectName: mi-interactions-api

@@ -10,11 +10,8 @@ name: Sync OpenAPI spec from mig-readme-docs
 # Plans/MIG-1920-schedule-sync-workflow.md.
 
 on:
-  # Hourly at :17. Off-the-hour minute per GitHub's guidance to avoid the
-  # top-of-hour congestion that delays cron-triggered runs.
-  #
-  # `schedule:` only fires from the default branch (develop), so changes to
-  # this file take effect once merged, not on the PR branch.
+  # Hourly at :17
+
   schedule:
     - cron: '17 * * * *'
 
@@ -31,9 +28,6 @@ on:
         required: false
         type: string
 
-# One sync at a time. Overlapping runs (a manual dispatch landing mid-schedule)
-# could both see "no existing PR" for the same upstream SHA and race on the
-# branch push.
 concurrency:
   group: sync-spec
   cancel-in-progress: false

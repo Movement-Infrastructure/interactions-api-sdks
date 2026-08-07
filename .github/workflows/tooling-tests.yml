@@ -1,0 +1,37 @@
+name: Tooling tests
+
+# MIG-1925. Unit tests for the repo's own tooling under scripts/ — currently
+# the version-bump script that generate-python-sdk.yml depends on.
+#
+# Separate from python-sdk-tests.yml because this suite needs neither the
+# OpenAPI spec nor the generator: it's pure Python over fixtures, so it runs in
+# seconds and stays green during the bootstrap window when no spec is committed.
+#
+# Runs on ALL PRs (no `paths:` filter) for the same reason python-sdk-tests.yml
+# does: a required status check that is path-filtered shows as perpetually
+# pending on PRs that don't match, blocking merge forever.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [develop]
+
+jobs:
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PR
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r scripts/requirements-test.txt
+
+      - name: Run tooling tests
+        run: pytest scripts/tests -q

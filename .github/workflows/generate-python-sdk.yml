@@ -1,12 +1,16 @@
 name: Generate Python SDK
 
-# MIG-1917. On every PR open/sync that touches openapi/v1/swagger.json,
-# regenerates sdks/python/v1/ via openapi-generator and commits the result
-# back to the PR branch.
+# MIG-1917 (generation), MIG-1925 (versioning). On every PR open/sync that
+# touches openapi/v1/swagger.json, computes the next package version from the
+# PR's labels, regenerates sdks/python/v1/ via openapi-generator, and commits
+# both back to the PR branch so the version lands in the generated manifest as
+# part of the same diff.
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    # `labeled`/`unlabeled` are here so adding or removing a version label
+    # after the PR opens recomputes the version.
+    types: [opened, synchronize, labeled, unlabeled]
     paths:
       - openapi/v1/swagger.json
 
@@ -25,6 +29,32 @@ jobs:
           # checks. The default GITHUB_TOKEN push is silently ignored by GHA
           # for push-triggered workflows on the same branch.
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Read base-branch package version
+        run: |
+          set -euo pipefail
+
+          config=sdks/python/v1/openapi-generator-config.yaml
+
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+
+          if ! git show "FETCH_HEAD:$config" > /tmp/base-config.yaml; then
+            echo "::error::$config not found on ${{ github.base_ref }}; cannot determine the current version."
+            exit 1
+          fi
+
+      - name: Compute and apply next version
+        id: version
+        run: |
+          python scripts/bump_version.py \
+            --current-config /tmp/base-config.yaml \
+            --write-config sdks/python/v1/openapi-generator-config.yaml \
+            --labels-json '${{ toJSON(github.event.pull_request.labels.*.name) }}'
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -54,7 +84,7 @@ jobs:
             -g python \
             -o sdks/python/v1 \
             -c sdks/python/v1/openapi-generator-config.yaml
-
+ 
       - name: Commit generated SDK if changed
         run: |
           git config user.name "github-actions[bot]"
@@ -65,6 +95,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to generated SDK — skipping commit."
           else
-            git commit -m "chore: regenerate Python SDK from openapi/v1/swagger.json"
+            git commit -m "chore: regenerate Python SDK at v${{ steps.version.outputs.next }} from openapi/v1/swagger.json"
             git push origin HEAD:${{ github.head_ref }}
           fi
