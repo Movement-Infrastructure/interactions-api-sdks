@@ -13,7 +13,7 @@
 packageName: mig_interactions_api
 
 # Project/PyPI name (kebab-case). Provisional — revisit before publishing.
-projectName: mi-interactions-api
+projectName: mig-interactions-api
 
 # Placeholder; the version-bump workflow (milestone 4) will rewrite this on
 # each sync PR based on the patch/minor/major label.
