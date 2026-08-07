@@ -1,0 +1,23 @@
+# .gitattributes
+# `export-ignore` keeps dev-only paths out of `git archive` output: the
+# "Source code (tar.gz/zip)" assets GitHub attaches to releases/tags, and any
+# archive-based source distribution.
+#
+# IMPORTANT: this does NOT affect the pip wheel/sdist published to (Test)PyPI.
+# Those are built by setuptools, which ignores .gitattributes. The wheel/sdist
+# are kept minimal by the generated setup.py — find_packages(exclude=["test",
+# "tests"]) with package_data limited to py.typed — plus the openapi-generator
+# config (globalProperties + .openapi-generator-ignore).
+
+# Hand-written Python test suite and generator inputs (dev-only).
+sdks/python/v1/tests/                          export-ignore
+sdks/python/v1/requirements-test.txt           export-ignore
+sdks/python/v1/openapi-generator-config.yaml   export-ignore
+sdks/python/v1/.openapi-generator-ignore       export-ignore
+sdks/python/v1/.openapi-generator/             export-ignore
+
+# Repo tooling & planning docs — not something a source-archive consumer needs.
+.github/        export-ignore
+Plans/          export-ignore
+.gitignore      export-ignore
+.gitattributes  export-ignore

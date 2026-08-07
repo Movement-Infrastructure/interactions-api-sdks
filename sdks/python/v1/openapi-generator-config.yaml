@@ -32,3 +32,7 @@ packageUrl: https://github.com/Movement-Infrastructure/interactions-api-sdks
 # defaults to "OpenAPI Generator Community". Fix is an upstream change in
 # mig-readme-docs (add info.contact to reference/mercury.json), not a
 # generator config override.
+
+globalProperties:
+  apiTests: "false"
+  modelTests: "false"

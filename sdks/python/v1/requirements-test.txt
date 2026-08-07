@@ -1,0 +1,6 @@
+# Test-only dependencies for the MIG-1918 smoke suite (sdks/python/v1/tests/).
+# The SDK's own runtime deps (urllib3, pydantic, python-dateutil, ...) are
+# installed via `pip install ./sdks/python/v1`; these are the extras the tests
+# themselves need.
+pytest>=8,<9
+pytest-httpserver>=1.0,<2
