@@ -5,16 +5,20 @@ MIG-1925. Reads the current version from an openapi-generator config, decides a
 bump from the PR's labels, and rewrites `packageVersion` so the generator emits
 the new version into the package manifest as part of the same diff.
 
-Label semantics match the repo's label descriptions and PR template:
+Label semantics:
 
-    interactions-api-patch   bumps patch (C). The only label the tooling reads.
-    interactions-api-minor   informational. Minor (B) is the default anyway.
-    interactions-api-major   informational. Major (A) bumps are manual (MIG-1926);
-                             this label only flags PRs that needed one.
+    interactions-api-major   bumps major (A). Wins over the others.
+    interactions-api-patch   bumps patch (C).
+    interactions-api-minor   no effect. Minor (B) is the default anyway.
 
-So the label logic reduces to: patch label present -> patch, otherwise minor.
-A major bump is reachable only via an explicit `--force-bump major`, which is
-what the manual process in MIG-1926 calls.
+Major is label-driven rather than fully manual (MIG-1926). The original design
+kept it out of the automation, but that left no way to land a breaking spec
+change and its major bump in the same merge: this script recomputes from the
+base branch on every push and label change, so a hand-edited version was
+silently rewritten back to a minor bump on the next CI run. Applying a label to
+a CODEOWNERS-reviewed PR is the human gate that "manual" was protecting.
+
+`--force-bump` remains for out-of-band bumps that aren't driven by a PR.
 
 The current version is read from a *separate* path than the one written, so the
 workflow can read the base branch's committed version while writing the PR
@@ -86,11 +90,16 @@ def parse_version(text: str) -> Version:
 def select_bump(labels: list[str]) -> str:
     """Decide the bump from PR label names.
 
-    Only the patch label changes behavior. Minor is the default, so its label
-    is decorative; major is manual, so its label is a flag for humans and is
-    deliberately not honored here.
+    Precedence is largest-wins: a PR carrying both the major and patch labels
+    is contradictory, and of the two readings, treating a declared breaking
+    change as breaking is the safe one. Minor is the default, so its label is
+    decorative.
     """
-    return "patch" if PATCH_LABEL in labels else DEFAULT_BUMP
+    if MAJOR_LABEL in labels:
+        return "major"
+    if PATCH_LABEL in labels:
+        return "patch"
+    return DEFAULT_BUMP
 
 
 def bump_version(version: Version, bump: str) -> Version:
@@ -188,8 +197,8 @@ def main(argv: list[str] | None = None) -> int:
         "--force-bump",
         choices=VALID_BUMPS,
         help=(
-            "Override the label logic. `major` is the manual escape hatch "
-            "documented in MIG-1926; labels never produce a major bump."
+            "Override the label logic. Intended for out-of-band bumps that "
+            "aren't driven by a PR; in CI the labels decide. See MIG-1926."
         ),
     )
     args = parser.parse_args(argv)
@@ -214,13 +223,13 @@ def main(argv: list[str] | None = None) -> int:
     print(f"bump={bump} (from {source})")
     print(f"next={nxt}")
 
-    # The major label is informational, and a PR carrying it without a manual
-    # bump is a likely mistake. Surface it as an Actions warning rather than
-    # failing: the author may have labelled it purely to flag the API break.
-    if MAJOR_LABEL in labels and args.force_bump != "major":
+    # A major bump is the one outcome that breaks consumers, so leave an
+    # explicit trace in the run log rather than letting it pass as just
+    # another line of output.
+    if bump == "major":
         print(
-            f"::warning::PR carries {MAJOR_LABEL} but major bumps are manual; "
-            f"applying a {bump} bump instead. See MIG-1926."
+            f"::notice::Applying a MAJOR bump {current} -> {nxt}. "
+            "Confirm the breaking change is documented for consumers (MIG-1926)."
         )
 
     if args.write_config:

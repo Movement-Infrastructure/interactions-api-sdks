@@ -14,7 +14,13 @@ The label set from MIG-1913 (`interactions-api-{patch,minor,major}`) already exi
 
 **The current version is read from the base branch, not the PR branch.** A PR whose labels change three times, or that gets pushed to five times, must still land exactly one bump ahead of its base. Reading from the PR branch would compound: 0.1.0 → 0.2.0 → 0.3.0 across re-runs. Reading from the base makes every run converge on the same answer, which matches the idempotency approach already used by the sync workflow's upstream-SHA branch naming.
 
-**Only the patch label is behavioral.** This is not a new decision — it's what the three existing sources already say (label descriptions, PR template, and the plan's note that major bumps are manual). Minor is the default, so its label is decorative. Major is manual per MIG-1926, so the script reaches it only via `--force-bump major`. A PR carrying the major label without a manual bump gets an Actions warning rather than a failure, since the label legitimately means "this PR broke the API" independent of who runs the bump.
+**All three labels are behavioral, largest-wins.** Major beats patch beats the minor default.
+
+This reverses the decision this ticket originally shipped with. The first implementation followed the existing label descriptions and PR template, which said major bumps were manual and the label was informational. Writing the MIG-1926 runbook showed that doesn't survive contact with the process: the script recomputes the version from the base branch on every push *and every label change*, so a hand-edited major version on a sync PR is silently rewritten back to a minor bump by the next CI run. There was no way to land a breaking spec change and its major bump in the same merge, and the config-only-PR workaround publishes a major version carrying the old generated code.
+
+The human gate that "manual" was protecting is preserved: someone must deliberately apply the label to a CODEOWNERS-reviewed PR, and a major bump emits an Actions `::notice::`. `--force-bump` remains for out-of-band bumps not driven by a PR.
+
+**Follow-up:** the three `interactions-api-*` label descriptions in the repo settings, and the Version impact section of `.github/pull_request_template.md`, still describe the superseded behavior. Both need updating to match.
 
 **Line rewrite, not a YAML round-trip.** The config is hand-maintained and every field carries a comment explaining it. PyYAML discards comments on dump, so a load/dump round-trip would silently strip the file's documentation on the first bump. The script rewrites the single `packageVersion:` line with a regex and leaves the rest byte-identical.
 
@@ -23,11 +29,12 @@ The label set from MIG-1913 (`interactions-api-{patch,minor,major}`) already exi
 ## Changes
 
 - [x] `scripts/bump_version.py` — parses the current version, decides the bump from PR labels, computes the next version, and rewrites `packageVersion`. Separate `--current-config` and `--write-config` paths so CI can read the base branch while writing the PR branch. Emits `current` / `next` / `bump` to `$GITHUB_OUTPUT`.
-- [x] `scripts/tests/test_bump_version.py` — 55 unit tests over version parsing, label precedence, bump arithmetic, comment preservation, label JSON handling, and the CLI (including a direct idempotency test of the CI shape).
+- [x] `scripts/tests/test_bump_version.py` — 57 unit tests over version parsing, label precedence, bump arithmetic, comment preservation, label JSON handling, and the CLI (including a direct idempotency test of the CI shape).
 - [x] `scripts/requirements-test.txt`, `scripts/tests/conftest.py` — test deps and import path for the non-packaged tooling directory.
 - [x] `.github/workflows/generate-python-sdk.yml` — added `labeled`/`unlabeled` triggers, a base-branch version read, and the bump step ahead of generation. The existing `git add sdks/python/v1` already covers the rewritten config, so bump and generated code commit together. Commit message now names the version.
 - [x] `.github/workflows/tooling-tests.yml` — runs the unit tests on every PR to `develop`. Separate from `python-sdk-tests.yml` because it needs neither the spec nor the generator; no `paths:` filter, for the same required-check reason documented there.
-- [x] README "Versioning" section: source of truth, the label table, the two non-obvious properties (base-branch bump, manual major), and how to dry-run.
+- [x] README "Versioning" section: source of truth, the label table, the two non-obvious properties (base-branch bump, largest-wins precedence), and how to dry-run.
+- [x] `.github/pull_request_template.md` — rewrote the Version impact guidance to match: major is functional, precedence stated, and the CODEOWNERS/migration-note requirement called out.
 - [x] Removed the `.shared` symlink from version control and gitignored it. It was committed by accident in `ad47151` and pointed at an absolute path on one developer's machine — broken for every other checkout and for CI, and exactly the kind of `/Users/…` path `docs/publish-leak-audit-checklist.md` says to keep out of a repo headed for public.
 
 ## Verification

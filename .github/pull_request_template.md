@@ -9,20 +9,21 @@
 
 ### Version impact
 <!-- Apply at most one of the following labels. Only `interactions-api-patch`
-     actually drives automation; the other two are human-readable tags for
-     triage.
+     drives the version-bump workflow. Precedence is largest-wins.
 
-     - interactions-api-patch  (functional)  Tells the version-bump workflow
-       to increment the patch (C) version instead of the minor (B). Use for
-       bug fixes, doc updates, and other non-behavioral changes.
+     - interactions-api-major  (functional)  Increments the major (A) version.
+       Use when the generated client surface breaks: an operation or model
+       removed or renamed, a field becoming required, a type or auth change.
+       Requires a CODEOWNERS approval that acknowledges the break, and a
+       migration note for consumers. See the MIG-1926 runbook.
+
+     - interactions-api-patch  (functional)  Increments the patch (C) version
+       instead of the minor (B) default. Use for bug fixes, doc updates, and
+       other non-behavioral changes.
 
      - interactions-api-minor  (informational only)  Minor (B) is the default
-       bump when no patch label is present, so this label adds no behavior.
+       bump when no other label is present, so this label adds no behavior.
        It exists only as an explicit signal for reviewers and PR filters.
-
-     - interactions-api-major  (informational only)  Major (A) bumps are
-       manual per the SDK plan and not triggered by labels. This tag flags
-       PRs that required (or will require) a manual major bump.
 
      Tooling-only PRs (workflows, repo config) don't need a label. -->
 

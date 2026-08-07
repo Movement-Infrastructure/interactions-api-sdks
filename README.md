@@ -29,8 +29,8 @@ Each language directory contains a generated SDK produced by [`openapi-generator
 
 1. A scheduled GitHub Action (`.github/workflows/sync-spec.yml`, hourly at :17) fetches the current `reference/mercury.json` from `mig-readme-docs`.
 2. If it differs from the committed `openapi/v1/swagger.json`, a PR is opened against this repo.
-3. CI on the PR regenerates each language SDK and bumps the package version — patch if the PR carries `interactions-api-patch`, minor otherwise. See [Versioning](#versioning).
-4. Once merged, CI publishes the updated packages to their respective registries.
+3. CI on the PR regenerates each language SDK and bumps the package version from the PR's labels — minor by default, patch or major if labelled. See [Versioning](#versioning).
+4. Sync PRs merge to `develop`. Promoting `develop` → `main` is the deliberate act that releases: CI builds each package and publishes it to its registry. See [Publishing](#publishing).
 
 ## Internal developer setup
 
@@ -85,14 +85,16 @@ Package versions live in each SDK's `openapi-generator-config.yaml` as `packageV
 
 | Label | Effect |
 | --- | --- |
-| `interactions-api-patch` | Bumps patch (C). The only label the tooling reads. |
-| `interactions-api-minor` | None. Minor (B) is the default when no patch label is present. |
-| `interactions-api-major` | None. Major (A) bumps are manual (MIG-1926); the label flags PRs that needed one. A PR carrying it without a manual bump gets an Actions warning. |
+| `interactions-api-major` | Bumps major (A). Wins over the others. Requires a CODEOWNERS approval acknowledging the break — see the [MIG-1926](https://linear.app/movementinfrastructure/issue/MIG-1926) runbook. |
+| `interactions-api-patch` | Bumps patch (C). |
+| `interactions-api-minor` | None. Minor (B) is the default when no other label is present. |
 
 Two properties worth knowing:
 
 - **The bump is computed from the base branch**, not the PR branch. Pushing again or toggling a label recomputes the same version rather than stacking a second bump — a PR always lands exactly one bump ahead of its base.
-- **Major bumps are not label-driven.** Run the script by hand with `--force-bump major` as part of the process in MIG-1926.
+- **Precedence is largest-wins.** A PR carrying both the major and patch labels is contradictory; the script honors the declared breaking change.
+
+A major bump emits an Actions `::notice::` so it's visible in the run log rather than passing as another line of output. `--force-bump` overrides the labels entirely, for out-of-band bumps not driven by a PR.
 
 Dry-run the script against any config without writing:
 
@@ -108,6 +110,34 @@ Its unit tests run on every PR via `tooling-tests.yml`:
 pip install -r scripts/requirements-test.txt
 pytest scripts/tests -q
 ```
+
+### Publishing
+
+Two branches, two roles. `develop` is where sync PRs land and where the version is computed. `main` is the release branch — pushing to it publishes.
+
+```
+sync PR ──merge──> develop ──promotion PR──> main ──> TestPyPI
+```
+
+`publish-python-testpypi.yml` fires on push to `main` under `sdks/python/v1/**`, or on manual dispatch. It builds the sdist and wheel from the committed SDK (nothing is regenerated at publish time), gates on package metadata, then uploads.
+
+**Authentication is OIDC trusted publishing — there is no token.** The publish job mints a short-lived OIDC token that TestPyPI exchanges for a one-time upload grant. Nothing to store in secrets, mask in logs, or rotate, which is what section 1 of [the leak-audit checklist](docs/publish-leak-audit-checklist.md) asks for.
+
+Three properties the workflow relies on, each worth preserving if you edit it:
+
+- **The trusted publisher is bound to this file's name.** Renaming `publish-python-testpypi.yml` breaks publishing until the TestPyPI publisher config is updated to match.
+- **Build and publish are separate jobs.** Only `publish` has `id-token: write`, and it does nothing but download a prebuilt artifact and upload it. No generated or third-party code executes with the credential in scope.
+- **The build job checks out with `persist-credentials: false`.** The default leaves an unmasked live token in `.git/config` as an `http.extraheader`, readable by any tooling that runs afterwards.
+
+Every run writes the full sdist and wheel file listings to the job summary, so the artifact enumeration the checklist requires becomes a permanent per-release record rather than something done by hand once.
+
+The metadata gate fails the release on the generated defaults the audit flagged (`team@openapitools.org`, `OpenAPI Generator Community`, version `0.0.0`). `twine check` does not catch these — it validates that the long description renders, not that the author is a real person.
+
+**First-time setup**, once per registry:
+
+1. Create the `main` branch from `develop`.
+2. On TestPyPI, add a *pending publisher* under Publishing: owner `Movement-Infrastructure`, repository `interactions-api-sdks`, workflow `publish-python-testpypi.yml`, environment `testpypi`. Pending publishers work before the project exists — the first upload creates it.
+3. Create a GitHub Environment named `testpypi` on this repo. Attach required reviewers if a release should need a human gate.
 
 ## Status
 

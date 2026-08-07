@@ -75,13 +75,17 @@ class TestSelectBump:
     def test_minor_label_is_decorative(self):
         assert select_bump([MINOR_LABEL]) == "minor"
 
-    def test_major_label_does_not_produce_a_major_bump(self):
-        # Major bumps are manual (MIG-1926); the label only flags the PR.
-        assert select_bump([MAJOR_LABEL]) == "minor"
+    def test_major_label_selects_major(self):
+        assert select_bump([MAJOR_LABEL]) == "major"
 
-    def test_patch_wins_over_other_version_labels(self):
+    def test_patch_wins_over_minor(self):
         assert select_bump([MINOR_LABEL, PATCH_LABEL]) == "patch"
-        assert select_bump([MAJOR_LABEL, PATCH_LABEL]) == "patch"
+
+    def test_major_wins_over_everything(self):
+        # Contradictory labelling; of the two readings, honoring the declared
+        # breaking change is the safe one.
+        assert select_bump([MAJOR_LABEL, PATCH_LABEL]) == "major"
+        assert select_bump([MAJOR_LABEL, MINOR_LABEL, PATCH_LABEL]) == "major"
 
     def test_unrelated_labels_are_ignored(self):
         assert select_bump(["bug", "documentation"]) == "minor"
@@ -265,29 +269,37 @@ class TestMain:
             1, 4, 3
         )
 
-    def test_warns_when_major_label_present_without_force(self, config_file, capsys):
+    def test_major_label_bumps_major_end_to_end(self, config_file):
         main(
             [
                 "--current-config",
+                str(config_file),
+                "--write-config",
                 str(config_file),
                 "--labels-json",
                 json.dumps([MAJOR_LABEL]),
             ]
         )
-        assert "::warning::" in capsys.readouterr().out
+        assert read_package_version(config_file.read_text(encoding="utf-8")) == Version(
+            2, 0, 0
+        )
 
-    def test_no_warning_when_major_is_forced(self, config_file, capsys):
+    def test_notices_a_major_bump(self, config_file, capsys):
         main(
             [
                 "--current-config",
                 str(config_file),
                 "--labels-json",
                 json.dumps([MAJOR_LABEL]),
-                "--force-bump",
-                "major",
             ]
         )
-        assert "::warning::" not in capsys.readouterr().out
+        out = capsys.readouterr().out
+        assert "::notice::" in out
+        assert "MAJOR" in out
+
+    def test_no_notice_for_a_routine_bump(self, config_file, capsys):
+        main(["--current-config", str(config_file)])
+        assert "::notice::" not in capsys.readouterr().out
 
     def test_emits_github_output(self, config_file, tmp_path, monkeypatch):
         output = tmp_path / "gh-output"
