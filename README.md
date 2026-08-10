@@ -27,7 +27,7 @@ Each language directory contains a generated SDK produced by [`openapi-generator
 
 ## How it works
 
-1. A scheduled GitHub Action fetches the current `reference/mercury.json` from `mig-readme-docs`.
+1. A scheduled GitHub Action (`.github/workflows/sync-spec.yml`, hourly at :17) fetches the current `reference/mercury.json` from `mig-readme-docs`.
 2. If it differs from the committed `openapi/v1/swagger.json`, a PR is opened against this repo.
 3. CI on the PR regenerates each language SDK and bumps the package version based on PR labels (`interactions-api-patch`, `interactions-api-minor`, `interactions-api-major`).
 4. Once merged, CI publishes the updated packages to their respective registries.
@@ -70,6 +70,12 @@ No fixed rotation cadence is required, since installation tokens are minted fres
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `READMEDOCS_SYNC_BRANCH` | unset (default branch) | Override which branch of `mig-readme-docs` the sync workflow reads `reference/mercury.json` from. Useful for validating the sync against in-flight branches. Set to a branch name; a tag or commit SHA also works. The workflow logs the resolved value at the top of each run. |
+
+### Running the sync by hand
+
+`sync-spec.yml` runs hourly at :17, and can also be triggered from **Actions → Sync OpenAPI spec from mig-readme-docs → Run workflow**. The optional `upstream_ref` input overrides which ref of `mig-readme-docs` that run reads from, and takes precedence over `READMEDOCS_SYNC_BRANCH` — use it for a one-off check against an in-flight branch without leaving a repo variable set.
+
+Re-running the sync is safe. The branch name (`sync/mercury-<short-sha>`) is derived from the upstream commit that last touched the spec, so a run that finds an open PR for that SHA leaves it alone rather than opening a duplicate.
 
 ## Status
 

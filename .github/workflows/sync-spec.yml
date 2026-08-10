@@ -1,19 +1,42 @@
 name: Sync OpenAPI spec from mig-readme-docs
 
-# MIG-1916. Pulls reference/mercury.json from mig-readme-docs, compares against
-# the committed openapi/v1/swagger.json, and opens a PR if they differ.
+# MIG-1916 (workflow), MIG-1920 (scheduling). Pulls reference/mercury.json from
+# mig-readme-docs, compares against the committed openapi/v1/swagger.json, and
+# opens a PR if they differ.
 #
-# Currently runs on every push to any branch (PoC trigger). Cron scheduling,
-# the rename to sync-spec.yml, and removal of the push trigger are tracked in
-# MIG-1920. See Plans/MIG-1916-scheduled-spec-sync.md.
+# Idempotent on the upstream commit SHA that last touched the spec: a run that
+# finds an open PR for that SHA's sync branch leaves it alone rather than
+# opening a duplicate. See Plans/MIG-1916-scheduled-spec-sync.md and
+# Plans/MIG-1920-schedule-sync-workflow.md.
 
 on:
-  # Runs on every push to any branch during the milestone-2 PoC. Replaced by
-  # `schedule:` + `workflow_dispatch:` in MIG-1920 once the sync is trusted.
-  # `sync/**` excluded so the bot's own sync-branch push doesn't recurse.
-  push:
-    branches-ignore:
-      - 'sync/**'
+  # Hourly at :17. Off-the-hour minute per GitHub's guidance to avoid the
+  # top-of-hour congestion that delays cron-triggered runs.
+  #
+  # `schedule:` only fires from the default branch (develop), so changes to
+  # this file take effect once merged, not on the PR branch.
+  schedule:
+    - cron: '17 * * * *'
+
+  # Ad-hoc runs: pick up an upstream spec merge without waiting for the next
+  # hour, or validate the sync against an in-flight branch of mig-readme-docs
+  # via the upstream_ref input.
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: >-
+          Branch, tag, or SHA of mig-readme-docs to read reference/mercury.json
+          from. Leave blank to fall back to vars.READMEDOCS_SYNC_BRANCH, then
+          the repo's default branch.
+        required: false
+        type: string
+
+# One sync at a time. Overlapping runs (a manual dispatch landing mid-schedule)
+# could both see "no existing PR" for the same upstream SHA and race on the
+# branch push.
+concurrency:
+  group: sync-spec
+  cancel-in-progress: false
 
 jobs:
   sync:
@@ -54,27 +77,43 @@ jobs:
           repositories: mig-readme-docs
 
       # By default the sync follows mig-readme-docs' default branch (which
-      # tracks the current API version). Setting the repo variable
-      # READMEDOCS_SYNC_BRANCH to a branch, tag, or SHA overrides that — used
+      # tracks the current API version). Two escape hatches override that, used
       # to validate the sync against in-flight branches of mig-readme-docs
-      # without faking changes upstream. The resolved value is threaded into
-      # both downstream API calls (contents fetch + commits lookup).
-      - name: Resolve upstream branch
+      # without faking changes upstream:
+      #
+      #   1. the workflow_dispatch `upstream_ref` input (per-run, wins)
+      #   2. the repo variable READMEDOCS_SYNC_BRANCH (persistent)
+      #
+      # `inputs.upstream_ref` is empty on scheduled runs, so the variable — and
+      # failing that, the default branch — is what a cron run resolves to. The
+      # resolved value is threaded into both downstream API calls (contents
+      # fetch + commits lookup).
+      - name: Resolve upstream ref
         id: upstream-branch
         env:
+          INPUT_REF: ${{ inputs.upstream_ref }}
           OVERRIDE_BRANCH: ${{ vars.READMEDOCS_SYNC_BRANCH }}
         run: |
           set -euo pipefail
 
-          if [ -n "${OVERRIDE_BRANCH:-}" ]; then
-            echo "Using override branch from vars.READMEDOCS_SYNC_BRANCH: $OVERRIDE_BRANCH"
-            echo "label=$OVERRIDE_BRANCH" >> "$GITHUB_OUTPUT"
+          if [ -n "${INPUT_REF:-}" ]; then
+            ref="$INPUT_REF"
+            echo "Using ref from workflow_dispatch input: $ref"
+          elif [ -n "${OVERRIDE_BRANCH:-}" ]; then
+            ref="$OVERRIDE_BRANCH"
+            echo "Using override ref from vars.READMEDOCS_SYNC_BRANCH: $ref"
+          else
+            ref=""
+            echo "No override set; using mig-readme-docs default branch."
+          fi
+
+          if [ -n "$ref" ]; then
+            echo "label=$ref" >> "$GITHUB_OUTPUT"
             # Query-string fragments for the two GitHub API calls below.
             # contents endpoint takes `?ref=`; commits endpoint takes `&sha=`.
-            echo "contents_query=?ref=$OVERRIDE_BRANCH" >> "$GITHUB_OUTPUT"
-            echo "commits_query=&sha=$OVERRIDE_BRANCH" >> "$GITHUB_OUTPUT"
+            echo "contents_query=?ref=$ref" >> "$GITHUB_OUTPUT"
+            echo "commits_query=&sha=$ref" >> "$GITHUB_OUTPUT"
           else
-            echo "No override branch set; using mig-readme-docs default branch."
             echo "label=(default branch)" >> "$GITHUB_OUTPUT"
             echo "contents_query=" >> "$GITHUB_OUTPUT"
             echo "commits_query=" >> "$GITHUB_OUTPUT"
@@ -251,7 +290,7 @@ jobs:
           - Reason: \`${REASON}\`
           - \`openapi/v1/swagger.json\`: +${ADDED} / -${REMOVED} lines
 
-          Opened automatically by \`.github/workflows/sync-spec-verify.yml\` (MIG-1916).
+          Opened automatically by \`.github/workflows/sync-spec.yml\` (MIG-1916).
           EOF
 
           gh pr create \
@@ -264,7 +303,7 @@ jobs:
       # having to expand individual steps.
       - name: Summary
         run: |
-          echo "upstream_branch=${{ steps.upstream-branch.outputs.label }}"
+          echo "upstream_ref=${{ steps.upstream-branch.outputs.label }}"
           echo "changed=${{ steps.diff.outputs.changed }}"
           echo "reason=${{ steps.diff.outputs.reason }}"
           echo "upstream_sha=${{ steps.upstream.outputs.sha }}"
