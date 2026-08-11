@@ -139,24 +139,17 @@ jobs:
           echo "info.title: $(jq -r '.info.title // "(missing)"' upstream-mercury.json)"
           echo "info.version: $(jq -r '.info.version // "(missing)"' upstream-mercury.json)"
 
-      # MIG-1926 decided hard cutover: exactly one API version is live at a
-      # time. That makes an upstream `info.version` change a deliberate
-      # migration rather than a routine sync, and nothing downstream would
-      # notice on its own — the generator would emit a v2 client into
-      # sdks/*/v1/ and the bump script, which reads only labels, would ship it
-      # as a minor. Stop here instead.
-      #
-      # A failing scheduled run is currently only visible in the Actions tab
-      # (see the failure-visibility follow-up in MIG-1920's plan). This guard
-      # is a good reason to finish that one.
+      # We run one API version at a time, so an upstream `info.version` change
+      # is a migration rather than a routine sync. Nothing downstream would
+      # catch it: the generator would emit a v2 client into sdks/*/v1/ and the
+      # bump script, which reads only labels, would ship it as a minor.
       - name: Guard against an API version cutover
         run: |
           set -euo pipefail
 
           local_path=openapi/v1/swagger.json
 
-          # Bootstrap: no committed spec to compare against yet. The initial
-          # sync PR establishes the baseline.
+          # No committed spec yet; the initial sync PR establishes the baseline.
           if [ ! -f "$local_path" ]; then
             echo "No committed spec yet; skipping the cutover guard (bootstrap)."
             exit 0
@@ -165,8 +158,8 @@ jobs:
           upstream_version=$(jq -r '.info.version // empty' upstream-mercury.json)
           committed_version=$(jq -r '.info.version // empty' "$local_path")
 
-          # Don't block the sync on a spec that simply doesn't declare a
-          # version — that's an upstream authoring gap, not a cutover.
+          # An undeclared version is an upstream authoring gap, so warn instead
+          # of halting the sync.
           if [ -z "$upstream_version" ] || [ -z "$committed_version" ]; then
             echo "::warning::info.version missing (upstream='${upstream_version:-<unset>}', committed='${committed_version:-<unset>}'); cannot check for a cutover."
             exit 0
@@ -174,11 +167,10 @@ jobs:
 
           if [ "$upstream_version" != "$committed_version" ]; then
             echo "::error::Upstream spec is '$upstream_version'; committed spec is '$committed_version'."
-            echo "::error::That is an API version cutover, not a routine sync, so this run is halted."
-            echo "::error::Migrating is deliberate and manual: rename openapi/<old>/ and sdks/*/<old>/,"
-            echo "::error::repoint the hardcoded paths in the three workflows, then land the"
-            echo "::error::regeneration on a PR labelled interactions-api-major."
-            echo "::error::See the MIG-1926 runbook."
+            echo "::error::That is an API version cutover, so this run is halted."
+            echo "::error::To migrate: rename openapi/<old>/ and sdks/*/<old>/, repoint the"
+            echo "::error::hardcoded paths in the workflows, then land the regeneration on a"
+            echo "::error::PR labelled interactions-api-major."
             exit 1
           fi
 

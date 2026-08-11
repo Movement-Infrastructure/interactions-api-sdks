@@ -1,4 +1,4 @@
-"""Unit tests for scripts/bump_version.py (MIG-1925)."""
+"""Unit tests for scripts/bump_version.py."""
 
 import json
 

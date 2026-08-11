@@ -1,20 +1,14 @@
 name: Publish Python SDK to TestPyPI
 
-# MIG-1927. Builds sdks/python/v1 and publishes it to TestPyPI on push to the
+# Builds sdks/python/v1 and publishes it to TestPyPI on push to the
 # `main` release branch. `develop` is where sync PRs land; promoting develop ->
 # main is the deliberate act that releases.
 #
 # Authentication is OIDC trusted publishing — there is no token, so nothing to
-# mask, leak, or rotate. This satisfies section 1 of
-# docs/publish-leak-audit-checklist.md and takes most of section 2 out of scope.
+# mask, leak, or rotate.
 #
 # IMPORTANT: TestPyPI's trusted publisher is bound to this file's NAME. Renaming
 # this workflow breaks publishing until the publisher config is updated to match.
-#
-# Build and publish are separate jobs on purpose. The build job has no
-# credentials and no id-token permission; only the publish job can mint an OIDC
-# token, and it does nothing but upload a prebuilt artifact. Nothing that
-# executes generated or third-party code runs with the credential in scope.
 
 on:
   push:
@@ -37,10 +31,9 @@ jobs:
       - name: Check out release branch
         uses: actions/checkout@v4
         with:
-          # This job never pushes, so don't leave a credential in .git/config.
-          # The default writes base64("x-access-token:<token>") into
-          # http.extraheader — an unmasked live token readable by any build
-          # tooling that runs afterwards. See the audit checklist, section 2.
+          # This job never pushes. The default leaves an unmasked live token in
+          # .git/config as an http.extraheader, readable by any build tooling
+          # that runs afterwards.
           persist-credentials: false
 
       - name: Set up Python
@@ -48,9 +41,8 @@ jobs:
         with:
           python-version: '3.11'
 
-      # The SDK is committed by the generate workflow, not built here. If it's
-      # absent the promotion was made before the first sync PR merged, and
-      # there is nothing to publish.
+      # The SDK is committed by the generate workflow. If it's absent, the
+      # promotion happened before the first sync PR merged.
       - name: Verify the generated SDK is present
         run: |
           set -euo pipefail
@@ -66,12 +58,8 @@ jobs:
           python -m pip install --upgrade pip build
           python -m build sdks/python/v1
 
-      # Section 3 of the audit checklist requires enumerating a real artifact
-      # rather than reasoning from config, and requires auditing the sdist and
-      # the wheel separately — they're built by different code paths and
-      # routinely disagree about what's excluded. Doing it here leaves a
-      # permanent record on every release instead of relying on someone
-      # repeating it by hand.
+      # sdist and wheel are built by different code paths and routinely
+      # disagree about what's excluded, so list both on every release.
       - name: Enumerate artifact contents
         run: |
           set -euo pipefail
@@ -94,9 +82,8 @@ jobs:
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           done
 
-      # Fails the release on the metadata defaults the audit flagged as publish
-      # blockers (finding F6). `twine check` alone does not catch these — it
-      # validates the long description renders, not that the author is real.
+      # `twine check` only validates that the long description renders, so it
+      # misses the generator's placeholder author and version.
       - name: Check package metadata
         run: |
           set -euo pipefail
@@ -120,13 +107,13 @@ jobs:
               fail=1
             fi
           done <<'BLOCKERS'
-          team@openapitools.org|Author email is the openapi-generator project's address, not ours (audit finding F6).
-          OpenAPI Generator Community|Author is the generator's default, not ours. Set info.contact in mercury.json (audit finding F6).
+          team@openapitools.org|Author email is the openapi-generator project's address. Set info.contact in mercury.json.
+          OpenAPI Generator Community|Author is the generator's default. Set info.contact in mercury.json.
           ^Version: 0\.0\.0|Version is still the 0.0.0 placeholder; the version-bump workflow did not run.
           BLOCKERS
 
           if [ "$fail" -ne 0 ]; then
-            echo "::error::Refusing to publish with generated-default metadata. See docs/publish-leak-audit-checklist.md."
+            echo "::error::Refusing to publish with generated-default metadata."
             exit 1
           fi
 
@@ -143,17 +130,14 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
 
-    # The Environment is what keeps the publish capability off arbitrary
-    # branches, and is where a required reviewer can be attached if we ever
-    # want a human gate before a release leaves the building.
+    # Keeps the publish capability off arbitrary branches, and is where a
+    # required reviewer attaches if we want a human gate before a release.
     environment:
       name: testpypi
       url: https://test.pypi.org/project/mig-interactions-api/
 
     permissions:
-      # Mints the short-lived OIDC token TestPyPI exchanges for an upload
-      # grant. This is the only elevated permission in the file, and the job
-      # holding it runs nothing but the download and the upload.
+      # Mints the short-lived OIDC token TestPyPI exchanges for an upload grant.
       id-token: write
 
     steps:
@@ -168,8 +152,7 @@ jobs:
         with:
           repository-url: https://test.pypi.org/legacy/
           # Re-promoting develop -> main without a version change would
-          # otherwise fail the release on a duplicate upload. Acceptable on a
-          # test registry; set this to false for the PyPI switch in milestone 9,
+          # otherwise fail on a duplicate upload. Set this to false for PyPI,
           # where a silent skip would hide a real mistake.
           skip-existing: true
           print-hash: true

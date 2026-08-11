@@ -1,29 +1,17 @@
 #!/usr/bin/env python3
 """Compute and apply the next SDK package version from PR labels.
 
-MIG-1925. Reads the current version from an openapi-generator config, decides a
-bump from the PR's labels, and rewrites `packageVersion` so the generator emits
-the new version into the package manifest as part of the same diff.
+Reads the current version from an openapi-generator config, decides a bump from
+the PR's labels, and rewrites `packageVersion` so the generator emits the new
+version into the package manifest.
 
-Label semantics:
+    interactions-api-major   bumps major (A); wins over the others
+    interactions-api-patch   bumps patch (C)
+    interactions-api-minor   no effect; minor (B) is the default
 
-    interactions-api-major   bumps major (A). Wins over the others.
-    interactions-api-patch   bumps patch (C).
-    interactions-api-minor   no effect. Minor (B) is the default anyway.
-
-Major is label-driven rather than fully manual (MIG-1926). The original design
-kept it out of the automation, but that left no way to land a breaking spec
-change and its major bump in the same merge: this script recomputes from the
-base branch on every push and label change, so a hand-edited version was
-silently rewritten back to a minor bump on the next CI run. Applying a label to
-a CODEOWNERS-reviewed PR is the human gate that "manual" was protecting.
-
-`--force-bump` remains for out-of-band bumps that aren't driven by a PR.
-
-The current version is read from a *separate* path than the one written, so the
-workflow can read the base branch's committed version while writing the PR
-branch's working copy. That makes re-runs idempotent: a PR whose labels change
-three times still lands on one bump from the base, not three compounding ones.
+The version is read from a different path than the one written, so CI can read
+the base branch while writing the PR branch. That keeps re-runs idempotent: a
+PR whose labels change three times still lands one bump ahead of its base.
 """
 
 from __future__ import annotations
@@ -43,12 +31,8 @@ MAJOR_LABEL = "interactions-api-major"
 DEFAULT_BUMP = "minor"
 VALID_BUMPS = ("major", "minor", "patch")
 
-# Matches the `packageVersion:` line in openapi-generator-config.yaml.
-#
-# Deliberately a line rewrite rather than a YAML load/dump round-trip: the
-# config is hand-maintained and its comments carry the rationale for each
-# field. PyYAML discards comments on dump, so a round-trip would silently
-# strip them on the first bump.
+# A line rewrite rather than a YAML round-trip: PyYAML discards comments on
+# dump, and the config's comments carry the rationale for every field.
 _PACKAGE_VERSION_RE = re.compile(
     r"^(?P<prefix>[ \t]*packageVersion:[ \t]*)(?P<value>[^\s#]+)(?P<suffix>[ \t]*(?:#.*)?)$",
     re.MULTILINE,
@@ -74,9 +58,9 @@ class Version:
 def parse_version(text: str) -> Version:
     """Parse a strict `A.B.C` version. Quotes are tolerated; suffixes are not.
 
-    Pre-release and build metadata (`1.2.3-rc1`, `1.2.3+build`) are rejected
-    rather than silently truncated — the pipeline has no story for them yet,
-    and guessing would produce a wrong version in a published artifact.
+    Pre-release and build metadata are rejected rather than truncated. The
+    pipeline has no story for them, and guessing would put a wrong version in
+    a published artifact.
     """
     stripped = text.strip().strip("\"'")
     match = _SEMVER_RE.match(stripped)
@@ -90,10 +74,8 @@ def parse_version(text: str) -> Version:
 def select_bump(labels: list[str]) -> str:
     """Decide the bump from PR label names.
 
-    Precedence is largest-wins: a PR carrying both the major and patch labels
-    is contradictory, and of the two readings, treating a declared breaking
-    change as breaking is the safe one. Minor is the default, so its label is
-    decorative.
+    Largest label wins. A PR carrying both major and patch is contradictory,
+    and treating a declared breaking change as breaking is the safe reading.
     """
     if MAJOR_LABEL in labels:
         return "major"
@@ -153,9 +135,8 @@ def _emit_github_output(pairs: dict[str, str]) -> None:
 def _parse_labels(raw: str | None) -> list[str]:
     """Parse the JSON array GitHub Actions produces for PR label names.
 
-    `${{ toJSON(github.event.pull_request.labels.*.name) }}` renders a JSON
-    array. An empty or absent value means an unlabeled PR, which is a normal
-    state (it takes the default minor bump), not an error.
+    An empty or absent value means an unlabeled PR, which is normal and takes
+    the default minor bump.
     """
     if not raw or not raw.strip():
         return []
@@ -197,8 +178,8 @@ def main(argv: list[str] | None = None) -> int:
         "--force-bump",
         choices=VALID_BUMPS,
         help=(
-            "Override the label logic. Intended for out-of-band bumps that "
-            "aren't driven by a PR; in CI the labels decide. See MIG-1926."
+            "Override the label logic, for a bump run by hand outside a PR. "
+            "In CI the labels decide."
         ),
     )
     args = parser.parse_args(argv)
@@ -223,13 +204,12 @@ def main(argv: list[str] | None = None) -> int:
     print(f"bump={bump} (from {source})")
     print(f"next={nxt}")
 
-    # A major bump is the one outcome that breaks consumers, so leave an
-    # explicit trace in the run log rather than letting it pass as just
-    # another line of output.
+    # A major bump is the one outcome that breaks consumers, so make it visible
+    # in the run log.
     if bump == "major":
         print(
             f"::notice::Applying a MAJOR bump {current} -> {nxt}. "
-            "Confirm the breaking change is documented for consumers (MIG-1926)."
+            "Confirm the breaking change is documented for consumers."
         )
 
     if args.write_config:

@@ -1,10 +1,8 @@
 name: Generate Python SDK
 
-# MIG-1917 (generation), MIG-1925 (versioning). On every PR open/sync that
-# touches openapi/v1/swagger.json, computes the next package version from the
-# PR's labels, regenerates sdks/python/v1/ via openapi-generator, and commits
-# both back to the PR branch so the version lands in the generated manifest as
-# part of the same diff.
+# On every PR that touches openapi/v1/swagger.json, computes the next package
+# version from the PR's labels, regenerates sdks/python/v1/, and commits both
+# back to the PR branch so the version lands in the generated manifest.
 
 on:
   pull_request:
