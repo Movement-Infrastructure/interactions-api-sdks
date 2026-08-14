@@ -17,7 +17,7 @@ packageName: mig_interactions_api
 projectName: mig-interactions-api
 
 # Rewritten by the version-bump workflow on each sync PR.
-packageVersion: 0.0.0
+packageVersion: 0.1.0
 
 # urllib3-based synchronous client. Async (asyncio) variant is available if
 # we end up needing it.
