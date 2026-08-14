@@ -10,7 +10,7 @@ The request/response bodies below match the committed OpenAPI spec.
 
 import inspect
 
-from mi_interactions_api import (
+from mig_interactions_api import (
     InteractionsApi,
     InteractionsBatchResultDto,
     InteractionsDto,

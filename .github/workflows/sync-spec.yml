@@ -10,11 +10,8 @@ name: Sync OpenAPI spec from mig-readme-docs
 # Plans/MIG-1920-schedule-sync-workflow.md.
 
 on:
-  # Hourly at :17. Off-the-hour minute per GitHub's guidance to avoid the
-  # top-of-hour congestion that delays cron-triggered runs.
-  #
-  # `schedule:` only fires from the default branch (develop), so changes to
-  # this file take effect once merged, not on the PR branch.
+  # Hourly at :17
+
   schedule:
     - cron: '17 * * * *'
 
@@ -31,9 +28,6 @@ on:
         required: false
         type: string
 
-# One sync at a time. Overlapping runs (a manual dispatch landing mid-schedule)
-# could both see "no existing PR" for the same upstream SHA and race on the
-# branch push.
 concurrency:
   group: sync-spec
   cancel-in-progress: false
@@ -143,6 +137,44 @@ jobs:
           echo "Size (bytes): $size"
           echo "openapi version: $(jq -r '.openapi // "(missing)"' upstream-mercury.json)"
           echo "info.title: $(jq -r '.info.title // "(missing)"' upstream-mercury.json)"
+          echo "info.version: $(jq -r '.info.version // "(missing)"' upstream-mercury.json)"
+
+      # We run one API version at a time, so an upstream `info.version` change
+      # is a migration rather than a routine sync. Nothing downstream would
+      # catch it: the generator would emit a v2 client into sdks/*/v1/ and the
+      # bump script, which reads only labels, would ship it as a minor.
+      - name: Guard against an API version cutover
+        run: |
+          set -euo pipefail
+
+          local_path=openapi/v1/swagger.json
+
+          # No committed spec yet; the initial sync PR establishes the baseline.
+          if [ ! -f "$local_path" ]; then
+            echo "No committed spec yet; skipping the cutover guard (bootstrap)."
+            exit 0
+          fi
+
+          upstream_version=$(jq -r '.info.version // empty' upstream-mercury.json)
+          committed_version=$(jq -r '.info.version // empty' "$local_path")
+
+          # An undeclared version is an upstream authoring gap, so warn instead
+          # of halting the sync.
+          if [ -z "$upstream_version" ] || [ -z "$committed_version" ]; then
+            echo "::warning::info.version missing (upstream='${upstream_version:-<unset>}', committed='${committed_version:-<unset>}'); cannot check for a cutover."
+            exit 0
+          fi
+
+          if [ "$upstream_version" != "$committed_version" ]; then
+            echo "::error::Upstream spec is '$upstream_version'; committed spec is '$committed_version'."
+            echo "::error::That is an API version cutover, so this run is halted."
+            echo "::error::To migrate: rename openapi/<old>/ and sdks/*/<old>/, repoint the"
+            echo "::error::hardcoded paths in the workflows, then land the regeneration on a"
+            echo "::error::PR labelled interactions-api-major."
+            exit 1
+          fi
+
+          echo "API version unchanged ($committed_version); proceeding."
 
       # Byte-level comparison via `cmp`. No normalization: the upstream file is
       # human-edited and committed, so key order is stable. If the local copy
