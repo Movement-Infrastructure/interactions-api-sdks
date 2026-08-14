@@ -233,8 +233,9 @@ jobs:
 
       # Idempotency at the PR layer: if an open PR already exists for this
       # upstream SHA's sync branch, skip the create steps below. The branch
-      # itself may also exist from a prior unclean run — that's handled by
-      # the `--force-with-lease` push later.
+      # itself may also exist without an open PR, left behind by a closed or
+      # abandoned sync PR. The push step below fetches it first so the
+      # force-with-lease can overwrite it.
       - name: Skip if a PR already exists for this upstream SHA
         id: existing-pr
         if: steps.diff.outputs.changed == 'true'
@@ -300,7 +301,26 @@ jobs:
 
           git add openapi/v1/swagger.json
           git commit -m "Sync mercury.json from mig-readme-docs@${SHORT_SHA}"
-          git push --force-with-lease origin "$BRANCH"
+
+          # Two things break a bare `--force-with-lease` here: `actions/checkout`
+          # fetches only the branch it checks out, and the `checkout -B` above
+          # leaves $BRANCH with no upstream. Git then has no remote-tracking ref
+          # to lease against and rejects the push as "stale info" instead of
+          # overwriting a branch orphaned by a closed sync PR. That is how every
+          # scheduled run failed before MIG-2317.
+          #
+          # So fetch the ref explicitly, then name the expected value on the
+          # push. The refspec has to be spelled out because checkout narrows
+          # remote.origin.fetch to a single branch, which makes a bare
+          # `git fetch origin "$BRANCH"` write no tracking ref at all.
+          git fetch --depth=1 origin \
+            "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" || true
+
+          # Empty on the first sync of a given spec commit, where the lease
+          # becomes "this branch must not exist yet".
+          expected=$(git rev-parse --verify -q "refs/remotes/origin/$BRANCH" || true)
+
+          git push --force-with-lease="$BRANCH:$expected" origin "$BRANCH"
 
       - name: Open sync PR
         if: steps.diff.outputs.changed == 'true' && steps.existing-pr.outputs.skip == 'false'
