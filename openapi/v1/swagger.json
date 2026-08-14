@@ -1,0 +1,1648 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Interactions API",
+    "description": "Interactions API documentation",
+    "contact": {
+      "name": "DDx API Team",
+      "url": "https://demexchange.com/",
+      "email": "api@demexchange.com"
+    },
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "https://api.movementinfrastructure.org",
+      "description": "Production server"
+    },
+    {
+      "url": "https://api-dev.movementinfrastructure.org",
+      "description": "Public test server"
+    }
+  ],
+  "paths": {
+    "/v{version}/auth/me": {
+      "get": {
+        "tags": [
+          "Authentication Details"
+        ],
+        "summary": "Get authentication context",
+        "description": "Returns details about the authenticated API key including vendor, organization, committee, and state information.",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "default": "1"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved API key information",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhoAmIApiKeyDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhoAmIApiKeyDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhoAmIApiKeyDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing API key"
+          }
+        }
+      }
+    },
+    "/v{version}/interactions": {
+      "post": {
+        "tags": [
+          "Interactions"
+        ],
+        "summary": "Post interactions data",
+        "description": "This endpoint is used to post interactions data to the Interactions API that will be published to Pub/Sub.\r\nA maximum of 100 interactions can be submitted per request.",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "default": "1"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InteractionsDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InteractionsDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/InteractionsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "All interactions were valid and successfully published",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionsBatchResultDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionsBatchResultDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionsBatchResultDto"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Some interactions were rejected; see response body for details"
+          },
+          "400": {
+            "description": "Invalid interactions data"
+          }
+        }
+      }
+    },
+    "/v{version}/interactions/{interactionId}/transactions": {
+      "get": {
+        "tags": [
+          "Interactions"
+        ],
+        "summary": "Get external API transactions by interactionId",
+        "description": "Get all external API transaction records for the specified interaction.",
+        "parameters": [
+          {
+            "name": "interactionId",
+            "in": "path",
+            "description": "ID of the interaction to retrieve records for.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "showOnlyFailedTransactions",
+            "in": "query",
+            "description": "When true, will return only transactions with Failed, Invalid, or Duplicate status. True by default.",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "default": "1"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionsExternalApiTransactionDtoGetResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionsExternalApiTransactionDtoGetResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionsExternalApiTransactionDtoGetResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v{version}/interactions/transactions": {
+      "get": {
+        "tags": [
+          "Interactions"
+        ],
+        "summary": "Get external API transaction logs by date range",
+        "description": "Get all external API transaction records within the date range specified, for a maximum of up to a 30 day span.",
+        "parameters": [
+          {
+            "name": "startDate",
+            "in": "query",
+            "description": "Beginning of date range to show transactions for (inclusive). Must be provided in UTC, and be within 30 days of endDate.",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "description": "End of date range to show transactions for (inclusive). Defaults to current date/time if not provided. Must be provided in UTC if specified,\r\n            and be within 30 days of startDate.",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "showOnlyFailedTransactions",
+            "in": "query",
+            "description": "When true, will return only transactions with Failed, Invalid, or Duplicate status. True by default.",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "default": "1"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionsExternalApiTransactionDtoGetResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionsExternalApiTransactionDtoGetResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionsExternalApiTransactionDtoGetResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v{version}/interactions/exchange-status": {
+      "get": {
+        "tags": [
+          "Interactions"
+        ],
+        "summary": "Get Exchange pipeline statuses by correlation or interaction ID",
+        "description": "Returns Exchange pipeline statuses filtered by either correlationId or interactionId.\r\nSupports cursor-based pagination.",
+        "parameters": [
+          {
+            "name": "correlationId",
+            "in": "query",
+            "description": "The correlation ID returned from the initial publish response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "interactionId",
+            "in": "query",
+            "description": "The interaction's unique identifier (GUID).",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque pagination token from a previous response's nextCursor field.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of results to return (default 100, max 1000).",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "default": "1"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of Exchange statuses",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeInteractionStatusDtoCursorPaginatedResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeInteractionStatusDtoCursorPaginatedResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeInteractionStatusDtoCursorPaginatedResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or ambiguous filter parameters"
+          }
+        }
+      }
+    },
+    "/v{version}/interactions/exchange-status/range": {
+      "get": {
+        "tags": [
+          "Interactions"
+        ],
+        "summary": "Get Exchange pipeline statuses by date range",
+        "description": "Returns Exchange pipeline statuses for interactions published within the specified date range.\r\nSupports cursor-based pagination. Maximum date range is 30 days.",
+        "parameters": [
+          {
+            "name": "startDate",
+            "in": "query",
+            "description": "Beginning of date range (inclusive, UTC).",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "description": "End of date range (inclusive, UTC). Defaults to current UTC time.",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque pagination token from a previous response's nextCursor field.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of results to return (default 100, max 1000).",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "default": "1"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of Exchange statuses",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeInteractionStatusDtoCursorPaginatedResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeInteractionStatusDtoCursorPaginatedResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeInteractionStatusDtoCursorPaginatedResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid date range, limit, or cursor"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AcceptedInteractionDto": {
+        "type": "object",
+        "properties": {
+          "interactionId": {
+            "type": "string",
+            "description": "ID used to identify the interaction; ID will have been returned from the initial publish response.",
+            "format": "uuid"
+          },
+          "index": {
+            "type": "integer",
+            "description": "Index of the accepted interaction in the batch.",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents an accepted interaction with its associated index."
+      },
+      "AcceptedInteractionsDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "The total number of accepted interactions.",
+            "format": "int32"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AcceptedInteractionDto"
+            },
+            "description": "The list of accepted interactions."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents a collection of accepted interactions along with their count."
+      },
+      "ActivistCode": {
+        "title": "Activist Code",
+        "required": [
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "activistCodeId": {
+            "type": "string",
+            "description": "Unique identifier for an activist code;\r\nthe value may be retrieved from the system that sourced the activist code",
+            "nullable": true
+          },
+          "text": {
+            "minLength": 1,
+            "type": "string",
+            "description": "The question or information prompted during the interaction"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ActivistCodeOutcomeDetails": {
+        "title": "Activist Code Outcome",
+        "required": [
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "operation": {
+            "enum": [
+              "create",
+              "delete"
+            ],
+            "type": "string",
+            "description": "Describes whether this outcome detail is being created, deleted, or updated. Which operations are accepted varies by outcome type. Defaults to create."
+          },
+          "type": {
+            "type": "string",
+            "description": "This field categorizes the type of detailed outcome information being provided."
+          },
+          "value": {
+            "$ref": "#/components/schemas/ActivistCode"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents an activist code (e.g. affiliation, activity, or interest) acquired during an interaction."
+      },
+      "Address": {
+        "title": "Address",
+        "required": [
+          "addressLine1",
+          "city",
+          "postalCode",
+          "state"
+        ],
+        "type": "object",
+        "properties": {
+          "addressLine1": {
+            "type": "string",
+            "description": "The primary street address (e.g., house number and street name)."
+          },
+          "addressLine2": {
+            "type": "string",
+            "description": "The secondary address information (e.g., apartment, suite, unit number).",
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "description": "The city of the address."
+          },
+          "state": {
+            "type": "string",
+            "description": "The state or region of the address."
+          },
+          "postalCode": {
+            "type": "string",
+            "description": "The postal (ZIP) code for the address. Can accept ZIP5, ZIP+4, or ZIP9 format."
+          }
+        },
+        "additionalProperties": false
+      },
+      "AddressChannelDetails": {
+        "title": "Address Channel",
+        "required": [
+          "type",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Optional; unique identifier for any known id for the channel `type`",
+            "nullable": true
+          },
+          "type": {
+            "minLength": 1,
+            "type": "string",
+            "description": "Specifies that the `type` of channel used was an `address` and a full address must be provided as the `value`."
+          },
+          "value": {
+            "$ref": "#/components/schemas/Address"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents that an address was used for an interaction."
+      },
+      "CanvasserDetails": {
+        "required": [
+          "id",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "minLength": 1,
+            "type": "string",
+            "description": "Type of the canvasser identifier specified in 'id'.\r\nRequired when Canvasser is provided."
+          },
+          "id": {
+            "minLength": 1,
+            "type": "string",
+            "description": "The actual canvasser identifier used during the outreach attempt.\r\nExamples: user ID, employee number, volunteer ID, etc.\r\nRequired when Canvasser is provided."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents canvasser details for the individual who conducted the outreach attempt."
+      },
+      "CommitteeDetails": {
+        "required": [
+          "id",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "minLength": 1,
+            "type": "string",
+            "description": "Type of the committee identifier specified in 'id', representing the source context of the interaction."
+          },
+          "id": {
+            "minLength": 1,
+            "type": "string",
+            "description": "The actual committee identifier itself."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents details for the entities that conducted or logged the outreach attempt."
+      },
+      "CommunicationConsent": {
+        "title": "Communication Consent Outcome",
+        "required": [
+          "consentStatus"
+        ],
+        "type": "object",
+        "properties": {
+          "consentStatus": {
+            "$ref": "#/components/schemas/CommunicationConsentStatus"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CommunicationConsentOutcomeDetails": {
+        "title": "Communication Consent Outcome",
+        "required": [
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "operation": {
+            "enum": [
+              "create",
+              "delete"
+            ],
+            "type": "string",
+            "description": "Describes whether this outcome detail is being created, deleted, or updated. Which operations are accepted varies by outcome type. Defaults to create."
+          },
+          "type": {
+            "type": "string",
+            "description": "This field categorizes the type of detailed outcome information being provided."
+          },
+          "value": {
+            "$ref": "#/components/schemas/CommunicationConsent"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents a communication consent response (\"opted_in\" or \"opted_out\")."
+      },
+      "CommunicationConsentStatus": {
+        "enum": [
+          "opted_in",
+          "opted_out"
+        ],
+        "type": "string"
+      },
+      "ContactInfo": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Email addresses of the person being interacted with.",
+            "nullable": true
+          },
+          "phone": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Phone numbers of the person being interacted with. Should be in E.164 format (e.g. +1234567890).",
+            "nullable": true
+          },
+          "address": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Address"
+            },
+            "description": "Physical addresses of the person being interacted with.",
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Optional first name field for person being interacted with.",
+            "nullable": true
+          },
+          "middleName": {
+            "type": "string",
+            "description": "Optional middle name field for person being interacted with.",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Optional last name field for person being interacted with.",
+            "nullable": true
+          },
+          "socialHandle": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional social media handles for person being interacted with.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents contact information for a person being interacted with, including email, phone, or address.\r\nCan be used to match a person if an Id is not known"
+      },
+      "ContactMethod": {
+        "enum": [
+          "unknown",
+          "mail",
+          "letter",
+          "digital_ad",
+          "email",
+          "text",
+          "text_broadcast",
+          "robo_call",
+          "dialer_call",
+          "phone_call",
+          "door_knock",
+          "Event",
+          "hot_spot",
+          "one_on_one",
+          "web_interaction"
+        ],
+        "type": "string"
+      },
+      "DynamicChannelDetails": {
+        "title": "Channel",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Optional; unique identifier for any known id for the channel `type`",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of the channel specified in 'value'. Required when Channel is provided.\r\n            \r\nRecognized types:\r\n- \"phone_number\": Indicates `value` is a phone number; `value` must be in E.164 format (e.g., +14155552671).\r\n- \"email\": Indicates `value` is an email address.\r\n- [any other identifier]: Any type not listed above. `value` can be a string, an int or an arbitrary object."
+          },
+          "value": {
+            "description": "\nThe actual channel used during the outreach attempt. This field can be provided as a string or int though only the object form is shown here.\r\n\nExamples: +14155552671, name@org.org, @handle.\r\n\nRequired when Channel is provided."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents a generic Channel Details object;\r\ndoes not have any validation rules or JSON format limitations except where noted below."
+      },
+      "DynamicOutcomeDetails": {
+        "title": "Outcome",
+        "type": "object",
+        "properties": {
+          "operation": {
+            "$ref": "#/components/schemas/OutcomeDetailOperation"
+          },
+          "type": {
+            "type": "string",
+            "description": "This field categorizes the type of detailed outcome information being provided."
+          },
+          "value": {
+            "description": "\nProvide additional details of the outreach attempt. This field can be provided as a string or int though only the object form is shown here."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents a generic Outcome Details object;\r\ndoes not have any validation rules or JSON format limitations"
+      },
+      "EventDetails": {
+        "required": [
+          "id",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "type": "string",
+            "description": "The identifier value"
+          },
+          "type": {
+            "minLength": 1,
+            "type": "string",
+            "description": "The namespace the id belongs to, scoped to the field this object appears in: an event namespace in event_id (e.g. \"vendor_event_id\", \"vendor_signup_id\"), or a shift namespace in shifts (e.g. \"vendor_shift_id\")."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents an identifier and the namespace its value belongs to."
+      },
+      "EventRole": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The role name or description",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the role of a participant in an event"
+      },
+      "EventSignup": {
+        "title": "Event Signup",
+        "required": [
+          "event_id"
+        ],
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "$ref": "#/components/schemas/EventDetails"
+          },
+          "shifts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventDetails"
+            },
+            "description": "Optional array of shift identifiers for specific shifts within the event",
+            "nullable": true
+          },
+          "role": {
+            "$ref": "#/components/schemas/EventRole"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EventSignupStatus"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents an event signup captured during an interaction."
+      },
+      "EventSignupOutcomeDetails": {
+        "title": "Event Signup Outcome",
+        "required": [
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "operation": {
+            "enum": [
+              "create",
+              "update"
+            ],
+            "type": "string",
+            "description": "Describes whether this outcome detail is being created, deleted, or updated. Which operations are accepted varies by outcome type. Defaults to create."
+          },
+          "type": {
+            "type": "string",
+            "description": "This field categorizes the type of detailed outcome information being provided."
+          },
+          "value": {
+            "$ref": "#/components/schemas/EventSignup"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents an event signup acquired during an interaction."
+      },
+      "EventSignupStatus": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/EventSignupStatusValue"
+          },
+          "vendor_reference": {
+            "type": "string",
+            "description": "Open string field for vendor-specific reference information",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the status of an event signup"
+      },
+      "EventSignupStatusValue": {
+        "enum": [
+          "scheduled",
+          "waitlisted",
+          "invited",
+          "completed",
+          "confirmed",
+          "cancelled",
+          "no_show",
+          "partial",
+          "cannot_attend"
+        ],
+        "type": "string",
+        "description": "Valid event signup status values"
+      },
+      "ExchangeInteractionStatus": {
+        "enum": [
+          "Queued",
+          "Processed",
+          "PartiallyOrFullyUnsupported",
+          "Error",
+          "Unknown"
+        ],
+        "type": "string",
+        "description": "Status of an interaction's progress through the Exchange data pipeline."
+      },
+      "ExchangeInteractionStatusDto": {
+        "type": "object",
+        "properties": {
+          "correlationId": {
+            "type": "string",
+            "description": "DDx API request identifier."
+          },
+          "interactionId": {
+            "type": "string",
+            "description": "The interaction's unique identifier.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExchangeInteractionStatus"
+          },
+          "exchangeDataTypes": {
+            "type": "string",
+            "description": "The Exchange data types the interaction was transformed into."
+          },
+          "publishTime": {
+            "type": "string",
+            "description": "Timestamp when the interaction was received into the Exchange pipeline (Pub/Sub publish time).",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Per-interaction status through the Exchange data pipeline."
+      },
+      "ExchangeInteractionStatusDtoCursorPaginatedResponseDto": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/MinervaMetadataDto"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExchangeInteractionStatusDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "Opaque cursor token for fetching the next page. Null if there are no more results.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Extends Minerva.Dto.Api.GetResponseDto`1 with cursor-based pagination support."
+      },
+      "ExternalApiKeyStatus": {
+        "enum": [
+          "Unknown",
+          "Active"
+        ],
+        "type": "string"
+      },
+      "ExternalApiKeyType": {
+        "enum": [
+          "Van"
+        ],
+        "type": "string"
+      },
+      "ExternalTransactionStatus": {
+        "enum": [
+          "Received",
+          "Processing",
+          "Success",
+          "Failed",
+          "Invalid",
+          "Duplicate",
+          "InternalError"
+        ],
+        "type": "string"
+      },
+      "InitiativeDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Type of the initiative identifier specified in 'id'.",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "description": "The actual initiative identifier, such as a campaign ID.",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "Descriptive name or title for the initiative.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents an initiative associated with an interaction, such as a campaign identifier."
+      },
+      "InteractionDto": {
+        "required": [
+          "attemptDateTime",
+          "committee",
+          "method",
+          "outcome",
+          "stateCode",
+          "vendorSource"
+        ],
+        "type": "object",
+        "properties": {
+          "interactionId": {
+            "type": "string",
+            "description": "Optional ID used to identify a specific interaction.\r\nThis ID should only be provided in the initial request when re-sending data, and must use DDx-provided\r\ninteractionId value. If an existing ID is not provided to mark the interaction as a retry, Interactions API\r\nwill populate this ID field and include it in the response for future use if the interaction needs to be re-sent.",
+            "format": "uuid"
+          },
+          "person": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonIdentifier"
+            },
+            "description": "Optional array of person identifiers representing all IDs from any vendor system for the person interacted with. Each identifier can\r\ncontain an ID and type of ID indicating source system. If contact information for a person involved in the interaction is not provided, at least one ID is required. \r\nA maximum of 100 IDs are allowed per interaction.\r\nAn ID of type 'VAN' must be present if VAN is included as a destination, even if contact information is provided. Each person identifier type can appear at most once\r\nin the array (i.e. no duplicate types are allowed).",
+            "nullable": true
+          },
+          "contactInfo": {
+            "$ref": "#/components/schemas/ContactInfo"
+          },
+          "channel": {
+            "required": [
+              "type",
+              "value"
+            ],
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AddressChannelDetails"
+              },
+              {
+                "$ref": "#/components/schemas/DynamicChannelDetails"
+              }
+            ],
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "value": {
+                "type": "object"
+              }
+            },
+            "description": "Channel-of-contact details used during the outreach attempt.\r\nIf the `type` is recognized as an Address Channel (type = \"address\"), the `value` will be deserialized to that object type.\r\nOther string-based types have specific validation documented in the \"Channel\" section below, like \"phone_number\".\r\nIf the `type` is unrecognized, the payload will be deserialized to an unvalidated, loosely typed object for flexibility.",
+            "nullable": true,
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "address": "#/components/schemas/AddressChannelDetails",
+                "example_type": "#/components/schemas/DynamicChannelDetails"
+              }
+            }
+          },
+          "stateCode": {
+            "maxLength": 2,
+            "minLength": 2,
+            "type": "string",
+            "description": "2-character US state postal abbreviation (e.g., AL, WY).\r\nUse \"NA\" when the state is unknown.\r\nMust be a valid uppercase state code."
+          },
+          "attemptDateTime": {
+            "type": "string",
+            "description": "The date and time when the outreach attempt occurred, as reported by the vendor\r\nand normalized to Coordinated Universal Time (UTC).",
+            "format": "date-time"
+          },
+          "method": {
+            "$ref": "#/components/schemas/ContactMethod"
+          },
+          "committee": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommitteeDetails"
+            },
+            "description": "Array of entities (campaign, state party, etc.) that conducted or logged the outreach attempt.\r\nCommittee objects consist of a type and an identifier, and at least one committee must be provided."
+          },
+          "canvasser": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CanvasserDetails"
+            },
+            "description": "Array of canvasser details for the individual who conducted the outreach attempt, as reported by the vendor.\r\nOptional object containing identifier and identifier type.",
+            "nullable": true
+          },
+          "vendorSource": {
+            "minLength": 1,
+            "type": "string",
+            "description": "Canonical name of the vendor or tool used to facilitate the outreach attempt.\r\nThis field reflects the platform through which the contact was made, not necessarily where the data was ingested from."
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/Outcome"
+          },
+          "outcomesDetailed": {
+            "type": "array",
+            "items": {
+              "required": [
+                "type",
+                "value"
+              ],
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ActivistCodeOutcomeDetails"
+                },
+                {
+                  "$ref": "#/components/schemas/SurveyResponseOutcomeDetails"
+                },
+                {
+                  "$ref": "#/components/schemas/CommunicationConsentOutcomeDetails"
+                },
+                {
+                  "$ref": "#/components/schemas/EventSignupOutcomeDetails"
+                },
+                {
+                  "$ref": "#/components/schemas/DynamicOutcomeDetails"
+                }
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "This field categorizes the type of detailed outcome information being provided."
+                },
+                "value": {
+                  "type": "object"
+                }
+              },
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "activist_code": "#/components/schemas/ActivistCodeOutcomeDetails",
+                  "survey_response": "#/components/schemas/SurveyResponseOutcomeDetails",
+                  "communication_consent": "#/components/schemas/CommunicationConsentOutcomeDetails",
+                  "event_signup": "#/components/schemas/EventSignupOutcomeDetails",
+                  "example_type": "#/components/schemas/DynamicOutcomeDetails"
+                }
+              }
+            },
+            "description": "Optional array of objects that provide additional context around the results of an interaction, such as activist codes or survey responses.\r\nIf the type is recognized as an Activist Code Outcome (type = \"activist_code\"),\r\nCommunication Consent Outcome (type = \"communication_consent\"), Survey Response Outcome\r\n(type = \"survey_response\"), or Event Signup (type = \"event_signup\") it will be deserialized to that type.\r\nIf the type is unrecognized, it will be deserialized to an unvalidated, loosely typed object for flexibility.",
+            "nullable": true
+          },
+          "threadId": {
+            "maxLength": 100,
+            "minLength": 0,
+            "type": "string",
+            "description": "Unique identifier for interactions that took place during the same conversation or set of conversations.\r\nUsed to group related interactions together. Maximum length of 100 characters.",
+            "nullable": true
+          },
+          "jsonMetadata": {
+            "type": "string",
+            "description": "Additional metadata in JSON format related to the interaction.\r\nMust be valid JSON when provided. Can contain arbitrary structured data relevant to the interaction.",
+            "nullable": true
+          },
+          "vanFields": {
+            "$ref": "#/components/schemas/InteractionVanFieldsDto"
+          },
+          "initiative": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InitiativeDto"
+            },
+            "description": "Optional array of initiatives associated with the interaction, such as campaign IDs.\r\nEach initiative can contain a type and an identifier.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents a single interaction record containing voter outreach attempt data."
+      },
+      "InteractionErrorDto": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "errorMessage": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "InteractionVanFieldsDto": {
+        "type": "object",
+        "properties": {
+          "contactTypeId": {
+            "type": "string",
+            "description": "VAN contact type ID. Must match a Contact Type accessible to the destination VAN committee.\r\nSee https://docs.ngpvan.com/reference/canvassresponsescontacttypes for details on retrieving accessible contact types."
+          },
+          "resultCodeId": {
+            "type": "string",
+            "description": "VAN contact attempt result code, representing the result of that contact attempt. Result code availibility varies based on\r\ncontact type, so this value must represent a code that is available to the Contact Type ID specified above.\r\nSee https://docs.ngpvan.com/reference/canvassresponsesresultcodes to view Result Codes accessible to the destination VAN committee.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "VAN-specific data for an interaction. Must be provided if if the Interactions API Key used on the request\r\nis configured with VAN as a destination."
+      },
+      "InteractionsBatchResultDto": {
+        "type": "object",
+        "properties": {
+          "correlationId": {
+            "type": "string",
+            "description": "DDx API request identifier, provided as X-Correlation-Id on interactions responses for use linking all interactions in a request."
+          },
+          "totalInteractions": {
+            "type": "integer",
+            "description": "Total number of interactions in the batch.",
+            "format": "int32"
+          },
+          "acceptedInteractions": {
+            "$ref": "#/components/schemas/AcceptedInteractionsDto"
+          },
+          "rejectedInteractions": {
+            "$ref": "#/components/schemas/RejectedInteractionsDto"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the result of processing a batch of interactions, including accepted and rejected interactions."
+      },
+      "InteractionsDto": {
+        "type": "object",
+        "properties": {
+          "interactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InteractionDto"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "InteractionsExternalApiTransactionDto": {
+        "type": "object",
+        "properties": {
+          "dateCreatedUtc": {
+            "type": "string",
+            "description": "The UTC date and time at which the request was received.",
+            "format": "date-time"
+          },
+          "interactionId": {
+            "type": "string",
+            "description": "ID used to identify the interaction; ID will have been returned from the initial publish response.",
+            "format": "uuid"
+          },
+          "correlationId": {
+            "type": "string",
+            "description": "DDx API request identifier, provided as X-Correlation-Id on interactions responses for use linking all interactions in a request."
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExternalTransactionStatus"
+          },
+          "logs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InteractionsExternalApiTransactionLogDto"
+            },
+            "description": "Any logs associated with this external API transaction."
+          }
+        },
+        "additionalProperties": false,
+        "description": "For an interaction request with an external destination configured, this represents the status of the interaction data sent to that destination."
+      },
+      "InteractionsExternalApiTransactionDtoGetResponseDto": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/MinervaMetadataDto"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InteractionsExternalApiTransactionDto"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "InteractionsExternalApiTransactionLogDto": {
+        "type": "object",
+        "properties": {
+          "responseStatusCode": {
+            "type": "integer",
+            "description": "HTTP response code received for external API request.",
+            "format": "int32",
+            "nullable": true
+          },
+          "response": {
+            "type": "string",
+            "description": "Response JSON received for external API request.",
+            "nullable": true
+          },
+          "dateCreatedUtc": {
+            "type": "string",
+            "description": "Timestamp for when the external API request was made.",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Log data for an external API transaction to a configured Interactions API destination."
+      },
+      "MercuryDestinationVanApiKeyDto": {
+        "type": "object",
+        "properties": {
+          "vanApiKeyProfileDetails": {
+            "$ref": "#/components/schemas/VanApiKeyDto"
+          },
+          "selectedDbModeAccess": {
+            "$ref": "#/components/schemas/VanDatabaseMode"
+          }
+        },
+        "additionalProperties": false,
+        "description": "VAN-specific DTO containing VAN key profile details along with DDx configuration for that VAN key for the linked destination."
+      },
+      "MinervaMetadataDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Number of records returned in the response `data` array",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Outcome": {
+        "enum": [
+          "unknown",
+          "clicked_link",
+          "email_opened",
+          "submitted_form",
+          "successful_contact",
+          "deceased",
+          "deliverability_error",
+          "permanently_undeliverable",
+          "inaccessible",
+          "language_barrier",
+          "moved",
+          "no_answer",
+          "wrong_number",
+          "hostile",
+          "marked_spam",
+          "refused",
+          "delivered",
+          "lit_drop",
+          "left_message",
+          "other"
+        ],
+        "type": "string"
+      },
+      "OutcomeDetailOperation": {
+        "enum": [
+          "create",
+          "delete",
+          "update"
+        ],
+        "type": "string"
+      },
+      "PersonIdentifier": {
+        "required": [
+          "id",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "type": "string",
+            "description": "A primary identifier for tracking individual voters. This can be an integer (e.g. for DNC person_ids),\r\na string (for UUIDs, phone numbers), or other identifier formats depending on the source system.\r\nUsed to link voter records across different data sources and track in-state voter history over time."
+          },
+          "type": {
+            "minLength": 1,
+            "type": "string",
+            "description": "Type of identifier or source system that generated the id.\r\nExamples include \"VAN\", \"phone\", \"slimCRM\", \"DNC\", \"SOS\", etc. \r\nThis field indicates the origin or authority of the person identifier."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents a person involved in an interaction, including their identifier and optional contact information."
+      },
+      "RejectedInteractionDto": {
+        "type": "object",
+        "properties": {
+          "interactionId": {
+            "type": "string",
+            "description": "ID used to identify the interaction; ID will have been returned from the initial publish response.",
+            "format": "uuid"
+          },
+          "index": {
+            "type": "integer",
+            "description": "Index of the rejected interaction in the batch.",
+            "format": "int32"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InteractionErrorDto"
+            },
+            "description": "List of errors associated with the rejected interaction."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents a rejected interaction with its associated errors."
+      },
+      "RejectedInteractionsDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "The total number of rejected interactions.",
+            "format": "int32"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RejectedInteractionDto"
+            },
+            "description": "The list of rejected interactions."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents a collection of rejected interactions along with their count."
+      },
+      "SimpleDestinationDto": {
+        "title": "Destination",
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Unique identifier for the destination",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name for the destination",
+            "nullable": true
+          },
+          "isVanDestination": {
+            "type": "boolean",
+            "description": "Indicator of whether the destination integrates with NGP VAN\r\nand requires an associated VAN External API Key"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SimpleMovementAppDto": {
+        "required": [
+          "movementAppId",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "movementAppId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SimpleWorkspaceDto": {
+        "title": "Workspace",
+        "required": [
+          "displayName",
+          "type",
+          "workspaceId"
+        ],
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "integer",
+            "description": "Unique identifier for the workspace",
+            "format": "int32"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Display name for the workspace"
+          },
+          "type": {
+            "$ref": "#/components/schemas/WorkspaceTypeDto"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SurveyResponse": {
+        "title": "Survey Response",
+        "required": [
+          "questionText",
+          "responseText"
+        ],
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "description": "Unique identifier for the survey question being asked;\r\nthe value may be retrieved from the system that sourced the question",
+            "nullable": true
+          },
+          "questionText": {
+            "minLength": 1,
+            "type": "string",
+            "description": "The question text presented during an interaction"
+          },
+          "responseId": {
+            "type": "string",
+            "description": "Unique identifier for the survey response associated with the question;\r\nthe value may be retrieved from the system that sourced the question",
+            "nullable": true
+          },
+          "responseText": {
+            "minLength": 1,
+            "type": "string",
+            "description": "An answer to the question.\r\nRequired when Survey Question text is provided."
+          }
+        },
+        "additionalProperties": false
+      },
+      "SurveyResponseOutcomeDetails": {
+        "title": "Survey Response Outcome",
+        "required": [
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "operation": {
+            "enum": [
+              "create",
+              "delete"
+            ],
+            "type": "string",
+            "description": "Describes whether this outcome detail is being created, deleted, or updated. Which operations are accepted varies by outcome type. Defaults to create."
+          },
+          "type": {
+            "type": "string",
+            "description": "This field categorizes the type of detailed outcome information being provided."
+          },
+          "value": {
+            "$ref": "#/components/schemas/SurveyResponse"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents a survey question and response obtained from an interaction."
+      },
+      "VanApiKeyDto": {
+        "type": "object",
+        "properties": {
+          "externalApiKeyId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ExternalApiKeyType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExternalApiKeyStatus"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "dateCreated": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "connections": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "committeeName": {
+            "type": "string"
+          },
+          "hasMyVoters": {
+            "type": "boolean"
+          },
+          "hasMyCampaign": {
+            "type": "boolean"
+          },
+          "keyRef": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "description": "VAN-specific external key fields, for display and other front-end use"
+      },
+      "VanDatabaseMode": {
+        "enum": [
+          "MyVoters",
+          "MyCampaign"
+        ],
+        "type": "string"
+      },
+      "WhoAmIApiKeyDto": {
+        "required": [
+          "publicKeyId",
+          "source",
+          "workspace"
+        ],
+        "type": "object",
+        "properties": {
+          "publicKeyId": {
+            "type": "integer",
+            "description": "Unique identifier that specifies which API Key is being used",
+            "format": "int32"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SimpleMovementAppDto"
+          },
+          "workspace": {
+            "$ref": "#/components/schemas/SimpleWorkspaceDto"
+          },
+          "expireDate": {
+            "type": "string",
+            "description": "The date and time the API Key is set to expire. The time should be evaluated in Eastern Time.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "destinations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimpleDestinationDto"
+            },
+            "description": "The destinations enabled for this API key"
+          },
+          "vanApiKey": {
+            "$ref": "#/components/schemas/MercuryDestinationVanApiKeyDto"
+          }
+        },
+        "additionalProperties": false
+      },
+      "WorkspaceTypeDto": {
+        "enum": [
+          "Personal",
+          "Organization"
+        ],
+        "type": "string",
+        "description": "Indicates the type of workspace."
+      }
+    },
+    "securitySchemes": {
+      "Basic": {
+        "type": "http",
+        "description": "Enter your API key in the password field (leave username empty)",
+        "scheme": "basic"
+      }
+    }
+  },
+  "security": [
+    {
+      "Basic": []
+    }
+  ]
+}
