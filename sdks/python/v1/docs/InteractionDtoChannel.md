@@ -13,7 +13,7 @@ Name | Type | Description | Notes
 ## Example
 
 ```python
-from mig_interactions_api.models.interaction_dto_channel import InteractionDtoChannel
+from ddx_interactions_api.models.interaction_dto_channel import InteractionDtoChannel
 
 # TODO update the JSON string below
 json = "{}"

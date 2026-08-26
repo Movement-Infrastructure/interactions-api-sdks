@@ -12,7 +12,7 @@ Name | Type | Description | Notes
 ## Example
 
 ```python
-from mig_interactions_api.models.simple_destination_dto import SimpleDestinationDto
+from ddx_interactions_api.models.simple_destination_dto import SimpleDestinationDto
 
 # TODO update the JSON string below
 json = "{}"

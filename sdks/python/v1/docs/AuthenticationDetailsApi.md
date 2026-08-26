@@ -1,4 +1,4 @@
-# mig_interactions_api.AuthenticationDetailsApi
+# ddx_interactions_api.AuthenticationDetailsApi
 
 All URIs are relative to *https://api.movementinfrastructure.org*
 
@@ -19,14 +19,14 @@ Returns details about the authenticated API key including vendor, organization, 
 * Basic Authentication (Basic):
 
 ```python
-import mig_interactions_api
-from mig_interactions_api.models.who_am_i_api_key_dto import WhoAmIApiKeyDto
-from mig_interactions_api.rest import ApiException
+import ddx_interactions_api
+from ddx_interactions_api.models.who_am_i_api_key_dto import WhoAmIApiKeyDto
+from ddx_interactions_api.rest import ApiException
 from pprint import pprint
 
 # Defining the host is optional and defaults to https://api.movementinfrastructure.org
 # See configuration.py for a list of all supported configuration parameters.
-configuration = mig_interactions_api.Configuration(
+configuration = ddx_interactions_api.Configuration(
     host = "https://api.movementinfrastructure.org"
 )
 
@@ -36,15 +36,15 @@ configuration = mig_interactions_api.Configuration(
 # satisfies your auth use case.
 
 # Configure HTTP basic authorization: Basic
-configuration = mig_interactions_api.Configuration(
+configuration = ddx_interactions_api.Configuration(
     username = os.environ["USERNAME"],
     password = os.environ["PASSWORD"]
 )
 
 # Enter a context with an instance of the API client
-with mig_interactions_api.ApiClient(configuration) as api_client:
+with ddx_interactions_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
-    api_instance = mig_interactions_api.AuthenticationDetailsApi(api_client)
+    api_instance = ddx_interactions_api.AuthenticationDetailsApi(api_client)
     version = '1' # str |  (default to '1')
 
     try:

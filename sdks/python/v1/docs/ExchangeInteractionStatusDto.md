@@ -15,7 +15,7 @@ Name | Type | Description | Notes
 ## Example
 
 ```python
-from mig_interactions_api.models.exchange_interaction_status_dto import ExchangeInteractionStatusDto
+from ddx_interactions_api.models.exchange_interaction_status_dto import ExchangeInteractionStatusDto
 
 # TODO update the JSON string below
 json = "{}"

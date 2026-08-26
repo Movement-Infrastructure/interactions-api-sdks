@@ -10,11 +10,11 @@
 # Generator pinned to v7.10.0; see the workflow for the cached jar.
 
 # Pythonic snake_case import name.
-packageName: mig_interactions_api
+packageName: ddx_interactions_api
 
 # Project/PyPI name (kebab-case). The TestPyPI trusted publisher is bound to
 # this, so changing it means reconfiguring on the registry side.
-projectName: mig-interactions-api
+projectName: ddx-interactions-api
 
 # Rewritten by the version-bump workflow on each sync PR.
 packageVersion: 0.1.0

@@ -1,6 +1,6 @@
 # Python v1 SDK smoke tests (MIG-1918)
 
-A minimal suite that runs against the **generated** `mig_interactions_api`
+A minimal suite that runs against the **generated** `ddx_interactions_api`
 package to catch a broken SDK before a PR merges.
 
 - `test_import_smoke.py` — the package imports and exposes its public surface

@@ -14,7 +14,7 @@ Name | Type | Description | Notes
 ## Example
 
 ```python
-from mig_interactions_api.models.event_signup import EventSignup
+from ddx_interactions_api.models.event_signup import EventSignup
 
 # TODO update the JSON string below
 json = "{}"

@@ -24,8 +24,8 @@ from bump_version import (
 CONFIG = """\
 # openapi-generator config for the Python v1 SDK.
 
-packageName: mig_interactions_api
-projectName: mig-interactions-api
+packageName: ddx_interactions_api
+projectName: ddx-interactions-api
 
 # Placeholder; the version-bump workflow rewrites this on each sync PR.
 packageVersion: 1.4.2

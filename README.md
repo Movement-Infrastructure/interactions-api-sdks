@@ -136,7 +136,9 @@ The metadata gate fails the release on the generated defaults the audit flagged 
 **First-time setup**, once per registry:
 
 1. Create the `main` branch from `develop`.
-2. On TestPyPI, add a *pending publisher* under Publishing: owner `Movement-Infrastructure`, repository `interactions-api-sdks`, workflow `publish-python-testpypi.yml`, environment `testpypi`. Pending publishers work before the project exists — the first upload creates it.
+2. On TestPyPI, add a *pending publisher* under Publishing: PyPI project name `ddx-interactions-api`, owner `Movement-Infrastructure`, repository `interactions-api-sdks`, workflow `publish-python-testpypi.yml`, environment `testpypi`. Pending publishers work before the project exists — the first upload creates it.
+
+   The project name is the one field that is *not* the repository name, and it must match `projectName` in `sdks/python/v1/openapi-generator-config.yaml`. Get it wrong and the OIDC handshake still succeeds — the upload then fails at the end with `400 Non-user identities cannot create new projects`, because the identity is only allowed to create the project its pending publisher names.
 3. Create a GitHub Environment named `testpypi` on this repo. Attach required reviewers if a release should need a human gate.
 
 ## Status

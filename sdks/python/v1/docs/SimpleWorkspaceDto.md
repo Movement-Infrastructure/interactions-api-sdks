@@ -12,7 +12,7 @@ Name | Type | Description | Notes
 ## Example
 
 ```python
-from mig_interactions_api.models.simple_workspace_dto import SimpleWorkspaceDto
+from ddx_interactions_api.models.simple_workspace_dto import SimpleWorkspaceDto
 
 # TODO update the JSON string below
 json = "{}"

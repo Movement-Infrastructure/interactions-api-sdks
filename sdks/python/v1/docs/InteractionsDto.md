@@ -10,7 +10,7 @@ Name | Type | Description | Notes
 ## Example
 
 ```python
-from mig_interactions_api.models.interactions_dto import InteractionsDto
+from ddx_interactions_api.models.interactions_dto import InteractionsDto
 
 # TODO update the JSON string below
 json = "{}"

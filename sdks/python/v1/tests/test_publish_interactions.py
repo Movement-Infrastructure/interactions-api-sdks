@@ -11,7 +11,7 @@ The request/response bodies below match the committed OpenAPI spec.
 
 import inspect
 
-from mig_interactions_api import (
+from ddx_interactions_api import (
     InteractionsApi,
     InteractionsBatchResultDto,
     InteractionsDto,

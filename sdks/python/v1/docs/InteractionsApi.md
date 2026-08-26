@@ -1,4 +1,4 @@
-# mig_interactions_api.InteractionsApi
+# ddx_interactions_api.InteractionsApi
 
 All URIs are relative to *https://api.movementinfrastructure.org*
 
@@ -23,14 +23,14 @@ Returns Exchange pipeline statuses filtered by either correlationId or interacti
 * Basic Authentication (Basic):
 
 ```python
-import mig_interactions_api
-from mig_interactions_api.models.exchange_interaction_status_dto_cursor_paginated_response_dto import ExchangeInteractionStatusDtoCursorPaginatedResponseDto
-from mig_interactions_api.rest import ApiException
+import ddx_interactions_api
+from ddx_interactions_api.models.exchange_interaction_status_dto_cursor_paginated_response_dto import ExchangeInteractionStatusDtoCursorPaginatedResponseDto
+from ddx_interactions_api.rest import ApiException
 from pprint import pprint
 
 # Defining the host is optional and defaults to https://api.movementinfrastructure.org
 # See configuration.py for a list of all supported configuration parameters.
-configuration = mig_interactions_api.Configuration(
+configuration = ddx_interactions_api.Configuration(
     host = "https://api.movementinfrastructure.org"
 )
 
@@ -40,15 +40,15 @@ configuration = mig_interactions_api.Configuration(
 # satisfies your auth use case.
 
 # Configure HTTP basic authorization: Basic
-configuration = mig_interactions_api.Configuration(
+configuration = ddx_interactions_api.Configuration(
     username = os.environ["USERNAME"],
     password = os.environ["PASSWORD"]
 )
 
 # Enter a context with an instance of the API client
-with mig_interactions_api.ApiClient(configuration) as api_client:
+with ddx_interactions_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
-    api_instance = mig_interactions_api.InteractionsApi(api_client)
+    api_instance = ddx_interactions_api.InteractionsApi(api_client)
     version = '1' # str |  (default to '1')
     correlation_id = 'correlation_id_example' # str | The correlation ID returned from the initial publish response. (optional)
     interaction_id = 'interaction_id_example' # str | The interaction's unique identifier (GUID). (optional)
@@ -111,14 +111,14 @@ Returns Exchange pipeline statuses for interactions published within the specifi
 * Basic Authentication (Basic):
 
 ```python
-import mig_interactions_api
-from mig_interactions_api.models.exchange_interaction_status_dto_cursor_paginated_response_dto import ExchangeInteractionStatusDtoCursorPaginatedResponseDto
-from mig_interactions_api.rest import ApiException
+import ddx_interactions_api
+from ddx_interactions_api.models.exchange_interaction_status_dto_cursor_paginated_response_dto import ExchangeInteractionStatusDtoCursorPaginatedResponseDto
+from ddx_interactions_api.rest import ApiException
 from pprint import pprint
 
 # Defining the host is optional and defaults to https://api.movementinfrastructure.org
 # See configuration.py for a list of all supported configuration parameters.
-configuration = mig_interactions_api.Configuration(
+configuration = ddx_interactions_api.Configuration(
     host = "https://api.movementinfrastructure.org"
 )
 
@@ -128,15 +128,15 @@ configuration = mig_interactions_api.Configuration(
 # satisfies your auth use case.
 
 # Configure HTTP basic authorization: Basic
-configuration = mig_interactions_api.Configuration(
+configuration = ddx_interactions_api.Configuration(
     username = os.environ["USERNAME"],
     password = os.environ["PASSWORD"]
 )
 
 # Enter a context with an instance of the API client
-with mig_interactions_api.ApiClient(configuration) as api_client:
+with ddx_interactions_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
-    api_instance = mig_interactions_api.InteractionsApi(api_client)
+    api_instance = ddx_interactions_api.InteractionsApi(api_client)
     version = '1' # str |  (default to '1')
     start_date = '2013-10-20T19:20:30+01:00' # datetime | Beginning of date range (inclusive, UTC). (optional)
     end_date = '2013-10-20T19:20:30+01:00' # datetime | End of date range (inclusive, UTC). Defaults to current UTC time. (optional)
@@ -199,14 +199,14 @@ Get all external API transaction records for the specified interaction.
 * Basic Authentication (Basic):
 
 ```python
-import mig_interactions_api
-from mig_interactions_api.models.interactions_external_api_transaction_dto_get_response_dto import InteractionsExternalApiTransactionDtoGetResponseDto
-from mig_interactions_api.rest import ApiException
+import ddx_interactions_api
+from ddx_interactions_api.models.interactions_external_api_transaction_dto_get_response_dto import InteractionsExternalApiTransactionDtoGetResponseDto
+from ddx_interactions_api.rest import ApiException
 from pprint import pprint
 
 # Defining the host is optional and defaults to https://api.movementinfrastructure.org
 # See configuration.py for a list of all supported configuration parameters.
-configuration = mig_interactions_api.Configuration(
+configuration = ddx_interactions_api.Configuration(
     host = "https://api.movementinfrastructure.org"
 )
 
@@ -216,15 +216,15 @@ configuration = mig_interactions_api.Configuration(
 # satisfies your auth use case.
 
 # Configure HTTP basic authorization: Basic
-configuration = mig_interactions_api.Configuration(
+configuration = ddx_interactions_api.Configuration(
     username = os.environ["USERNAME"],
     password = os.environ["PASSWORD"]
 )
 
 # Enter a context with an instance of the API client
-with mig_interactions_api.ApiClient(configuration) as api_client:
+with ddx_interactions_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
-    api_instance = mig_interactions_api.InteractionsApi(api_client)
+    api_instance = ddx_interactions_api.InteractionsApi(api_client)
     interaction_id = 'interaction_id_example' # str | ID of the interaction to retrieve records for.
     version = '1' # str |  (default to '1')
     show_only_failed_transactions = True # bool | When true, will return only transactions with Failed, Invalid, or Duplicate status. True by default. (optional) (default to True)
@@ -282,15 +282,15 @@ This endpoint is used to post interactions data to the Interactions API that wil
 * Basic Authentication (Basic):
 
 ```python
-import mig_interactions_api
-from mig_interactions_api.models.interactions_batch_result_dto import InteractionsBatchResultDto
-from mig_interactions_api.models.interactions_dto import InteractionsDto
-from mig_interactions_api.rest import ApiException
+import ddx_interactions_api
+from ddx_interactions_api.models.interactions_batch_result_dto import InteractionsBatchResultDto
+from ddx_interactions_api.models.interactions_dto import InteractionsDto
+from ddx_interactions_api.rest import ApiException
 from pprint import pprint
 
 # Defining the host is optional and defaults to https://api.movementinfrastructure.org
 # See configuration.py for a list of all supported configuration parameters.
-configuration = mig_interactions_api.Configuration(
+configuration = ddx_interactions_api.Configuration(
     host = "https://api.movementinfrastructure.org"
 )
 
@@ -300,17 +300,17 @@ configuration = mig_interactions_api.Configuration(
 # satisfies your auth use case.
 
 # Configure HTTP basic authorization: Basic
-configuration = mig_interactions_api.Configuration(
+configuration = ddx_interactions_api.Configuration(
     username = os.environ["USERNAME"],
     password = os.environ["PASSWORD"]
 )
 
 # Enter a context with an instance of the API client
-with mig_interactions_api.ApiClient(configuration) as api_client:
+with ddx_interactions_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
-    api_instance = mig_interactions_api.InteractionsApi(api_client)
+    api_instance = ddx_interactions_api.InteractionsApi(api_client)
     version = '1' # str |  (default to '1')
-    interactions_dto = mig_interactions_api.InteractionsDto() # InteractionsDto |  (optional)
+    interactions_dto = ddx_interactions_api.InteractionsDto() # InteractionsDto |  (optional)
 
     try:
         # Post interactions data
@@ -366,14 +366,14 @@ Get all external API transaction records within the date range specified, for a 
 * Basic Authentication (Basic):
 
 ```python
-import mig_interactions_api
-from mig_interactions_api.models.interactions_external_api_transaction_dto_get_response_dto import InteractionsExternalApiTransactionDtoGetResponseDto
-from mig_interactions_api.rest import ApiException
+import ddx_interactions_api
+from ddx_interactions_api.models.interactions_external_api_transaction_dto_get_response_dto import InteractionsExternalApiTransactionDtoGetResponseDto
+from ddx_interactions_api.rest import ApiException
 from pprint import pprint
 
 # Defining the host is optional and defaults to https://api.movementinfrastructure.org
 # See configuration.py for a list of all supported configuration parameters.
-configuration = mig_interactions_api.Configuration(
+configuration = ddx_interactions_api.Configuration(
     host = "https://api.movementinfrastructure.org"
 )
 
@@ -383,15 +383,15 @@ configuration = mig_interactions_api.Configuration(
 # satisfies your auth use case.
 
 # Configure HTTP basic authorization: Basic
-configuration = mig_interactions_api.Configuration(
+configuration = ddx_interactions_api.Configuration(
     username = os.environ["USERNAME"],
     password = os.environ["PASSWORD"]
 )
 
 # Enter a context with an instance of the API client
-with mig_interactions_api.ApiClient(configuration) as api_client:
+with ddx_interactions_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
-    api_instance = mig_interactions_api.InteractionsApi(api_client)
+    api_instance = ddx_interactions_api.InteractionsApi(api_client)
     version = '1' # str |  (default to '1')
     start_date = '2013-10-20T19:20:30+01:00' # datetime | Beginning of date range to show transactions for (inclusive). Must be provided in UTC, and be within 30 days of endDate. (optional)
     end_date = '2013-10-20T19:20:30+01:00' # datetime | End of date range to show transactions for (inclusive). Defaults to current date/time if not provided. Must be provided in UTC if specified,              and be within 30 days of startDate. (optional)

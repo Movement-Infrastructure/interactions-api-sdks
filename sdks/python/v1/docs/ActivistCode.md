@@ -11,7 +11,7 @@ Name | Type | Description | Notes
 ## Example
 
 ```python
-from mig_interactions_api.models.activist_code import ActivistCode
+from ddx_interactions_api.models.activist_code import ActivistCode
 
 # TODO update the JSON string below
 json = "{}"

@@ -12,7 +12,7 @@ Name | Type | Description | Notes
 ## Example
 
 ```python
-from mig_interactions_api.models.mercury_destination_van_api_key_dto import MercuryDestinationVanApiKeyDto
+from ddx_interactions_api.models.mercury_destination_van_api_key_dto import MercuryDestinationVanApiKeyDto
 
 # TODO update the JSON string below
 json = "{}"
