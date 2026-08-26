@@ -29,6 +29,7 @@ REQUIRES = [
     "python-dateutil >= 2.8.2",
     "pydantic >= 2",
     "typing-extensions >= 4.7.1",
+    "certifi >= 2024.2.2",
 ]
 
 setup(
@@ -39,6 +40,7 @@ setup(
     author_email="api@demexchange.com",
     url="https://github.com/Movement-Infrastructure/interactions-api-sdks",
     keywords=["OpenAPI", "OpenAPI-Generator", "Interactions API"],
+    python_requires=PYTHON_REQUIRES,
     install_requires=REQUIRES,
     packages=find_packages(exclude=["test", "tests"]),
     include_package_data=True,
