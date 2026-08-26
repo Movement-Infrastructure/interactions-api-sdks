@@ -11,3 +11,5 @@ venv/
 # Local openapi-generator jar cache (downloaded by CI/workflows at runtime;
 # see .github/workflows/*.yml). Not the generated SDK, which IS committed.
 .cache/
+.shared
+

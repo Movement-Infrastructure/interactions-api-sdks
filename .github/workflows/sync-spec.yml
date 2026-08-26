@@ -1,19 +1,36 @@
 name: Sync OpenAPI spec from mig-readme-docs
 
-# MIG-1916. Pulls reference/mercury.json from mig-readme-docs, compares against
-# the committed openapi/v1/swagger.json, and opens a PR if they differ.
+# MIG-1916 (workflow), MIG-1920 (scheduling). Pulls reference/mercury.json from
+# mig-readme-docs, compares against the committed openapi/v1/swagger.json, and
+# opens a PR if they differ.
 #
-# Currently runs on every push to any branch (PoC trigger). Cron scheduling,
-# the rename to sync-spec.yml, and removal of the push trigger are tracked in
-# MIG-1920. See Plans/MIG-1916-scheduled-spec-sync.md.
+# Idempotent on the upstream commit SHA that last touched the spec: a run that
+# finds an open PR for that SHA's sync branch leaves it alone rather than
+# opening a duplicate. See Plans/MIG-1916-scheduled-spec-sync.md and
+# Plans/MIG-1920-schedule-sync-workflow.md.
 
 on:
-  # Runs on every push to any branch during the milestone-2 PoC. Replaced by
-  # `schedule:` + `workflow_dispatch:` in MIG-1920 once the sync is trusted.
-  # `sync/**` excluded so the bot's own sync-branch push doesn't recurse.
-  push:
-    branches-ignore:
-      - 'sync/**'
+  # Hourly at :17
+
+  schedule:
+    - cron: '17 * * * *'
+
+  # Ad-hoc runs: pick up an upstream spec merge without waiting for the next
+  # hour, or validate the sync against an in-flight branch of mig-readme-docs
+  # via the upstream_ref input.
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: >-
+          Branch, tag, or SHA of mig-readme-docs to read reference/mercury.json
+          from. Leave blank to fall back to vars.READMEDOCS_SYNC_BRANCH, then
+          the repo's default branch.
+        required: false
+        type: string
+
+concurrency:
+  group: sync-spec
+  cancel-in-progress: false
 
 jobs:
   sync:
@@ -54,27 +71,43 @@ jobs:
           repositories: mig-readme-docs
 
       # By default the sync follows mig-readme-docs' default branch (which
-      # tracks the current API version). Setting the repo variable
-      # READMEDOCS_SYNC_BRANCH to a branch, tag, or SHA overrides that — used
+      # tracks the current API version). Two escape hatches override that, used
       # to validate the sync against in-flight branches of mig-readme-docs
-      # without faking changes upstream. The resolved value is threaded into
-      # both downstream API calls (contents fetch + commits lookup).
-      - name: Resolve upstream branch
+      # without faking changes upstream:
+      #
+      #   1. the workflow_dispatch `upstream_ref` input (per-run, wins)
+      #   2. the repo variable READMEDOCS_SYNC_BRANCH (persistent)
+      #
+      # `inputs.upstream_ref` is empty on scheduled runs, so the variable — and
+      # failing that, the default branch — is what a cron run resolves to. The
+      # resolved value is threaded into both downstream API calls (contents
+      # fetch + commits lookup).
+      - name: Resolve upstream ref
         id: upstream-branch
         env:
+          INPUT_REF: ${{ inputs.upstream_ref }}
           OVERRIDE_BRANCH: ${{ vars.READMEDOCS_SYNC_BRANCH }}
         run: |
           set -euo pipefail
 
-          if [ -n "${OVERRIDE_BRANCH:-}" ]; then
-            echo "Using override branch from vars.READMEDOCS_SYNC_BRANCH: $OVERRIDE_BRANCH"
-            echo "label=$OVERRIDE_BRANCH" >> "$GITHUB_OUTPUT"
+          if [ -n "${INPUT_REF:-}" ]; then
+            ref="$INPUT_REF"
+            echo "Using ref from workflow_dispatch input: $ref"
+          elif [ -n "${OVERRIDE_BRANCH:-}" ]; then
+            ref="$OVERRIDE_BRANCH"
+            echo "Using override ref from vars.READMEDOCS_SYNC_BRANCH: $ref"
+          else
+            ref=""
+            echo "No override set; using mig-readme-docs default branch."
+          fi
+
+          if [ -n "$ref" ]; then
+            echo "label=$ref" >> "$GITHUB_OUTPUT"
             # Query-string fragments for the two GitHub API calls below.
             # contents endpoint takes `?ref=`; commits endpoint takes `&sha=`.
-            echo "contents_query=?ref=$OVERRIDE_BRANCH" >> "$GITHUB_OUTPUT"
-            echo "commits_query=&sha=$OVERRIDE_BRANCH" >> "$GITHUB_OUTPUT"
+            echo "contents_query=?ref=$ref" >> "$GITHUB_OUTPUT"
+            echo "commits_query=&sha=$ref" >> "$GITHUB_OUTPUT"
           else
-            echo "No override branch set; using mig-readme-docs default branch."
             echo "label=(default branch)" >> "$GITHUB_OUTPUT"
             echo "contents_query=" >> "$GITHUB_OUTPUT"
             echo "commits_query=" >> "$GITHUB_OUTPUT"
@@ -104,6 +137,44 @@ jobs:
           echo "Size (bytes): $size"
           echo "openapi version: $(jq -r '.openapi // "(missing)"' upstream-mercury.json)"
           echo "info.title: $(jq -r '.info.title // "(missing)"' upstream-mercury.json)"
+          echo "info.version: $(jq -r '.info.version // "(missing)"' upstream-mercury.json)"
+
+      # We run one API version at a time, so an upstream `info.version` change
+      # is a migration rather than a routine sync. Nothing downstream would
+      # catch it: the generator would emit a v2 client into sdks/*/v1/ and the
+      # bump script, which reads only labels, would ship it as a minor.
+      - name: Guard against an API version cutover
+        run: |
+          set -euo pipefail
+
+          local_path=openapi/v1/swagger.json
+
+          # No committed spec yet; the initial sync PR establishes the baseline.
+          if [ ! -f "$local_path" ]; then
+            echo "No committed spec yet; skipping the cutover guard (bootstrap)."
+            exit 0
+          fi
+
+          upstream_version=$(jq -r '.info.version // empty' upstream-mercury.json)
+          committed_version=$(jq -r '.info.version // empty' "$local_path")
+
+          # An undeclared version is an upstream authoring gap, so warn instead
+          # of halting the sync.
+          if [ -z "$upstream_version" ] || [ -z "$committed_version" ]; then
+            echo "::warning::info.version missing (upstream='${upstream_version:-<unset>}', committed='${committed_version:-<unset>}'); cannot check for a cutover."
+            exit 0
+          fi
+
+          if [ "$upstream_version" != "$committed_version" ]; then
+            echo "::error::Upstream spec is '$upstream_version'; committed spec is '$committed_version'."
+            echo "::error::That is an API version cutover, so this run is halted."
+            echo "::error::To migrate: rename openapi/<old>/ and sdks/*/<old>/, repoint the"
+            echo "::error::hardcoded paths in the workflows, then land the regeneration on a"
+            echo "::error::PR labelled interactions-api-major."
+            exit 1
+          fi
+
+          echo "API version unchanged ($committed_version); proceeding."
 
       # Byte-level comparison via `cmp`. No normalization: the upstream file is
       # human-edited and committed, so key order is stable. If the local copy
@@ -162,8 +233,9 @@ jobs:
 
       # Idempotency at the PR layer: if an open PR already exists for this
       # upstream SHA's sync branch, skip the create steps below. The branch
-      # itself may also exist from a prior unclean run — that's handled by
-      # the `--force-with-lease` push later.
+      # itself may also exist without an open PR, left behind by a closed or
+      # abandoned sync PR. The push step below fetches it first so the
+      # force-with-lease can overwrite it.
       - name: Skip if a PR already exists for this upstream SHA
         id: existing-pr
         if: steps.diff.outputs.changed == 'true'
@@ -229,7 +301,26 @@ jobs:
 
           git add openapi/v1/swagger.json
           git commit -m "Sync mercury.json from mig-readme-docs@${SHORT_SHA}"
-          git push --force-with-lease origin "$BRANCH"
+
+          # Two things break a bare `--force-with-lease` here: `actions/checkout`
+          # fetches only the branch it checks out, and the `checkout -B` above
+          # leaves $BRANCH with no upstream. Git then has no remote-tracking ref
+          # to lease against and rejects the push as "stale info" instead of
+          # overwriting a branch orphaned by a closed sync PR. That is how every
+          # scheduled run failed before MIG-2317.
+          #
+          # So fetch the ref explicitly, then name the expected value on the
+          # push. The refspec has to be spelled out because checkout narrows
+          # remote.origin.fetch to a single branch, which makes a bare
+          # `git fetch origin "$BRANCH"` write no tracking ref at all.
+          git fetch --depth=1 origin \
+            "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" || true
+
+          # Empty on the first sync of a given spec commit, where the lease
+          # becomes "this branch must not exist yet".
+          expected=$(git rev-parse --verify -q "refs/remotes/origin/$BRANCH" || true)
+
+          git push --force-with-lease="$BRANCH:$expected" origin "$BRANCH"
 
       - name: Open sync PR
         if: steps.diff.outputs.changed == 'true' && steps.existing-pr.outputs.skip == 'false'
@@ -251,7 +342,7 @@ jobs:
           - Reason: \`${REASON}\`
           - \`openapi/v1/swagger.json\`: +${ADDED} / -${REMOVED} lines
 
-          Opened automatically by \`.github/workflows/sync-spec-verify.yml\` (MIG-1916).
+          Opened automatically by \`.github/workflows/sync-spec.yml\` (MIG-1916).
           EOF
 
           gh pr create \
@@ -264,7 +355,7 @@ jobs:
       # having to expand individual steps.
       - name: Summary
         run: |
-          echo "upstream_branch=${{ steps.upstream-branch.outputs.label }}"
+          echo "upstream_ref=${{ steps.upstream-branch.outputs.label }}"
           echo "changed=${{ steps.diff.outputs.changed }}"
           echo "reason=${{ steps.diff.outputs.reason }}"
           echo "upstream_sha=${{ steps.upstream.outputs.sha }}"

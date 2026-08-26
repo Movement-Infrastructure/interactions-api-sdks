@@ -9,15 +9,15 @@
 #
 # Generator pinned to v7.10.0; see the workflow for the cached jar.
 
-# Pythonic snake_case import name. Provisional — revisit before publishing.
-packageName: mi_interactions_api
+# Pythonic snake_case import name.
+packageName: mig_interactions_api
 
-# Project/PyPI name (kebab-case). Provisional — revisit before publishing.
-projectName: mi-interactions-api
+# Project/PyPI name (kebab-case). The TestPyPI trusted publisher is bound to
+# this, so changing it means reconfiguring on the registry side.
+projectName: mig-interactions-api
 
-# Placeholder; the version-bump workflow (milestone 4) will rewrite this on
-# each sync PR based on the patch/minor/major label.
-packageVersion: 0.0.0
+# Rewritten by the version-bump workflow on each sync PR.
+packageVersion: 0.1.0
 
 # urllib3-based synchronous client. Async (asyncio) variant is available if
 # we end up needing it.

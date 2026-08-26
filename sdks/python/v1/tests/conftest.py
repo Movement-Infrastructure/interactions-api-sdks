@@ -7,7 +7,7 @@ provided by ``pytest-httpserver`` rather than monkeypatching the transport.
 
 import pytest
 
-from mi_interactions_api import ApiClient, Configuration
+from mig_interactions_api import ApiClient, Configuration
 
 
 @pytest.fixture

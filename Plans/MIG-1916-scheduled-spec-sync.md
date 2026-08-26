@@ -18,7 +18,7 @@ Build the workflow in stages so each piece can be verified independently before 
 
 A `workflow_dispatch`-only workflow that confirms the App token mints correctly and can read `reference/mercury.json` from `mig-readme-docs`. No diff logic, no commits, no PRs. Output is just a log line.
 
-- [x] `.github/workflows/sync-spec-verify.yml`
+- [x] `.github/workflows/sync-spec-verify.yml` (renamed to `sync-spec.yml` in MIG-1920)
   - `on: workflow_dispatch` only (plus a temporary `push:` trigger on the feature branch for iteration, removed before merge).
   - Mints token via `actions/create-github-app-token@v1` using `vars.READMEDOCS_SYNC_APP_ID` and `secrets.READMEDOCS_SYNC_PRIVATE_KEY`. `INSTALLATION_ID` is discovered automatically from owner/repos.
   - Fetches `reference/mercury.json` via `gh api repos/Movement-Infrastructure/mig-readme-docs/contents/reference/mercury.json` using the minted token.
@@ -48,11 +48,11 @@ The fetch currently hardcodes the readme repo's default branch, which makes it h
 - [x] Log the resolved ref at the top of the workflow run so it's obvious which branch a given run pulled from.
 - [x] README "Sync credentials" section: brief mention of the variable as a testing toggle.
 
-Long-term shape (deferred to MIG-1920): also expose this as a `workflow_dispatch:` input that wins over the variable when present. For the PoC, variable-only is enough.
+Long-term shape (deferred to MIG-1920): also expose this as a `workflow_dispatch:` input that wins over the variable when present. For the PoC, variable-only is enough. — Landed in MIG-1920 as the `upstream_ref` input.
 
 ### Stage 4 — Scheduling and cleanup
 
-Tracked separately in [MIG-1920](https://linear.app/movementinfrastructure/issue/MIG-1920/schedule-sync-workflow-and-clean-up-dev-triggers). MIG-1916 ships with the push trigger in place; the cron + rename + push-trigger removal lands in MIG-1920 once we've exercised the sync manually for confidence.
+Tracked separately in [MIG-1920](https://linear.app/movementinfrastructure/issue/MIG-1920/schedule-sync-workflow-and-clean-up-dev-triggers) — see `Plans/MIG-1920-schedule-sync-workflow.md`. MIG-1916 shipped with the push trigger in place; the cron + rename + push-trigger removal lands in MIG-1920 once we've exercised the sync manually for confidence.
 
 ## Notes / open questions
 
