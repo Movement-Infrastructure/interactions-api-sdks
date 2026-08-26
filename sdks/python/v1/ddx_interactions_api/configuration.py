@@ -22,7 +22,6 @@ import sys
 from typing import Any, ClassVar, Dict, List, Literal, Optional, TypedDict
 from typing_extensions import NotRequired, Self
 
-import certifi
 import urllib3
 
 
@@ -274,9 +273,8 @@ conf = ddx_interactions_api.Configuration(
            Set this to false to skip verifying SSL certificate when calling API
            from https server.
         """
-        self.ssl_ca_cert = (
-            ssl_ca_cert if ssl_ca_cert is not None else certifi.where()
-        )
+        import certifi
+        self.ssl_ca_cert = ssl_ca_cert if ssl_ca_cert is not None else certifi.where()
         """Set this to customize the certificate file to verify the peer.
         """
         self.cert_file = None
