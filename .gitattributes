@@ -4,10 +4,14 @@
 # archive-based source distribution.
 #
 # IMPORTANT: this does NOT affect the pip wheel/sdist published to (Test)PyPI.
-# Those are built by setuptools, which ignores .gitattributes. The wheel/sdist
-# are kept minimal by the generated setup.py — find_packages(exclude=["test",
-# "tests"]) with package_data limited to py.typed — plus the openapi-generator
-# config (globalProperties + .openapi-generator-ignore).
+# Those are built by setuptools, which ignores .gitattributes.
+#
+# The wheel is kept minimal by the generated setup.py — find_packages(exclude=
+# ["test", "tests"]) with package_data limited to py.typed. That covers the
+# wheel ONLY. setuptools builds the sdist from a separate file list and picks up
+# test*.py regardless, so sdks/python/v1/MANIFEST.in prunes the test suite and
+# generator inputs out of the sdist. Both halves are needed; neither substitutes
+# for the other.
 
 # Hand-written Python test suite and generator inputs (dev-only).
 sdks/python/v1/tests/                          export-ignore
