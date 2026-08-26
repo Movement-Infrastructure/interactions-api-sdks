@@ -134,7 +134,7 @@ jobs:
     # required reviewer attaches if we want a human gate before a release.
     environment:
       name: testpypi
-      url: https://test.pypi.org/project/mig-interactions-api/
+      url: https://test.pypi.org/project/ddx-interactions-api/
 
     permissions:
       # Mints the short-lived OIDC token TestPyPI exchanges for an upload grant.

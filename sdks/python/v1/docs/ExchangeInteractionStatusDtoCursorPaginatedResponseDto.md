@@ -13,7 +13,7 @@ Name | Type | Description | Notes
 ## Example
 
 ```python
-from mig_interactions_api.models.exchange_interaction_status_dto_cursor_paginated_response_dto import ExchangeInteractionStatusDtoCursorPaginatedResponseDto
+from ddx_interactions_api.models.exchange_interaction_status_dto_cursor_paginated_response_dto import ExchangeInteractionStatusDtoCursorPaginatedResponseDto
 
 # TODO update the JSON string below
 json = "{}"

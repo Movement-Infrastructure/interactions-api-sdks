@@ -10,7 +10,7 @@ Name | Type | Description | Notes
 ## Example
 
 ```python
-from mig_interactions_api.models.communication_consent import CommunicationConsent
+from ddx_interactions_api.models.communication_consent import CommunicationConsent
 
 # TODO update the JSON string below
 json = "{}"

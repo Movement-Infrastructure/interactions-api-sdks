@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "mig_interactions_api"
+name = "ddx_interactions_api"
 version = "0.1.0"
 description = "Interactions API"
 authors = ["DDx API Team <api@demexchange.com>"]
@@ -7,7 +7,7 @@ license = "NoLicense"
 readme = "README.md"
 repository = "https://github.com/Movement-Infrastructure/interactions-api-sdks"
 keywords = ["OpenAPI", "OpenAPI-Generator", "Interactions API"]
-include = ["mig_interactions_api/py.typed"]
+include = ["ddx_interactions_api/py.typed"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -35,7 +35,7 @@ extension-pkg-whitelist = "pydantic"
 
 [tool.mypy]
 files = [
-  "mig_interactions_api",
+  "ddx_interactions_api",
   #"test",  # auto-generated tests
   "tests", # hand-written tests
 ]
@@ -73,7 +73,7 @@ disallow_any_generics = true
 
 [[tool.mypy.overrides]]
 module = [
-  "mig_interactions_api.configuration",
+  "ddx_interactions_api.configuration",
 ]
 warn_unused_ignores = true
 strict_equality = true

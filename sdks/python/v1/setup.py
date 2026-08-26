@@ -21,7 +21,7 @@ from setuptools import setup, find_packages  # noqa: H301
 #
 # prerequisite: setuptools
 # http://pypi.python.org/pypi/setuptools
-NAME = "mig-interactions-api"
+NAME = "ddx-interactions-api"
 VERSION = "0.1.0"
 PYTHON_REQUIRES = ">= 3.8"
 REQUIRES = [
@@ -46,5 +46,5 @@ setup(
     long_description="""\
     Interactions API documentation
     """,  # noqa: E501
-    package_data={"mig_interactions_api": ["py.typed"]},
+    package_data={"ddx_interactions_api": ["py.typed"]},
 )

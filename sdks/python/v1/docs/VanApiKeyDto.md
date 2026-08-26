@@ -20,7 +20,7 @@ Name | Type | Description | Notes
 ## Example
 
 ```python
-from mig_interactions_api.models.van_api_key_dto import VanApiKeyDto
+from ddx_interactions_api.models.van_api_key_dto import VanApiKeyDto
 
 # TODO update the JSON string below
 json = "{}"
