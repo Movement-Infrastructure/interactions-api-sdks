@@ -1,0 +1,141 @@
+name: Generate Ruby SDK
+
+# On every PR that touches openapi/v1/swagger.json, computes the next gem
+# version from the PR's labels, regenerates sdks/ruby/v1/, and commits both
+# back to the PR branch so the version lands in the generated gemspec.
+
+on:
+  pull_request:
+    # `labeled`/`unlabeled` are here so adding or removing a version label
+    # after the PR opens recomputes the version.
+    types: [opened, synchronize, labeled, unlabeled]
+    paths:
+      - openapi/v1/swagger.json
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Read base-branch gem version
+        run: |
+          set -euo pipefail
+
+          config=sdks/ruby/v1/openapi-generator-config.yaml
+
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+
+          if ! git show "FETCH_HEAD:$config" > /tmp/base-ruby-config.yaml; then
+            echo "::error::$config not found on ${{ github.base_ref }}; cannot determine the current version."
+            exit 1
+          fi
+
+      # The Ruby generator spells the version key `gemVersion`, not
+      # `packageVersion`. Passing the wrong key is an error rather than a silent
+      # no-op, which is what keeps a stuck version from reaching the registry.
+      - name: Compute and apply next version
+        id: version
+        run: |
+          python scripts/bump_version.py \
+            --current-config /tmp/base-ruby-config.yaml \
+            --write-config sdks/ruby/v1/openapi-generator-config.yaml \
+            --version-key gemVersion \
+            --labels-json '${{ toJSON(github.event.pull_request.labels.*.name) }}'
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Cache openapi-generator jar
+        id: cache-generator
+        uses: actions/cache@v4
+        with:
+          path: .cache/openapi-generator-cli.jar
+          key: openapi-generator-7.10.0
+
+      - name: Download openapi-generator jar
+        if: steps.cache-generator.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .cache
+          curl -sSL \
+            https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/7.10.0/openapi-generator-cli-7.10.0.jar \
+            -o .cache/openapi-generator-cli.jar
+
+      - name: Generate Ruby SDK
+        run: |
+          java -jar .cache/openapi-generator-cli.jar generate \
+            -i openapi/v1/swagger.json \
+            -g ruby \
+            -o sdks/ruby/v1 \
+            -c sdks/ruby/v1/openapi-generator-config.yaml
+
+      # Identity fields (author, email, license, required ruby version) come
+      # straight from the generator config, so unlike the Python SDK nothing has
+      # to be patched for them. The one exception is the gemspec's file list: the
+      # template globs the whole directory with `find *`, which would publish
+      # docs/, spec/, the Gemfile, the Rakefile and the generator config inside
+      # the gem. The anchor is exact generated text and a miss is fatal, so a
+      # template change fails the build rather than quietly shipping them.
+      # Keep in sync with the copy in ruby-sdk-tests.yml.
+      - name: Patch generated gemspec file list
+        run: |
+          python - <<'PY'
+          import pathlib, sys
+
+          GEMSPEC = pathlib.Path("sdks/ruby/v1/ddx_interactions_api.gemspec")
+          MARKER = 'Dir["lib/**/*"]'
+          ANCHOR = (
+              '  s.files         = `find *`.split("\\n").uniq.sort.select { |f| !f.empty? }\n'
+              '  s.test_files    = `find spec/*`.split("\\n")\n'
+          )
+          REPLACEMENT = (
+              '  # Ship the library and its README only. The generator globs the whole\n'
+              '  # directory, which would publish docs/, spec/, the Gemfile, the Rakefile\n'
+              '  # and the generator config inside the gem.\n'
+              '  s.files         = Dir["lib/**/*"].select { |f| File.file?(f) } + ["README.md"]\n'
+              '  s.test_files    = []\n'
+          )
+
+          text = GEMSPEC.read_text(encoding="utf-8")
+          if MARKER in text:
+              print("already applied: gemspec file list")
+          else:
+              hits = text.count(ANCHOR)
+              if hits != 1:
+                  sys.exit(
+                      f"::error::{GEMSPEC}: file-list anchor matched {hits} times, "
+                      f"expected 1. Generator template changed; update this step and "
+                      f"its copy in ruby-sdk-tests.yml."
+                  )
+              GEMSPEC.write_text(text.replace(ANCHOR, REPLACEMENT), encoding="utf-8")
+              print("patched: gemspec file list")
+          PY
+
+      - name: Commit generated SDK if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add sdks/ruby/v1
+
+          if git diff --cached --quiet; then
+            echo "No changes to generated SDK — skipping commit."
+          else
+            git commit -m "chore: regenerate Ruby SDK at v${{ steps.version.outputs.next }} from openapi/v1/swagger.json"
+            git push origin HEAD:${{ github.head_ref }}
+          fi

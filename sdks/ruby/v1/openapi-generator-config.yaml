@@ -1,0 +1,52 @@
+# openapi-generator config for the Ruby v1 SDK.
+#
+# Invoked by .github/workflows/generate-ruby-sdk.yml as:
+#   openapi-generator generate \
+#     -i openapi/v1/swagger.json \
+#     -g ruby \
+#     -o sdks/ruby/v1 \
+#     -c sdks/ruby/v1/openapi-generator-config.yaml
+#
+# Generator pinned to v7.10.0; see the workflow for the cached jar.
+
+# Gem name, underscore_case per RubyGems convention, so it matches the require
+# path: `require "ddx_interactions_api"`. Note this differs in shape from the
+# Python distribution name (ddx-interactions-api) on purpose -- each ecosystem
+# gets its own convention.
+gemName: ddx_interactions_api
+
+# Ruby namespace the generated classes live under.
+moduleName: DdxInteractionsApi
+
+# Rewritten by the version-bump workflow on each sync PR. The Ruby generator
+# spells this `gemVersion`, not `packageVersion` -- the workflow passes
+# `--version-key gemVersion` to scripts/bump_version.py for exactly this reason.
+# Get it wrong and the bump silently rewrites nothing.
+gemVersion: 0.1.0
+
+# Faraday rather than the generator's typhoeus default. Typhoeus binds libcurl
+# through a native extension, which means a compiler on every consumer machine
+# and in CI. Faraday is pure Ruby on its default net_http adapter.
+library: faraday
+
+# Identity fields. Unlike the Python generator -- which reads authorship from the
+# spec's info.contact and has no config override -- the Ruby generator takes
+# these directly, so no post-generation patching is needed. They must be set:
+# the defaults are "OpenAPI-Generator" for gemAuthor and "unlicense" for
+# gemLicense, and both would ship straight into the published gem.
+gemAuthor: DDx API Team
+gemAuthorEmail: mig-eng-inbox@demexchange.com
+gemHomepage: https://github.com/Movement-Infrastructure/interactions-api-sdks
+gemLicense: MIT
+gemSummary: Ruby client for the DDx Interactions API
+gemDescription: Ruby client for the DDx Interactions API, generated from the OpenAPI spec.
+
+# The generator's own default is ">= 2.4", which is long out of support.
+gemRequiredRubyVersion: ">= 3.0"
+
+gitUserId: Movement-Infrastructure
+gitRepoId: interactions-api-sdks
+
+globalProperties:
+  apiTests: "false"
+  modelTests: "false"

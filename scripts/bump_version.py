@@ -2,7 +2,7 @@
 """Compute and apply the next SDK package version from PR labels.
 
 Reads the current version from an openapi-generator config, decides a bump from
-the PR's labels, and rewrites `packageVersion` so the generator emits the new
+the PR's labels, and rewrites the version key so the generator emits the new
 version into the package manifest.
 
     interactions-api-major   bumps major (A); wins over the others
@@ -12,6 +12,11 @@ version into the package manifest.
 The version is read from a different path than the one written, so CI can read
 the base branch while writing the PR branch. That keeps re-runs idempotent: a
 PR whose labels change three times still lands one bump ahead of its base.
+
+Each generator names its version key differently -- `packageVersion` for Python,
+`gemVersion` for Ruby, `npmVersion` for TypeScript -- so the key is a parameter.
+It defaults to `packageVersion` because that is the most common spelling, but
+passing the wrong one is an error rather than a silent no-op.
 """
 
 from __future__ import annotations
@@ -31,14 +36,31 @@ MAJOR_LABEL = "interactions-api-major"
 DEFAULT_BUMP = "minor"
 VALID_BUMPS = ("major", "minor", "patch")
 
-# A line rewrite rather than a YAML round-trip: PyYAML discards comments on
-# dump, and the config's comments carry the rationale for every field.
-_PACKAGE_VERSION_RE = re.compile(
-    r"^(?P<prefix>[ \t]*packageVersion:[ \t]*)(?P<value>[^\s#]+)(?P<suffix>[ \t]*(?:#.*)?)$",
-    re.MULTILINE,
-)
+DEFAULT_VERSION_KEY = "packageVersion"
 
 _SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
+
+# Guards against a key that would change the regex's meaning rather than the
+# text it matches.
+_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _version_re(key: str) -> re.Pattern[str]:
+    """Build the line matcher for `key`.
+
+    A line rewrite rather than a YAML round-trip: PyYAML discards comments on
+    dump, and the config's comments carry the rationale for every field.
+    """
+    if not _KEY_RE.match(key):
+        raise VersionError(
+            f"invalid version key {key!r}; expected an identifier like "
+            f"'packageVersion' or 'gemVersion'"
+        )
+    return re.compile(
+        rf"^(?P<prefix>[ \t]*{re.escape(key)}:[ \t]*)(?P<value>[^\s#]+)"
+        rf"(?P<suffix>[ \t]*(?:#.*)?)$",
+        re.MULTILINE,
+    )
 
 
 class VersionError(ValueError):
@@ -94,30 +116,33 @@ def bump_version(version: Version, bump: str) -> Version:
     raise VersionError(f"unknown bump {bump!r}; expected one of {VALID_BUMPS}")
 
 
-def read_package_version(config_text: str) -> Version:
-    """Extract `packageVersion` from an openapi-generator config."""
-    matches = _PACKAGE_VERSION_RE.findall(config_text)
+def read_package_version(config_text: str, key: str = DEFAULT_VERSION_KEY) -> Version:
+    """Extract the version keyed by `key` from an openapi-generator config."""
+    matches = _version_re(key).findall(config_text)
     if not matches:
-        raise VersionError("no `packageVersion:` line found in config")
+        raise VersionError(f"no `{key}:` line found in config")
     if len(matches) > 1:
         raise VersionError(
-            f"found {len(matches)} `packageVersion:` lines in config; expected exactly one"
+            f"found {len(matches)} `{key}:` lines in config; expected exactly one"
         )
     return parse_version(matches[0][1])
 
 
-def write_package_version(config_text: str, version: Version) -> str:
-    """Return the config with `packageVersion` set, leaving everything else byte-identical."""
-    if not _PACKAGE_VERSION_RE.search(config_text):
-        raise VersionError("no `packageVersion:` line found in config")
+def write_package_version(
+    config_text: str, version: Version, key: str = DEFAULT_VERSION_KEY
+) -> str:
+    """Return the config with `key` set, leaving everything else byte-identical."""
+    pattern = _version_re(key)
+    if not pattern.search(config_text):
+        raise VersionError(f"no `{key}:` line found in config")
 
     def _replace(match: re.Match[str]) -> str:
         return f"{match.group('prefix')}{version}{match.group('suffix')}"
 
-    updated, count = _PACKAGE_VERSION_RE.subn(_replace, config_text)
+    updated, count = pattern.subn(_replace, config_text)
     if count != 1:
         raise VersionError(
-            f"expected exactly one `packageVersion:` line to rewrite, rewrote {count}"
+            f"expected exactly one `{key}:` line to rewrite, rewrote {count}"
         )
     return updated
 
@@ -182,6 +207,15 @@ def main(argv: list[str] | None = None) -> int:
             "In CI the labels decide."
         ),
     )
+    parser.add_argument(
+        "--version-key",
+        default=DEFAULT_VERSION_KEY,
+        help=(
+            "Config key holding the version. Differs per generator: "
+            "packageVersion (Python, C#), gemVersion (Ruby), npmVersion "
+            f"(TypeScript). Default: {DEFAULT_VERSION_KEY}."
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -192,7 +226,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         labels = _parse_labels(args.labels_json)
-        current = read_package_version(current_text)
+        current = read_package_version(current_text, args.version_key)
         bump = args.force_bump or select_bump(labels)
         nxt = bump_version(current, bump)
     except VersionError as exc:
@@ -216,7 +250,8 @@ def main(argv: list[str] | None = None) -> int:
         try:
             target_text = args.write_config.read_text(encoding="utf-8")
             args.write_config.write_text(
-                write_package_version(target_text, nxt), encoding="utf-8"
+                write_package_version(target_text, nxt, args.version_key),
+                encoding="utf-8",
             )
         except OSError as exc:
             print(f"error: cannot rewrite --write-config: {exc}", file=sys.stderr)
@@ -224,7 +259,7 @@ def main(argv: list[str] | None = None) -> int:
         except VersionError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
-        print(f"wrote packageVersion: {nxt} to {args.write_config}")
+        print(f"wrote {args.version_key}: {nxt} to {args.write_config}")
 
     _emit_github_output(
         {"current": str(current), "next": str(nxt), "bump": bump}

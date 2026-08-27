@@ -1,0 +1,14 @@
+source "https://rubygems.org"
+
+gemspec
+
+# Test-only dependencies for the smoke suite in spec/. The SDK's own runtime
+# deps come from the gemspec; these are the extras the specs themselves need.
+#
+# Hand-maintained rather than generated -- see .openapi-generator-ignore. The
+# generated Gemfile pins an ancient rubocop and carries no HTTP stubbing gem.
+group :development, :test do
+  gem "rake", "~> 13.0"
+  gem "rspec", "~> 3.13"
+  gem "webmock", "~> 3.23"
+end
