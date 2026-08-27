@@ -113,8 +113,11 @@ jobs:
           )
           if not lic or lic.group(1) == "NoLicense":
               sys.exit(
-                  "::error::pyproject.toml carries no usable license. Set info.license "
-                  "in reference/mercury.json (mig-readme-docs) and let it sync through."
+                  "::error::pyproject.toml carries no usable license. Set License on "
+                  "the OpenApiInfo in minerva's Mercury.Api/"
+                  "MercuryApiServiceCollectionExtensions.cs, then let it regenerate "
+                  "into mig-readme-docs and sync here. Editing reference/mercury.json "
+                  "by hand does not survive the next Swagger regeneration."
               )
 
           # (file, anchor, replacement, already-applied marker)
