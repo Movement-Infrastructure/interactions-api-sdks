@@ -133,6 +133,21 @@ Every run writes the full sdist and wheel file listings to the job summary, so t
 
 The metadata gate fails the release on the generated defaults the audit flagged (`team@openapitools.org`, `OpenAPI Generator Community`, version `0.0.0`). `twine check` does not catch these — it validates that the long description renders, not that the author is a real person.
 
+#### Running a promotion
+
+A promotion is a pull request from `develop` to `main`. It needs **one approving review** before merge; `main` takes no direct or force pushes. Anyone on the team may open one, but nobody releases alone — merging is what publishes, so the review is the release gate.
+
+**Check which version you are about to publish before you merge.** Read `packageVersion` in [`sdks/python/v1/openapi-generator-config.yaml`](sdks/python/v1/openapi-generator-config.yaml) on `develop` — that is the value the generator stamped into the package, and it is what the promotion will upload:
+
+```bash
+git show origin/develop:sdks/python/v1/openapi-generator-config.yaml | grep packageVersion
+curl -s https://test.pypi.org/pypi/ddx-interactions-api/json | jq -r '.info.version'   # what is already published
+```
+
+If those two match, **the promotion will publish nothing and still report success.** The publish step sets `skip-existing: true`, so a duplicate version is skipped rather than failed — deliberate, so that re-promoting without a version change is not an error, but it means a green run is not by itself proof that anything was uploaded. Confirm against the version on TestPyPI, or read the job summary, which lists the exact files uploaded on every run.
+
+The version itself is not set by hand. `bump_version.py` computes it on each sync PR from the PR's labels — minor by default, patch or major if labelled. See [Versioning](#versioning).
+
 **First-time setup**, once per registry:
 
 1. Create the `main` branch from `develop`.
