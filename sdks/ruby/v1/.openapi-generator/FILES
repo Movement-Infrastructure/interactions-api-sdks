@@ -1,6 +1,5 @@
 .gitignore
 .rspec
-Gemfile
 README.md
 Rakefile
 ddx_interactions_api.gemspec

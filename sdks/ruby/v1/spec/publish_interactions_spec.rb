@@ -12,12 +12,7 @@ require "webmock/rspec"
 API_VERSION = "1"
 HOST = "localhost:4010"
 
-# Minimal request the API accepts. `person` is not in the spec's required list
-# (attemptDateTime, committee, method, outcome, stateCode, vendorSource) but the
-# API rejects a non-VAN interaction carrying neither `person` nor `contactInfo`
-# with "Person ID or valid form of contact information (email, phone, or
-# address) required." A stub answers whatever it is given, so leaving it out
-# would keep this spec green while asserting a request the real API refuses.
+# Minimal request the API accepts.
 REQUEST_BODY = {
   interactions: [
     {
@@ -100,8 +95,7 @@ RSpec.describe DdxInteractionsApi::InteractionsApi do
     described_class.new(client).vversion_interactions_post(API_VERSION, interactions_dto: body)
 
     expect(
-      a_request(:post, %r{/interactions\z})
-        .with(headers: { "Authorization" => "Basic #{Base64.strict_encode64(':test')}" })
+      a_request(:post, %r{/interactions\z}).with(basic_auth: ["", "test"])
     ).to have_been_made
   end
 end
