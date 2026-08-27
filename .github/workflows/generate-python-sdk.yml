@@ -83,20 +83,39 @@ jobs:
             -o sdks/python/v1 \
             -c sdks/python/v1/openapi-generator-config.yaml
 
-      # The Python template never passes PYTHON_REQUIRES to setup(), and ships no
-      # certifi while defaulting ssl_ca_cert to None -- so HTTPS dies with
-      # CERTIFICATE_VERIFY_FAILED on python.org macOS builds, whose OpenSSL trust
-      # store is empty. No generator config option controls either. Anchors are
-      # exact generated text and a miss is fatal, so a template change fails the
-      # build instead of silently publishing a package missing these. Keep in
-      # sync with the copy in python-sdk-tests.yml. See MIG-2365.
+      # openapi-generator's Python template drops three things setup() needs, and
+      # no generator config option controls any of them:
+      #
+      #   - PYTHON_REQUIRES is defined and never passed, so no Requires-Python.
+      #   - No certifi, and ssl_ca_cert defaults to None, so HTTPS dies with
+      #     CERTIFICATE_VERIFY_FAILED on python.org macOS builds, whose OpenSSL
+      #     trust store is empty. urllib3 2.x will not pick up certifi on its own.
+      #   - info.license reaches pyproject.toml's poetry table, which the
+      #     setuptools backend ignores, and never reaches setup().
+      #
+      # Anchors are exact generated text and a miss is fatal, so a template change
+      # fails the build instead of silently publishing a package missing these.
+      # Keep in sync with the copy in python-sdk-tests.yml. See MIG-2365.
       - name: Patch generated SDK metadata
         run: |
           python - <<'PY'
-          import pathlib, sys
+          import pathlib, re, sys
 
           ROOT = pathlib.Path("sdks/python/v1")
           CERTIFI = "certifi >= 2024.2.2"
+
+          # Read the license back out of pyproject.toml so the spec's info.license
+          # stays the single source of truth rather than being hardcoded here.
+          lic = re.search(
+              r'^license = "(.+)"$',
+              (ROOT / "pyproject.toml").read_text(encoding="utf-8"),
+              re.M,
+          )
+          if not lic or lic.group(1) == "NoLicense":
+              sys.exit(
+                  "::error::pyproject.toml carries no usable license. Set info.license "
+                  "in reference/mercury.json (mig-readme-docs) and let it sync through."
+              )
 
           # (file, anchor, replacement, already-applied marker)
           PATCHES = [
@@ -108,6 +127,10 @@ jobs:
                '    "typing-extensions >= 4.7.1",\n]',
                f'    "typing-extensions >= 4.7.1",\n    "{CERTIFI}",\n]',
                CERTIFI),
+              ("setup.py",
+               '    packages=find_packages(exclude=["test", "tests"]),\n',
+               f'    license="{lic.group(1)}",\n    packages=find_packages(exclude=["test", "tests"]),\n',
+               'license="'),
               ("ddx_interactions_api/configuration.py",
                "        self.ssl_ca_cert = ssl_ca_cert\n",
                "        import certifi\n"
