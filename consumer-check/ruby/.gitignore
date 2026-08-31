@@ -1,0 +1,5 @@
+# Not committed: the lock pins whichever SDK_SOURCE was last used, so committing
+# it would make the next run with a different source fail to resolve.
+Gemfile.lock
+.bundle/
+vendor/
