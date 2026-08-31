@@ -1,0 +1,106 @@
+name: Generate Node SDK
+
+# On every PR that touches openapi/v1/swagger.json, computes the next package
+# version from the PR's labels, regenerates sdks/node/v1/, and commits both back
+# to the PR branch so the version lands in the generated manifest.
+
+on:
+  pull_request:
+    # `labeled`/`unlabeled` are here so adding or removing a version label
+    # after the PR opens recomputes the version.
+    types: [opened, synchronize, labeled, unlabeled]
+    paths:
+      - openapi/v1/swagger.json
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Read base-branch package version
+        run: |
+          set -euo pipefail
+
+          config=sdks/node/v1/openapi-generator-config.yaml
+
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+
+          if ! git show "FETCH_HEAD:$config" > /tmp/base-node-config.yaml; then
+            echo "::error::$config not found on ${{ github.base_ref }}; cannot determine the current version."
+            exit 1
+          fi
+
+      # The TypeScript generators spell the version key `npmVersion`, not
+      # `packageVersion`. Passing the wrong key is an error rather than a
+      # silent no-op, so a rename upstream fails the build.
+      - name: Compute and apply next version
+        id: version
+        run: |
+          python scripts/bump_version.py \
+            --current-config /tmp/base-node-config.yaml \
+            --write-config sdks/node/v1/openapi-generator-config.yaml \
+            --labels-json '${{ toJSON(github.event.pull_request.labels.*.name) }}' \
+            --version-key npmVersion
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Cache openapi-generator jar
+        id: cache-generator
+        uses: actions/cache@v4
+        with:
+          path: .cache/openapi-generator-cli.jar
+          key: openapi-generator-7.10.0
+
+      - name: Download openapi-generator jar
+        if: steps.cache-generator.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .cache
+          curl -sSL \
+            https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/7.10.0/openapi-generator-cli-7.10.0.jar \
+            -o .cache/openapi-generator-cli.jar
+
+      - name: Generate Node SDK
+        run: |
+          java -jar .cache/openapi-generator-cli.jar generate \
+            -i openapi/v1/swagger.json \
+            -g typescript-fetch \
+            -o sdks/node/v1 \
+            -c sdks/node/v1/openapi-generator-config.yaml
+
+      # Fills in the package.json fields the generator hardcodes or omits, and
+      # confines tsc to src/. Both are regenerated on every run, so this is not
+      # optional. Shared with node-sdk-tests.yml rather than duplicated, and
+      # unit-tested by tooling-tests.yml.
+      - name: Patch generated SDK
+        run: python scripts/patch_node_sdk.py sdks/node/v1 --expect-name ddx-interactions-api
+
+      - name: Commit generated SDK if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add sdks/node/v1
+
+          if git diff --cached --quiet; then
+            echo "No changes to generated SDK — skipping commit."
+          else
+            git commit -m "chore: regenerate Node SDK at v${{ steps.version.outputs.next }} from openapi/v1/swagger.json"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
