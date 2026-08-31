@@ -29,6 +29,10 @@ SDK_SOURCE=gem SDK_VERSION=0.2.0.pre.1 bundle exec ruby check.rb
 `SDK_BRANCH` defaults to `develop`, which only works once the Ruby SDK has
 merged there -- until then `sdks/ruby/v1/` on `develop` holds just a `.gitkeep`.
 
+The `git` source clones over SSH because the repo is private. Bundler clones
+without a terminal, so an HTTPS URL fails with `could not read Username for
+'https://github.com'` instead of prompting. You need a working SSH key.
+
 Only `gem` exercises the real packaged artifact. `git` resolves files straight
 from the repo, so anything excluded from `s.files` still loads and the omission
 stays invisible until publish.

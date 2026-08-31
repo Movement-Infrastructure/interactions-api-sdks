@@ -1,0 +1,192 @@
+name: Publish Ruby SDK to RubyGems
+
+# Builds sdks/ruby/v1 and publishes it to RubyGems on push to the `main` release
+# branch, mirroring publish-python-testpypi.yml. `develop` is where sync PRs
+# land; promoting develop -> main is the deliberate act that releases.
+#
+# Every publish is a PRERELEASE (`X.Y.Z.pre.<run>`). RubyGems has no sandbox
+# registry -- no equivalent of TestPyPI -- so isolation comes from the version
+# instead: `gem install` and `bundle install` skip prereleases unless the caller
+# opts in with `--pre` or an exact pin. That is what keeps these builds off
+# consumers until we deliberately cut a final version.
+#
+# Authentication is OIDC trusted publishing -- there is no token, so nothing to
+# mask, leak, or rotate. See docs/publish-leak-audit-checklist.md section 1.
+#
+# IMPORTANT: RubyGems binds the trusted publisher to this file's NAME. Renaming
+# this workflow breaks publishing until the publisher config is updated to match.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sdks/ruby/v1/**'
+  # Re-run a publish without a new promotion (e.g. after fixing a
+  # RubyGems-side config problem). Gets a fresh run number, so a fresh version.
+  workflow_dispatch:
+
+# One publish at a time. Two overlapping runs could race on the same version.
+concurrency:
+  group: publish-ruby-rubygems
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v4
+        with:
+          # This job never pushes. The default leaves an unmasked live token in
+          # .git/config as an http.extraheader, readable by any build tooling
+          # that runs afterwards.
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      # The SDK is committed by the generate workflow. If it's absent, the
+      # promotion happened before the first sync PR merged.
+      - name: Verify the generated SDK is present
+        run: |
+          set -euo pipefail
+
+          if [ ! -f sdks/ruby/v1/ddx_interactions_api.gemspec ]; then
+            echo "::error::No gemspec in sdks/ruby/v1."
+            echo "::error::The generated SDK has not been committed yet; nothing to publish."
+            exit 1
+          fi
+
+      # The suffix is a property of this build, not of the branch, so it is
+      # stamped here and never committed. It must not go into the generator
+      # config: scripts/bump_version.py parses `gemVersion` as strict A.B.C and
+      # exits 2 on a suffix, which would break the next sync PR.
+      #
+      # run_number is monotonic, which matters because RubyGems refuses to
+      # re-push a version and `yank` does not free it. There is no gem-push
+      # equivalent of the Python publish's `skip-existing`.
+      - name: Stamp the prerelease version
+        run: |
+          set -euo pipefail
+
+          base=$(sed -nE 's/^gemVersion:[[:space:]]*"?([^"[:space:]#]+)"?.*/\1/p' \
+                 sdks/ruby/v1/openapi-generator-config.yaml)
+
+          if [ -z "$base" ]; then
+            echo "::error::Could not read gemVersion from openapi-generator-config.yaml."
+            exit 1
+          fi
+
+          pre="${base}.pre.${GITHUB_RUN_NUMBER}"
+          sed -i "s/VERSION = '.*'/VERSION = '${pre}'/" \
+            sdks/ruby/v1/lib/ddx_interactions_api/version.rb
+
+          echo "GEM_VERSION=${pre}" >> "$GITHUB_ENV"
+          echo "Publishing ${pre} (base ${base})."
+
+      - name: Build the gem
+        working-directory: sdks/ruby/v1
+        run: gem build ddx_interactions_api.gemspec -o "ddx_interactions_api-${GEM_VERSION}.gem"
+
+      # Package contents are permanent and world-readable once pushed; yanking
+      # does not unpublish the files. Enumerated on every release so a bad
+      # s.files glob is visible in the run rather than discovered on the
+      # registry. See docs/publish-leak-audit-checklist.md section 3.
+      - name: Enumerate artifact contents
+        working-directory: sdks/ruby/v1
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Published artifact contents"
+            echo "### gem: ddx_interactions_api-${GEM_VERSION}.gem"
+            echo '```'
+            tar -xOf "ddx_interactions_api-${GEM_VERSION}.gem" data.tar.gz | tar -tzf - | sort
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The generator's defaults would otherwise ship straight into the gem:
+      # gemAuthor defaults to "OpenAPI-Generator" and gemLicense to "unlicense".
+      # Reads the built artifact rather than the gemspec source, because that is
+      # what actually gets published.
+      - name: Check gem metadata
+        working-directory: sdks/ruby/v1
+        run: |
+          set -euo pipefail
+
+          ruby -rrubygems/package -e '
+            spec = Gem::Package.new(ARGV[0]).spec
+            fails = 0
+            check = lambda do |cond, msg|
+              if cond
+                puts "::error::#{msg}"
+                fails += 1
+              end
+            end
+
+            check.call(spec.authors.any? { |a| a =~ /OpenAPI[- ]Generator/i },
+                       "Author is the generator default. Set gemAuthor in openapi-generator-config.yaml.")
+            check.call(spec.email.to_a.any? { |e| e =~ /openapitools\.org/i },
+                       "Author email is the openapi-generator project address. Set gemAuthorEmail.")
+            check.call(spec.license.to_s.empty? || spec.license =~ /\Aunlicense\z/i,
+                       "License is unset or the generator default. Set gemLicense.")
+            check.call(spec.version.to_s.start_with?("0.0.0"),
+                       "Version is the 0.0.0 placeholder; the version bump did not run.")
+            check.call(spec.homepage.to_s.empty?,
+                       "Homepage is unset. Set gemHomepage.")
+            check.call(!spec.version.prerelease?,
+                       "Version #{spec.version} is not a prerelease. This workflow only publishes prereleases.")
+
+            if fails.zero?
+              puts "Metadata checks passed: #{spec.name} #{spec.version} (#{spec.license})"
+            else
+              puts "::error::Refusing to publish with generated-default metadata."
+              exit 1
+            end
+          ' "ddx_interactions_api-${GEM_VERSION}.gem"
+
+      - name: Upload gem artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruby-sdk-gem
+          path: sdks/ruby/v1/*.gem
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+
+    # Keeps the publish capability off arbitrary branches, and is where a
+    # required reviewer attaches if we want a human gate before a release.
+    environment:
+      name: rubygems
+      url: https://rubygems.org/gems/ddx_interactions_api
+
+    permissions:
+      # Mints the short-lived OIDC token RubyGems exchanges for a push grant.
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download gem artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ruby-sdk-gem
+          path: dist/
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      # Exchanges the OIDC token for a scoped, short-lived RubyGems credential
+      # and writes it where `gem push` looks. No stored secret is involved.
+      - name: Configure RubyGems credentials
+        uses: rubygems/configure-rubygems-credentials@v2.1.0
+
+      - name: Push to RubyGems
+        run: |
+          set -euo pipefail
+          gem push dist/*.gem
