@@ -1,0 +1,70 @@
+{{!
+    Overrides the python generator's built-in README.mustache. Passed to the
+    generator as -t templates/python; templates absent from that directory fall
+    back to the ones embedded in the jar, which is why only this file exists.
+
+    NOTE: a mustache comment ends at its first closing brace pair, so no
+    variable or partial tag may appear in this block. Naming one here silently
+    ends the comment and renders the remainder as markup.
+
+    Three defects in the built-in template motivated the override:
+
+      - It tells consumers to pip install from git+https against this
+        repository. That is private, and even once public it is the wrong way
+        to install a published package.
+      - It documents `python setup.py install`, removed from setuptools.
+      - It advertises pytest to run tests that MANIFEST.in prunes from the
+        distribution, so the instruction cannot work for a consumer.
+
+    Deliberately omitted: the generatedDate build-date line, which would churn
+    the generated README on every run, and the generatorClass build-package
+    line, which leaks an internal Java class name onto the registry page.
+
+    The trailing common_README partial is the generator's own. It carries the
+    usage example plus the endpoint, model and authorization tables, all driven
+    off the spec -- worth keeping and not worth restating.
+}}
+# {{{projectName}}}
+{{#appDescriptionWithNewLines}}
+{{{.}}}
+{{/appDescriptionWithNewLines}}
+
+Python client for the DDx Interactions API, generated from its OpenAPI
+specification.
+
+- API version: {{appVersion}}
+- Package version: {{packageVersion}}
+- Generator version: {{generatorVersion}}
+{{#infoUrl}}
+
+For more information, please visit [{{{infoUrl}}}]({{{infoUrl}}}).
+{{/infoUrl}}
+
+## Requirements
+
+Python {{{generatorLanguageVersion}}}
+
+## Installation
+
+```sh
+pip install {{{projectName}}}
+```
+
+Then import the package:
+
+```python
+import {{{packageName}}}
+```
+
+## Changelog
+
+API changes are recorded in [CHANGELOG.md](CHANGELOG.md), regenerated from a
+diff of the OpenAPI specification on each sync. Entries marked **breaking**
+require a change on the consumer side.
+
+## Reporting issues
+
+This package is generated; edits to it are overwritten on the next spec sync.
+Report problems against the API specification rather than the generated code.
+
+{{> common_README }}

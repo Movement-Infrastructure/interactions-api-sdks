@@ -9,6 +9,11 @@ tests/**
 requirements-test.txt
 .openapi-generator-ignore
 
+# Written by the oasdiff step in generate-python-sdk.yml, accumulating one
+# entry per sync. The generator has no changelog template today, but listing it
+# means a future one can't wipe the history.
+CHANGELOG.md
+
 
 # The python generator emits these supporting files, but we don't use them (we
 # have our own CI and test suite). Not generating them keeps them out of the

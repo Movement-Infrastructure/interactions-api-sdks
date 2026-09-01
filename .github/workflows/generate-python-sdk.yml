@@ -33,7 +33,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      # One fetch serves three steps: the version bump reads the base config,
+      # and the changelog reads the base spec and the base changelog.
       - name: Read base-branch package version
+        id: base
         run: |
           set -euo pipefail
 
@@ -45,6 +48,21 @@ jobs:
             echo "::error::$config not found on ${{ github.base_ref }}; cannot determine the current version."
             exit 1
           fi
+
+          # Absent on the bootstrap sync that commits the first spec. No
+          # baseline means nothing to diff, so the changelog steps below are
+          # skipped rather than failing the run.
+          if git show "FETCH_HEAD:openapi/v1/swagger.json" > /tmp/base-swagger.json 2>/dev/null; then
+            echo "has_spec=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_spec=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No spec on ${{ github.base_ref }}; skipping the changelog."
+          fi
+
+          # Absent until the first sync after this workflow ships, which is the
+          # case the renderer treats as creating the file.
+          git show "FETCH_HEAD:sdks/python/v1/CHANGELOG.md" > /tmp/base-changelog.md 2>/dev/null \
+            || echo "::notice::No changelog on ${{ github.base_ref }} yet; it will be created."
 
       - name: Compute and apply next version
         id: version
@@ -81,56 +99,50 @@ jobs:
             -i openapi/v1/swagger.json \
             -g python \
             -o sdks/python/v1 \
-            -c sdks/python/v1/openapi-generator-config.yaml
+            -c sdks/python/v1/openapi-generator-config.yaml \
+            -t templates/python
 
-      # The Python template never passes PYTHON_REQUIRES to setup(), and ships no
-      # certifi while defaulting ssl_ca_cert to None -- so HTTPS dies with
-      # CERTIFICATE_VERIFY_FAILED on python.org macOS builds, whose OpenSSL trust
-      # store is empty. No generator config option controls either. Anchors are
-      # exact generated text and a miss is fatal, so a template change fails the
-      # build instead of silently publishing a package missing these. Keep in
-      # sync with the copy in python-sdk-tests.yml. See MIG-2365.
+      # Fills in what the python generator hardcodes or omits: python_requires,
+      # certifi, the Changelog project URL, and long_description (which PyPI
+      # renders as the whole project page). Shared with python-sdk-tests.yml
+      # rather than duplicated, and unit-tested by tooling-tests.yml.
       - name: Patch generated SDK metadata
+        run: python scripts/patch_python_sdk.py sdks/python/v1
+
+      # Pinned like the openapi-generator jar, so a sync PR's changelog can't
+      # change wording because upstream shipped a release.
+      - name: Install oasdiff
+        if: steps.base.outputs.has_spec == 'true'
+        env:
+          OASDIFF_VERSION: 1.30.0
         run: |
-          python - <<'PY'
-          import pathlib, sys
+          set -euo pipefail
 
-          ROOT = pathlib.Path("sdks/python/v1")
-          CERTIFI = "certifi >= 2024.2.2"
+          curl -sSL \
+            "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin oasdiff
 
-          # (file, anchor, replacement, already-applied marker)
-          PATCHES = [
-              ("setup.py",
-               "    install_requires=REQUIRES,\n",
-               "    python_requires=PYTHON_REQUIRES,\n    install_requires=REQUIRES,\n",
-               "python_requires=PYTHON_REQUIRES"),
-              ("setup.py",
-               '    "typing-extensions >= 4.7.1",\n]',
-               f'    "typing-extensions >= 4.7.1",\n    "{CERTIFI}",\n]',
-               CERTIFI),
-              ("ddx_interactions_api/configuration.py",
-               "        self.ssl_ca_cert = ssl_ca_cert\n",
-               "        import certifi\n"
-               "        self.ssl_ca_cert = ssl_ca_cert if ssl_ca_cert is not None else certifi.where()\n",
-               "certifi.where()"),
-          ]
+          oasdiff --version
 
-          for name, anchor, replacement, marker in PATCHES:
-              path = ROOT / name
-              text = path.read_text(encoding="utf-8")
-              if marker in text:
-                  print(f"already applied: {name}")
-                  continue
-              found = text.count(anchor)
-              if found != 1:
-                  sys.exit(
-                      f"::error::{path}: anchor {anchor!r} matched {found} times, "
-                      f"expected 1. Generator template changed; update this step "
-                      f"and its copy in python-sdk-tests.yml."
-                  )
-              path.write_text(text.replace(anchor, replacement), encoding="utf-8")
-              print(f"patched: {name}")
-          PY
+      # JSON rather than oasdiff's markdown: its markdown heads the output with
+      # `API Changelog v1 vs. v1` (the cutover guard already enforces matching
+      # info.version) and repeats each schema change once per request media
+      # type. scripts/render_changelog.py collapses that and files the entry
+      # under the version computed above.
+      - name: Update CHANGELOG.md
+        if: steps.base.outputs.has_spec == 'true'
+        run: |
+          set -euo pipefail
+
+          oasdiff changelog /tmp/base-swagger.json openapi/v1/swagger.json \
+            -f json > /tmp/oasdiff.json
+
+          python scripts/render_changelog.py \
+            --oasdiff-json /tmp/oasdiff.json \
+            --version "${{ steps.version.outputs.next }}" \
+            --date "$(date -u +%Y-%m-%d)" \
+            --current-changelog /tmp/base-changelog.md \
+            --write-changelog sdks/python/v1/CHANGELOG.md
 
       - name: Commit generated SDK if changed
         run: |
