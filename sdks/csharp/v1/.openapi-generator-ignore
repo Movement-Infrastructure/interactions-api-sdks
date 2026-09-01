@@ -1,0 +1,18 @@
+# openapi-generator ignore file.
+#
+# Files listed here are NOT written or overwritten when the SDK is regenerated
+# (.github/workflows/generate-csharp-sdk.yml and csharp-sdk-tests.yml both run
+# the generator into this directory). This protects the hand-written smoke-test
+# suite and its supporting files from being clobbered by regeneration.
+
+test/**
+.openapi-generator-ignore
+
+# The generator emits these supporting files, but we don't use them (we have
+# our own CI and test suite). Not generating them keeps them out of the repo.
+appveyor.yml
+git_push.sh
+
+# A second copy of the spec, normalised by the generator. openapi/v1/swagger.json
+# is the source of truth and the only copy worth reviewing in a sync PR.
+api/openapi.yaml

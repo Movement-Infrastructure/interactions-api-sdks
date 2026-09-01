@@ -1,0 +1,56 @@
+# openapi-generator config for the C# v1 SDK.
+#
+# Invoked by .github/workflows/generate-csharp-sdk.yml as:
+#   openapi-generator generate \
+#     -i openapi/v1/swagger.json \
+#     -g csharp \
+#     -o sdks/csharp/v1 \
+#     -c sdks/csharp/v1/openapi-generator-config.yaml
+#
+# Generator pinned to v7.10.0; see the workflow for the cached jar.
+
+# NuGet id and root namespace. Dotted, per .NET convention for an org-prefixed
+# library -- unlike the Python distribution (ddx-interactions-api) or the Ruby
+# gem (ddx_interactions_api). Each ecosystem gets its own convention.
+packageName: Ddx.InteractionsApi
+
+# Rewritten by the version-bump workflow on each sync PR. The C# generator
+# spells this `packageVersion`, which is scripts/bump_version.py's default, so
+# the workflow passes no --version-key.
+packageVersion: 0.1.0
+
+# HttpClient from the BCL rather than the generator's RestSharp default. Note
+# this is NOT dependency-free the way the Ruby and Node clients are: the C#
+# templates pull in JsonSubTypes, Newtonsoft.Json and Polly regardless. What
+# this buys is a strict subset -- restsharp emits those same three plus
+# RestSharp itself -- so it dominates the default at no cost.
+#
+# generichost is the only variant that avoids Newtonsoft.Json (it uses
+# System.Text.Json) and keeps every dependency Microsoft first-party, but it
+# imposes a DI registration pattern on consumers who just want one call.
+#
+# The generator labels this template experimental, meaning its output may change
+# across generator releases. That is bounded here: the jar is pinned, so the
+# risk only materialises on a deliberate generator upgrade, not on a spec sync.
+library: httpclient
+
+# Current LTS, and the highest this generator version offers. Excludes .NET
+# Framework consumers; revisit with a netstandard2.0 multi-target if one asks.
+targetFramework: net8.0
+
+# Pinned rather than left to the generator, which emits a fresh random GUID on
+# every run and would otherwise churn the csproj on each sync.
+packageGuid: '{9FF6EDD8-40C6-4E7F-BA23-B53A45144D41}'
+
+licenseId: MIT
+
+# Nullable annotations. The generator defaults this to false, which is the
+# pre-.NET-6 default and would push avoidable null checks onto consumers.
+nullableReferenceTypes: true
+
+gitUserId: Movement-Infrastructure
+gitRepoId: interactions-api-sdks
+
+globalProperties:
+  apiTests: "false"
+  modelTests: "false"
