@@ -129,6 +129,17 @@ class TestPatchSdk:
         text = (tmp_path / "setup.py").read_text()
         assert text.index("_LONG_DESCRIPTION = ") < text.index("setup(")
 
+    def test_drops_the_noqa_that_guarded_the_replaced_literal(self, tmp_path):
+        patch_sdk(write_sdk(tmp_path))
+        assert "# noqa: E501" not in (tmp_path / "setup.py").read_text()
+
+    def test_patches_a_setup_py_with_no_noqa(self, tmp_path):
+        without = SETUP_PY.replace('""",  # noqa: E501', '""",')
+        patch_sdk(write_sdk(tmp_path, setup_py=without))
+        text = (tmp_path / "setup.py").read_text()
+        assert "long_description=_LONG_DESCRIPTION," in text
+        assert ",," not in text
+
     def test_keeps_the_content_type(self, tmp_path):
         patch_sdk(write_sdk(tmp_path))
         assert "long_description_content_type" in (tmp_path / "setup.py").read_text()

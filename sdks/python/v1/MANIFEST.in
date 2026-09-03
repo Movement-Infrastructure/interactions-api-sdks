@@ -17,3 +17,6 @@ prune .openapi-generator
 # wheel, where a top-level file cannot go at all; wheel consumers reach the
 # changelog through the Changelog link in the package metadata.
 include CHANGELOG.md
+
+# setup.py reads this at build time for long_description.
+include README.md

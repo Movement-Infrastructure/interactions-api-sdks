@@ -45,7 +45,10 @@ BANNED = [
     # rather than a list of environment names keeps a newly added environment
     # from slipping through, and keeps their names out of this file.
     (
-        re.compile(rf"\b(?!{re.escape(PRODUCTION_HOST)})[a-z0-9-]+\.movementinfrastructure\.org\b"),
+        re.compile(
+            rf"\b(?!{re.escape(PRODUCTION_HOST)})[a-z0-9-]+\.movementinfrastructure\.org\b",
+            re.IGNORECASE,
+        ),
         f"names a host other than {PRODUCTION_HOST}; the spec's `servers` block "
         "is copied verbatim into the client",
     ),

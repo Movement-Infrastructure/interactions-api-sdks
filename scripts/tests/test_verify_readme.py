@@ -67,6 +67,14 @@ class TestCheck:
             bad = GOOD + f"\nSee https://{host} for testing.\n"
             assert any(PRODUCTION_HOST in p for p in check(bad, REQUIRED)), host
 
+    def test_matches_hosts_regardless_of_case(self):
+        bad = GOOD + "\nSee https://API-Dev.MovementInfrastructure.org here.\n"
+        assert any(PRODUCTION_HOST in p for p in check(bad, REQUIRED))
+
+    def test_the_production_host_is_allowed_regardless_of_case(self):
+        good = GOOD + "\nAll URIs are relative to *https://API.MovementInfrastructure.ORG*\n"
+        assert check(good, REQUIRED) == []
+
     def test_rejects_a_credential_placeholder(self):
         bad = GOOD + "\nconfiguration.password = 'YOUR_PASSWORD'\n"
         assert any("credential placeholder" in p for p in check(bad, REQUIRED))

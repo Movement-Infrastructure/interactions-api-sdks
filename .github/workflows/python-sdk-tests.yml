@@ -98,3 +98,25 @@ jobs:
       - name: Run smoke tests
         if: steps.spec.outputs.present == 'true'
         run: pytest sdks/python/v1/tests -q
+
+      # The SDK is committed, so it can drift from the spec and the templates
+      # with nothing noticing. This job has already regenerated it, so a diff
+      # means the committed copy is stale. Last, so a drift failure doesn't
+      # hide the test results. Skipped when the spec changed here, because
+      # generate-python-sdk.yml commits the regenerated SDK on those PRs.
+      - name: Check the committed SDK is up to date
+        if: steps.spec.outputs.present == 'true'
+        run: |
+          set -euo pipefail
+
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+
+          if ! git diff --quiet FETCH_HEAD -- openapi/v1/swagger.json; then
+            echo "::notice::Spec changed in this PR; the generate workflow commits the regenerated SDK."
+            exit 0
+          fi
+
+          if ! git diff --exit-code -- sdks/python/v1; then
+            echo "::error::sdks/python/v1 does not match a fresh generation. Regenerate and commit it."
+            exit 1
+          fi

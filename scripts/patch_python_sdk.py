@@ -94,8 +94,8 @@ REGEX_PATCHES = [
     # README instead.
     (
         "setup.py",
-        re.compile(r'long_description=""".*?"""', re.DOTALL),
-        "long_description=_LONG_DESCRIPTION",
+        re.compile(r'long_description=""".*?""",(?:[ \t]*# noqa: E501)?', re.DOTALL),
+        "long_description=_LONG_DESCRIPTION,",
         "long_description=_LONG_DESCRIPTION",
     ),
 ]
