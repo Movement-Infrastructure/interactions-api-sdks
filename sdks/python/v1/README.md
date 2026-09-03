@@ -28,14 +28,17 @@ import ddx_interactions_api
 
 ## Changelog
 
-API changes are recorded in [CHANGELOG.md](CHANGELOG.md), regenerated from a
-diff of the OpenAPI specification on each sync. Entries marked **breaking**
-require a change on the consumer side.
+API changes are recorded in the
+[changelog](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/CHANGELOG.md),
+regenerated from a diff of the OpenAPI specification on each sync. Entries
+marked **breaking** require a change on the consumer side.
 
 ## Reporting issues
 
 This package is generated; edits to it are overwritten on the next spec sync.
 Report problems against the API specification rather than the generated code.
+
+## Getting Started
 
 ```python
 

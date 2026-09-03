@@ -53,13 +53,9 @@ jobs:
             exit 1
           fi
 
-      # setup.py points long_description at this file, so it is the project page
-      # TestPyPI renders. python-sdk-tests.yml runs the same check on PRs to
-      # develop, but that check sees a regeneration -- this one sees the bytes
-      # about to be uploaded, which is what section 3 of
-      # docs/publish-leak-audit-checklist.md is asking for. No arguments: the
-      # required list lives in the script so this gate cannot drift from the
-      # PR gate.
+      # setup.py points long_description at this file, so it becomes the
+      # project page. The PR check sees a regeneration; this sees the bytes
+      # about to be uploaded. Both call it bare, so the two gates cannot drift.
       - name: Verify README before publishing
         run: python scripts/verify_readme.py sdks/python/v1/README.md
 

@@ -1,6 +1,6 @@
 """Unit tests for scripts/verify_readme.py."""
 
-from verify_readme import REQUIRED, check, main
+from verify_readme import PRODUCTION_HOST, REQUIRED, check, main
 
 # What templates/python/README.mustache produces. Kept short; the rules under
 # test are about what must and must not appear, not about length.
@@ -37,13 +37,12 @@ class TestCheck:
 
     def test_rejects_a_git_install_instruction(self):
         # The default template's actual output, and the defect that motivated
-        # the override: it points consumers at this private repository.
+        # the override.
         bad = GOOD.replace(
             "pip install ddx-interactions-api",
             "pip install git+https://github.com/Movement-Infrastructure/interactions-api-sdks.git",
         )
-        problems = check(bad, [])
-        assert any("private" in p for p in problems)
+        assert any("git URL" in p for p in check(bad, []))
 
     def test_rejects_setup_py_install(self):
         bad = GOOD + "\n```sh\npython setup.py install --user\n```\n"
@@ -51,11 +50,22 @@ class TestCheck:
 
     def test_rejects_the_generator_class_name(self):
         bad = GOOD + "\n- Build package: org.openapitools.codegen.languages.PythonClientCodegen\n"
-        assert any("Java class name" in p for p in check(bad, REQUIRED))
+        assert any("Java class" in p for p in check(bad, REQUIRED))
 
-    def test_rejects_a_non_production_host(self):
-        bad = GOOD + "\nSee https://api-dev.movementinfrastructure.org for testing.\n"
-        assert any("non-production host" in p for p in check(bad, REQUIRED))
+    def test_allows_the_production_host(self):
+        good = GOOD + f"\nAll URIs are relative to *https://{PRODUCTION_HOST}*\n"
+        assert check(good, REQUIRED) == []
+
+    def test_rejects_any_other_host_on_the_api_domain(self):
+        # Matched by shape, so an environment nobody thought to list is still
+        # caught. The spec's `servers` block is copied verbatim into the client.
+        for host in (
+            "api-dev.movementinfrastructure.org",
+            "staging.movementinfrastructure.org",
+            "api.internal.movementinfrastructure.org",
+        ):
+            bad = GOOD + f"\nSee https://{host} for testing.\n"
+            assert any(PRODUCTION_HOST in p for p in check(bad, REQUIRED)), host
 
     def test_rejects_a_credential_placeholder(self):
         bad = GOOD + "\nconfiguration.password = 'YOUR_PASSWORD'\n"

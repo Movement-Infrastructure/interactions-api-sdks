@@ -75,18 +75,15 @@ jobs:
           python-version: '3.11'
 
       # Same patch generate-python-sdk.yml applies, because this job installs
-      # what it just regenerated -- without it CI would test unpatched code and
-      # the long_description, certifi and Requires-Python fixes would go
-      # unverified.
+      # what it just regenerated. Without it the certifi and Requires-Python
+      # fixes would go untested.
       - name: Patch generated SDK metadata
         if: steps.spec.outputs.present == 'true'
         run: python scripts/patch_python_sdk.py sdks/python/v1
 
-      # The README is published content: the patch above points setup.py's
-      # long_description at it, so this is the PyPI project page. Checked on
-      # every PR because it is regenerated on every sync, and because a dropped
-      # `-t templates/python` would silently restore the built-in template --
-      # which tells consumers to pip install from this private repo.
+      # The patch above points long_description at the README, making it the
+      # PyPI project page. Checked on every PR because a dropped
+      # `-t templates/python` would silently restore the built-in template.
       - name: Verify generated README
         if: steps.spec.outputs.present == 'true'
         run: python scripts/verify_readme.py sdks/python/v1/README.md

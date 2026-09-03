@@ -1,28 +1,21 @@
 #!/usr/bin/env python3
 """Check a generated SDK README before it becomes a registry page.
 
-The README is published content: `patch_python_sdk.py` points setup.py's
-`long_description` at it, which is what PyPI renders as the whole project page.
-That puts it in scope for docs/publish-leak-audit-checklist.md section 3, and
-it is generated on every sync, so it needs a check rather than a review habit.
-
-Two classes of rule:
+`patch_python_sdk.py` points setup.py's `long_description` at the README, so it
+renders as the whole PyPI project page. It is regenerated on every spec sync,
+which makes it published content that needs a check rather than a review habit.
 
 Banned
-    Text that must never reach a registry page -- an install command pointing
-    at this private repository, a removed setuptools invocation, an internal
-    Java class name, a non-production hostname. Each has been observed in the
-    generator's default output; see templates/python/README.mustache.
+    Text that must not reach a registry page. Every pattern here has been seen
+    in the generator's default output.
 
 Required
-    Sections and the install command a consumer needs. Catches a template
-    override that silently stopped being applied, which otherwise shows up
-    only as a wrong README on the registry.
+    Content a consumer needs. Catches a template override that silently stopped
+    applying -- otherwise visible only as a wrong page on the registry.
 
-The required list lives here rather than in each caller's argv. Three workflows
-run this -- the PR check, the sync regeneration, and the publish build -- and a
-gate the publish path spells differently from the PR path is a gate that does
-not hold.
+The required list lives here rather than in each caller's argv: three workflows
+run this, and a gate the publish path spells differently from the PR path is a
+gate that does not hold.
 """
 
 from __future__ import annotations
@@ -32,12 +25,13 @@ import re
 import sys
 from pathlib import Path
 
+PRODUCTION_HOST = "api.movementinfrastructure.org"
+
 # (compiled pattern, why it must not appear)
 BANNED = [
     (
         re.compile(r"pip install git\+|gem ['\"]?\w+['\"]?, *git:|npm install git\+"),
-        "installs from a git URL; this repository is private and that is not how "
-        "a published package is installed",
+        "installs from a git URL, bypassing the registry the package is published to",
     ),
     (
         re.compile(r"setup\.py\s+install"),
@@ -45,11 +39,15 @@ BANNED = [
     ),
     (
         re.compile(r"org\.openapitools\.codegen"),
-        "leaks the generator's internal Java class name",
+        "names the generator's internal Java class",
     ),
+    # Any host on the API domain but the production one. Matching the shape
+    # rather than a list of environment names keeps a newly added environment
+    # from slipping through, and keeps their names out of this file.
     (
-        re.compile(r"\bapi-dev\.movementinfrastructure\.org\b"),
-        "names a non-production host (leak-audit finding F4)",
+        re.compile(rf"\b(?!{re.escape(PRODUCTION_HOST)})[a-z0-9-]+\.movementinfrastructure\.org\b"),
+        f"names a host other than {PRODUCTION_HOST}; the spec's `servers` block "
+        "is copied verbatim into the client",
     ),
     (
         re.compile(r"YOUR_(PASSWORD|USERNAME|API_KEY|ACCESS_TOKEN)"),
@@ -57,13 +55,13 @@ BANNED = [
     ),
     (
         re.compile(r"^- Build date:", re.MULTILINE),
-        "carries a build date, which churns the generated README on every run",
+        "carries a build date, which churns the README on every run",
     ),
 ]
 
-# What templates/python/README.mustache is there to produce. The install command
-# is the load-bearing one: the built-in template's is a git+https URL against
-# this private repo, so its absence means the override stopped applying.
+# What templates/python/README.mustache exists to produce. The install command
+# is load-bearing: the built-in template's is a git URL, so its absence means
+# the override stopped applying.
 REQUIRED = [
     "pip install ddx-interactions-api",
     "## Installation",

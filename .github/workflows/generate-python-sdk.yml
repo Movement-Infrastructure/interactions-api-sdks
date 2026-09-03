@@ -59,8 +59,7 @@ jobs:
             echo "::notice::No spec on ${{ github.base_ref }}; skipping the changelog."
           fi
 
-          # Absent until the first sync after this workflow ships, which is the
-          # case the renderer treats as creating the file.
+          # Absent until the first sync creates it, which the renderer handles.
           git show "FETCH_HEAD:sdks/python/v1/CHANGELOG.md" > /tmp/base-changelog.md 2>/dev/null \
             || echo "::notice::No changelog on ${{ github.base_ref }} yet; it will be created."
 
@@ -102,10 +101,8 @@ jobs:
             -c sdks/python/v1/openapi-generator-config.yaml \
             -t templates/python
 
-      # Fills in what the python generator hardcodes or omits: python_requires,
-      # certifi, the Changelog project URL, and long_description (which PyPI
-      # renders as the whole project page). Shared with python-sdk-tests.yml
-      # rather than duplicated, and unit-tested by tooling-tests.yml.
+      # Fills in what the generator hardcodes or omits: python_requires,
+      # certifi, the Changelog project URL, and long_description.
       - name: Patch generated SDK metadata
         run: python scripts/patch_python_sdk.py sdks/python/v1
 
@@ -124,17 +121,10 @@ jobs:
 
           oasdiff --version
 
-      # JSON rather than oasdiff's markdown: its markdown heads the output with
-      # `API Changelog v1 vs. v1` (the cutover guard already enforces matching
-      # info.version) and repeats each schema change once per request media
-      # type. scripts/render_changelog.py collapses that and files the entry
-      # under the version computed above.
-      #
-      # `--bump` is what makes this step a gate and not just a renderer: the
-      # version comes from the PR's labels, the breaking changes come from the
-      # spec, and the two can disagree. When they do this fails before the
-      # commit step, so no wrongly-versioned SDK reaches the branch. The fix is
-      # to apply `interactions-api-major`, which reruns the workflow.
+      # `--bump` makes this a gate: the version comes from the PR's labels, the
+      # breaking changes come from the spec, and when they disagree this fails
+      # before the commit step below, so no wrongly-versioned SDK reaches the
+      # branch. Applying `interactions-api-major` reruns the workflow.
       - name: Update CHANGELOG.md
         if: steps.base.outputs.has_spec == 'true'
         run: |
@@ -143,11 +133,13 @@ jobs:
           oasdiff changelog /tmp/base-swagger.json openapi/v1/swagger.json \
             -f json > /tmp/oasdiff.json
 
+          # The head commit's date rather than today's: a label applied days
+          # later reruns this step, and the entry must not churn on the date.
           python scripts/render_changelog.py \
             --oasdiff-json /tmp/oasdiff.json \
             --version "${{ steps.version.outputs.next }}" \
             --bump "${{ steps.version.outputs.bump }}" \
-            --date "$(date -u +%Y-%m-%d)" \
+            --date "$(git log -1 --format=%cs)" \
             --current-changelog /tmp/base-changelog.md \
             --write-changelog sdks/python/v1/CHANGELOG.md
 

@@ -17,8 +17,7 @@ from pathlib import Path
 
 from setuptools import setup, find_packages  # noqa: H301
 
-# The README is this package's registry page. See the long_description
-# patch in scripts/patch_python_sdk.py.
+# Rendered as the whole project page on the package registry.
 _LONG_DESCRIPTION = (Path(__file__).parent / "README.md").read_text(
     encoding="utf-8"
 )

@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """Apply the fixes the python generator can't be configured to make.
 
-Previously an inline heredoc duplicated across generate-python-sdk.yml and
-python-sdk-tests.yml, with a comment asking that the two copies be kept in
-sync by hand. Moved here for the same reasons as patch_node_sdk.py: both
-workflows need it, and being a module gets it unit coverage from
-tooling-tests.yml.
+None of these are reachable through generator config: it exposes packageName,
+projectName and packageVersion, and nothing that governs setup() arguments. A
+module rather than an inline step because both generate-python-sdk.yml and
+python-sdk-tests.yml need it, and because it can then be unit-tested.
 
 Two kinds of patch, because two kinds of target:
 
@@ -15,14 +14,9 @@ Exact anchors
     a package missing the fix.
 
 Regex
-    `long_description` holds the spec's `info.description`, so its text changes
-    whenever someone edits the API docs upstream. Anchoring on that prose would
-    hard-fail the pipeline on a routine docs edit, which is why this one match
-    is a pattern.
-
-None of it is reachable through generator config: the python generator exposes
-packageName, projectName and packageVersion, and nothing that governs setup()
-arguments.
+    `long_description` holds the spec's `info.description`, whose text changes
+    whenever the API docs are edited upstream. An exact anchor on that prose
+    would hard-fail the pipeline on a routine docs edit.
 """
 
 from __future__ import annotations
@@ -66,9 +60,10 @@ EXACT_PATCHES = [
         "else certifi.where()\n",
         "certifi.where()",
     ),
-    # Nothing renders sdist contents, so shipping CHANGELOG.md in the tarball
-    # does not make it visible to anyone. PyPI builds its page from metadata,
-    # and project_urls is the field it renders as a sidebar link.
+    # Shipping CHANGELOG.md in the sdist does not make it visible to anyone --
+    # nothing renders sdist contents. PyPI builds its page from metadata, and
+    # project_urls is the field it renders as a sidebar link. Keep this URL and
+    # the one in templates/python/README.mustache pointing at the same file.
     (
         "setup.py",
         '    packages=find_packages(exclude=["test", "tests"]),\n',
@@ -84,8 +79,7 @@ EXACT_PATCHES = [
         "from setuptools import setup, find_packages  # noqa: H301\n",
         "from pathlib import Path\n\n"
         "from setuptools import setup, find_packages  # noqa: H301\n\n"
-        "# The README is this package's registry page. See the long_description\n"
-        "# patch in scripts/patch_python_sdk.py.\n"
+        "# Rendered as the whole project page on the package registry.\n"
         "_LONG_DESCRIPTION = (Path(__file__).parent / \"README.md\").read_text(\n"
         '    encoding="utf-8"\n'
         ")\n",
@@ -96,9 +90,8 @@ EXACT_PATCHES = [
 # (relative path, pattern, replacement, already-applied marker)
 REGEX_PATCHES = [
     # The generator hardcodes long_description to the spec's info.description,
-    # which renders as the whole PyPI project page -- 30 characters of it.
-    # Point it at the README instead, which is what the leak-audit checklist
-    # assumes is published there.
+    # so the whole PyPI project page is 30 characters long. Point it at the
+    # README instead.
     (
         "setup.py",
         re.compile(r'long_description=""".*?"""', re.DOTALL),

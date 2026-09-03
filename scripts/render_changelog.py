@@ -1,34 +1,25 @@
 #!/usr/bin/env python3
 """Render an SDK CHANGELOG entry from `oasdiff changelog -f json` output.
 
-Consumes JSON rather than oasdiff's own markdown for three reasons: its
-markdown emits a `# API Changelog v1 vs. v1` heading that says nothing (the
-sync workflow's cutover guard already enforces matching `info.version`), it
-reports the same schema change once per request media type -- three times over,
-for a spec declaring `application/json`, `text/json` and `application/*+json`
--- and it has no place to put the package version the entry needs to be filed
-under.
+Consumes JSON rather than oasdiff's own markdown, which heads the output with a
+`v1 vs. v1` heading that says nothing, reports the same schema change once per
+declared request media type, and has nowhere to put the package version the
+entry is filed under.
 
-The entry is read from one changelog and written to another, the same split
+Entries are read from one changelog and written to another, the same split
 bump_version.py uses: CI reads the base branch's copy and writes the PR
-branch's. That is what keeps re-runs idempotent. The generate workflows fire on
-`labeled`/`unlabeled`, so a reviewer applying `interactions-api-major` after
-the PR opens recomputes the version -- and this regenerates the entry against
-an unchanged base rather than appending a second one.
+branch's. That is what keeps re-runs idempotent -- a label applied after the PR
+opens recomputes the version and refiles the entry rather than appending a
+second one.
 
-Every run that writes files an entry, including one for a spec edit that
-changed nothing in the contract. Two reasons. A version that reaches the
-registry with no line here reads as a gap in the record rather than as a
-release consumers can ignore. And skipping the write is what would let a stale
-entry survive: an earlier run on the same PR has already committed its entry to
-the branch, so leaving the file alone leaves that entry in place even after the
-spec change it described was reverted.
+Every run that writes files an entry, including an empty one for a spec edit
+that changed no contract. A version that reaches the registry with no line here
+reads as a gap in the record, and skipping the write would strand an entry an
+earlier run had already committed to the branch.
 
-`--bump` opts into the one check the label logic cannot make for itself.
-bump_version.py reads the intended bump off PR labels; oasdiff reads the actual
-breaking changes out of the spec. When those disagree -- a breaking change under
-a non-major bump -- this exits non-zero rather than let the workflow commit an
-SDK whose own changelog contradicts its version.
+`--bump` makes this a gate: the intended bump comes from PR labels, the actual
+breaking changes come from the spec, and when they disagree this exits non-zero
+rather than let a wrongly-versioned SDK be committed.
 """
 
 from __future__ import annotations
@@ -40,10 +31,9 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-# Same directory, so this resolves both under `python scripts/render_changelog.py`
-# and under pytest via scripts/tests/conftest.py. Imported rather than restated
-# so the label name cannot drift between the script that reads it and the script
-# that tells a reviewer to apply it.
+# Same directory, so this resolves both as a script and under pytest. Imported
+# rather than restated so the label name cannot drift between the script that
+# acts on it and the script that tells a reviewer to apply it.
 from bump_version import MAJOR_LABEL
 
 HEADER = """\
@@ -252,9 +242,8 @@ def main(argv: list[str] | None = None) -> int:
 
     undeclared_breaking = bool(breaking) and args.bump is not None and args.bump != "major"
 
-    # Printed when nothing will be written, and when the run is about to fail --
-    # a reviewer reading a failed run needs to see which changes are breaking,
-    # not just that some are.
+    # Also printed when the run is about to fail: a reviewer needs to see which
+    # changes are breaking, not just that some are.
     if undeclared_breaking or not args.write_changelog:
         print()
         print(entry)

@@ -1,28 +1,23 @@
 {{!
-    Overrides the python generator's built-in README.mustache. Passed to the
-    generator as -t templates/python; templates absent from that directory fall
-    back to the ones embedded in the jar, which is why only this file exists.
+    Overrides the python generator's built-in README.mustache. Passed as
+    -t templates/python; templates absent from that directory fall back to the
+    ones embedded in the jar, which is why only this file exists.
 
     NOTE: a mustache comment ends at its first closing brace pair, so no
     variable or partial tag may appear in this block. Naming one here silently
     ends the comment and renders the remainder as markup.
 
-    Three defects in the built-in template motivated the override:
+    Three defects in the built-in template motivated the override. It installs
+    from a git URL rather than the registry the package is published to; it
+    documents `python setup.py install`, which setuptools removed; and it
+    advertises pytest to run tests MANIFEST.in prunes from the distribution.
 
-      - It tells consumers to pip install from git+https against this
-        repository. That is private, and even once public it is the wrong way
-        to install a published package.
-      - It documents `python setup.py install`, removed from setuptools.
-      - It advertises pytest to run tests that MANIFEST.in prunes from the
-        distribution, so the instruction cannot work for a consumer.
+    Omitted deliberately: the build-date line, which would churn this file on
+    every run, and the build-package line, which names an internal generator
+    class.
 
-    Deliberately omitted: the generatedDate build-date line, which would churn
-    the generated README on every run, and the generatorClass build-package
-    line, which leaks an internal Java class name onto the registry page.
-
-    The trailing common_README partial is the generator's own. It carries the
-    usage example plus the endpoint, model and authorization tables, all driven
-    off the spec -- worth keeping and not worth restating.
+    The trailing common_README partial is the generator's own, carrying the
+    usage example and the endpoint, model and authorization tables.
 }}
 # {{{projectName}}}
 {{#appDescriptionWithNewLines}}
@@ -58,13 +53,16 @@ import {{{packageName}}}
 
 ## Changelog
 
-API changes are recorded in [CHANGELOG.md](CHANGELOG.md), regenerated from a
-diff of the OpenAPI specification on each sync. Entries marked **breaking**
-require a change on the consumer side.
+API changes are recorded in the
+[changelog](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/CHANGELOG.md),
+regenerated from a diff of the OpenAPI specification on each sync. Entries
+marked **breaking** require a change on the consumer side.
 
 ## Reporting issues
 
 This package is generated; edits to it are overwritten on the next spec sync.
 Report problems against the API specification rather than the generated code.
+
+## Getting Started
 
 {{> common_README }}
