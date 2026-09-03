@@ -1,6 +1,6 @@
 """Unit tests for scripts/verify_readme.py."""
 
-from verify_readme import check, main
+from verify_readme import REQUIRED, check, main
 
 # What templates/python/README.mustache produces. Kept short; the rules under
 # test are about what must and must not appear, not about length.
@@ -30,9 +30,6 @@ API changes are recorded in [CHANGELOG.md](CHANGELOG.md).
 
 ## Documentation for API Endpoints
 """
-
-REQUIRED = ["pip install ddx-interactions-api", "## Installation", "## Changelog"]
-
 
 class TestCheck:
     def test_a_good_readme_has_no_problems(self):
@@ -99,6 +96,18 @@ class TestMain:
         for item in REQUIRED:
             args += ["--require", item]
         assert main(args) == 0
+
+    def test_applies_the_built_in_requirements_without_any_flag(self, tmp_path):
+        # Three workflows call this with no arguments. A gate the publish path
+        # spells differently from the PR path is a gate that does not hold.
+        target = tmp_path / "README.md"
+        target.write_text(GOOD.replace("## Changelog", "## Changes"), encoding="utf-8")
+        assert main([str(target)]) == 1
+
+    def test_an_explicit_require_replaces_the_built_in_list(self, tmp_path):
+        target = tmp_path / "README.md"
+        target.write_text(GOOD.replace("## Changelog", "## Changes"), encoding="utf-8")
+        assert main([str(target), "--require", "## Installation"]) == 0
 
     def test_fails_on_a_bad_readme(self, tmp_path):
         target = tmp_path / "README.md"

@@ -129,6 +129,12 @@ jobs:
       # info.version) and repeats each schema change once per request media
       # type. scripts/render_changelog.py collapses that and files the entry
       # under the version computed above.
+      #
+      # `--bump` is what makes this step a gate and not just a renderer: the
+      # version comes from the PR's labels, the breaking changes come from the
+      # spec, and the two can disagree. When they do this fails before the
+      # commit step, so no wrongly-versioned SDK reaches the branch. The fix is
+      # to apply `interactions-api-major`, which reruns the workflow.
       - name: Update CHANGELOG.md
         if: steps.base.outputs.has_spec == 'true'
         run: |
@@ -140,6 +146,7 @@ jobs:
           python scripts/render_changelog.py \
             --oasdiff-json /tmp/oasdiff.json \
             --version "${{ steps.version.outputs.next }}" \
+            --bump "${{ steps.version.outputs.bump }}" \
             --date "$(date -u +%Y-%m-%d)" \
             --current-changelog /tmp/base-changelog.md \
             --write-changelog sdks/python/v1/CHANGELOG.md

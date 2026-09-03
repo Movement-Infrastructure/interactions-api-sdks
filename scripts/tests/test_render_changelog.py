@@ -5,13 +5,36 @@ import json
 import pytest
 
 from render_changelog import (
+    EXIT_UNDECLARED_BREAKING,
     HEADER,
+    NO_CHANGES_TEXT,
     Change,
     ChangelogError,
     main,
     parse_changes,
     prepend_entry,
     render_entry,
+    render_no_changes_entry,
+)
+
+# oasdiff output for a spec edit that touched no part of the contract -- a
+# description reworded, an example added.
+NO_CHANGES_JSON = "[]"
+
+# Only the informational half of OASDIFF_JSON, for the cases that need a diff
+# with nothing breaking in it.
+NON_BREAKING_JSON = json.dumps(
+    [
+        {
+            "id": "endpoint-added",
+            "text": "endpoint added",
+            "level": 1,
+            "operation": "GET",
+            "path": "/v{version}/auth/me",
+            "section": "paths",
+            "fingerprint": "a1b2c3d4e5f6",
+        }
+    ]
 )
 
 # Verbatim `oasdiff changelog -f json` output, taken from a real run against
@@ -139,6 +162,22 @@ class TestRenderEntry:
         assert entry.index("endpoint thing") < entry.index("general thing")
 
 
+class TestRenderNoChangesEntry:
+    def test_heads_the_entry_with_version_and_date(self):
+        entry = render_no_changes_entry("0.2.0", "2026-09-01")
+        assert entry.startswith("## 0.2.0 — 2026-09-01")
+
+    def test_says_the_contract_did_not_change(self):
+        assert NO_CHANGES_TEXT in render_no_changes_entry("0.2.0", "2026-09-01")
+
+    def test_prepends_like_any_other_entry(self):
+        older = "## 0.1.0 — 2026-08-01\n\n### GET /y\n- endpoint added\n"
+        result = prepend_entry(
+            f"{HEADER}\n{older}", render_no_changes_entry("0.2.0", "2026-09-01")
+        )
+        assert result.index("0.2.0") < result.index("0.1.0")
+
+
 class TestPrependEntry:
     ENTRY = "## 0.2.0 — 2026-09-01\n\n### GET /x\n- endpoint added\n"
     OLDER = "## 0.1.0 — 2026-08-01\n\n### GET /y\n- endpoint added\n"
@@ -246,9 +285,11 @@ class TestMain:
         assert "1.0.0" in written
         assert "0.2.0" not in written
 
-    def test_no_changes_leaves_the_changelog_alone(self, tmp_path):
+    def test_no_changes_still_files_an_entry(self, tmp_path):
+        # A version that reaches the registry with no line here reads as a gap
+        # in the record rather than as a release that changed no contract.
         source = tmp_path / "oasdiff.json"
-        source.write_text("[]", encoding="utf-8")
+        source.write_text(NO_CHANGES_JSON, encoding="utf-8")
         target = tmp_path / "CHANGELOG.md"
 
         code = main([
@@ -259,7 +300,40 @@ class TestMain:
         ])
 
         assert code == 0
-        assert not target.exists()
+        written = target.read_text(encoding="utf-8")
+        assert written.startswith("# Changelog")
+        assert "## 0.2.0 — 2026-09-01" in written
+        assert NO_CHANGES_TEXT in written
+
+    def test_no_changes_replaces_a_stale_entry_from_an_earlier_run(self, tmp_path):
+        # The failure this closes: run 1 committed an entry to the PR branch,
+        # then the spec change it described was reverted. Skipping the write
+        # would leave that entry in place to be merged.
+        current = tmp_path / "base" / "CHANGELOG.md"
+        current.parent.mkdir()
+        current.write_text(HEADER, encoding="utf-8")
+
+        target = tmp_path / "CHANGELOG.md"
+        target.write_text(
+            f"{HEADER}\n## 0.2.0 — 2026-09-01\n\n### POST /x\n"
+            "- **breaking** the request property `x` became required\n",
+            encoding="utf-8",
+        )
+
+        source = tmp_path / "oasdiff.json"
+        source.write_text(NO_CHANGES_JSON, encoding="utf-8")
+
+        assert main([
+            "--oasdiff-json", str(source),
+            "--version", "0.2.0",
+            "--date", "2026-09-02",
+            "--current-changelog", str(current),
+            "--write-changelog", str(target),
+        ]) == 0
+
+        written = target.read_text(encoding="utf-8")
+        assert "became required" not in written
+        assert NO_CHANGES_TEXT in written
 
     def test_missing_oasdiff_file_is_an_error(self, tmp_path):
         assert main([
@@ -276,3 +350,71 @@ class TestMain:
             "--version", "0.2.0",
             "--date", "2026-09-01",
         ]) == 2
+
+
+class TestBreakingChangeGuard:
+    """`--bump` cross-checks the label-derived version against the real diff."""
+
+    def _run(self, tmp_path, oasdiff_json, bump=None, write=True):
+        source = tmp_path / "oasdiff.json"
+        source.write_text(oasdiff_json, encoding="utf-8")
+        target = tmp_path / "CHANGELOG.md"
+
+        argv = [
+            "--oasdiff-json", str(source),
+            "--version", "0.2.0",
+            "--date", "2026-09-01",
+        ]
+        if bump:
+            argv += ["--bump", bump]
+        if write:
+            argv += ["--write-changelog", str(target)]
+
+        return main(argv), target
+
+    def test_breaking_under_a_minor_bump_fails(self, tmp_path):
+        code, _ = self._run(tmp_path, OASDIFF_JSON, bump="minor")
+        assert code == EXIT_UNDECLARED_BREAKING
+
+    def test_breaking_under_a_patch_bump_fails(self, tmp_path):
+        code, _ = self._run(tmp_path, OASDIFF_JSON, bump="patch")
+        assert code == EXIT_UNDECLARED_BREAKING
+
+    def test_a_failed_guard_writes_nothing(self, tmp_path):
+        # The generate workflow commits whatever is on disk after this step, so
+        # a rejected run must not leave a changelog behind.
+        _, target = self._run(tmp_path, OASDIFF_JSON, bump="minor")
+        assert not target.exists()
+
+    def test_a_failed_guard_prints_the_entry(self, tmp_path, capsys):
+        self._run(tmp_path, OASDIFF_JSON, bump="minor")
+        assert "**breaking**" in capsys.readouterr().out
+
+    def test_the_error_names_the_label_to_apply(self, tmp_path, capsys):
+        self._run(tmp_path, OASDIFF_JSON, bump="minor")
+        assert "interactions-api-major" in capsys.readouterr().err
+
+    def test_breaking_under_a_major_bump_passes(self, tmp_path):
+        code, target = self._run(tmp_path, OASDIFF_JSON, bump="major")
+        assert code == 0
+        assert "**breaking**" in target.read_text(encoding="utf-8")
+
+    def test_a_non_breaking_diff_passes_under_a_minor_bump(self, tmp_path):
+        code, target = self._run(tmp_path, NON_BREAKING_JSON, bump="minor")
+        assert code == 0
+        assert "endpoint added" in target.read_text(encoding="utf-8")
+
+    def test_no_changes_passes_under_any_bump(self, tmp_path):
+        code, _ = self._run(tmp_path, NO_CHANGES_JSON, bump="patch")
+        assert code == 0
+
+    def test_the_guard_is_off_without_the_flag(self, tmp_path):
+        # Omitting --bump is a dry run or a hand invocation, where there is no
+        # label set to contradict.
+        code, target = self._run(tmp_path, OASDIFF_JSON)
+        assert code == 0
+        assert target.exists()
+
+    def test_an_unknown_bump_is_rejected_by_argparse(self, tmp_path):
+        with pytest.raises(SystemExit):
+            self._run(tmp_path, OASDIFF_JSON, bump="nonsense")

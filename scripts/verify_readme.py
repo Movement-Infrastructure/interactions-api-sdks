@@ -18,6 +18,11 @@ Required
     Sections and the install command a consumer needs. Catches a template
     override that silently stopped being applied, which otherwise shows up
     only as a wrong README on the registry.
+
+The required list lives here rather than in each caller's argv. Three workflows
+run this -- the PR check, the sync regeneration, and the publish build -- and a
+gate the publish path spells differently from the PR path is a gate that does
+not hold.
 """
 
 from __future__ import annotations
@@ -56,6 +61,15 @@ BANNED = [
     ),
 ]
 
+# What templates/python/README.mustache is there to produce. The install command
+# is the load-bearing one: the built-in template's is a git+https URL against
+# this private repo, so its absence means the override stopped applying.
+REQUIRED = [
+    "pip install ddx-interactions-api",
+    "## Installation",
+    "## Changelog",
+]
+
 
 class ReadmeError(ValueError):
     """Raised when the README can't be read."""
@@ -86,11 +100,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--require",
         action="append",
-        default=[],
         metavar="TEXT",
-        help="Substring that must appear. Repeatable.",
+        help=(
+            "Substring that must appear. Repeatable. Replaces the built-in "
+            f"list ({', '.join(REQUIRED)}) rather than adding to it."
+        ),
     )
     args = parser.parse_args(argv)
+    required = REQUIRED if args.require is None else args.require
 
     try:
         text = args.readme.read_text(encoding="utf-8")
@@ -98,7 +115,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: cannot read {args.readme}: {exc}", file=sys.stderr)
         return 2
 
-    problems = check(text, args.require)
+    problems = check(text, required)
 
     for problem in problems:
         print(f"::error file={args.readme}::{problem}")

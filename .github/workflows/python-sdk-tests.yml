@@ -89,11 +89,7 @@ jobs:
       # which tells consumers to pip install from this private repo.
       - name: Verify generated README
         if: steps.spec.outputs.present == 'true'
-        run: |
-          python scripts/verify_readme.py sdks/python/v1/README.md \
-            --require 'pip install ddx-interactions-api' \
-            --require '## Installation' \
-            --require '## Changelog'
+        run: python scripts/verify_readme.py sdks/python/v1/README.md
 
       - name: Install generated SDK + test deps
         if: steps.spec.outputs.present == 'true'

@@ -15,6 +15,20 @@ branch's. That is what keeps re-runs idempotent. The generate workflows fire on
 `labeled`/`unlabeled`, so a reviewer applying `interactions-api-major` after
 the PR opens recomputes the version -- and this regenerates the entry against
 an unchanged base rather than appending a second one.
+
+Every run that writes files an entry, including one for a spec edit that
+changed nothing in the contract. Two reasons. A version that reaches the
+registry with no line here reads as a gap in the record rather than as a
+release consumers can ignore. And skipping the write is what would let a stale
+entry survive: an earlier run on the same PR has already committed its entry to
+the branch, so leaving the file alone leaves that entry in place even after the
+spec change it described was reverted.
+
+`--bump` opts into the one check the label logic cannot make for itself.
+bump_version.py reads the intended bump off PR labels; oasdiff reads the actual
+breaking changes out of the spec. When those disagree -- a breaking change under
+a non-major bump -- this exits non-zero rather than let the workflow commit an
+SDK whose own changelog contradicts its version.
 """
 
 from __future__ import annotations
@@ -25,6 +39,12 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+# Same directory, so this resolves both under `python scripts/render_changelog.py`
+# and under pytest via scripts/tests/conftest.py. Imported rather than restated
+# so the label name cannot drift between the script that reads it and the script
+# that tells a reviewer to apply it.
+from bump_version import MAJOR_LABEL
 
 HEADER = """\
 # Changelog
@@ -42,6 +62,14 @@ LEVEL_MARKERS = {
     LEVEL_ERR: "**breaking** ",
     LEVEL_WARN: "_warning_ ",
 }
+
+# Filed when oasdiff reports nothing: a description reworded, an example added.
+# The version still moved, so the release still gets a line.
+NO_CHANGES_TEXT = "No changes to the API contract."
+
+# oasdiff found breaking changes the PR's labels did not declare. Distinct from
+# the usage and I/O failures that exit 2.
+EXIT_UNDECLARED_BREAKING = 3
 
 # oasdiff appends the media type to the message, which turns one schema change
 # into one line per declared request media type. The change is the same change.
@@ -138,6 +166,11 @@ def render_entry(changes: list[Change], version: str, date: str) -> str:
     return "\n".join(lines)
 
 
+def render_no_changes_entry(version: str, date: str) -> str:
+    """Render the entry for a release whose spec edit touched no contract."""
+    return f"## {version} — {date}\n\n{NO_CHANGES_TEXT}\n"
+
+
 def prepend_entry(existing: str, entry: str) -> str:
     """Insert `entry` below the header and above any older entries."""
     if not entry:
@@ -182,6 +215,15 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="Changelog to write. Omit for a dry run that prints the entry only.",
     )
+    parser.add_argument(
+        "--bump",
+        choices=("major", "minor", "patch"),
+        help=(
+            "The bump bump_version.py computed from the PR's labels. When given, "
+            "a breaking change under a non-major bump fails the run instead of "
+            "being written."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if str(args.oasdiff_json) == "-":
@@ -200,19 +242,33 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     entry = render_entry(changes, args.version, args.date)
-
-    if not entry:
-        # A spec edit that changes no part of the API contract -- a description
-        # reworded, an example added. Nothing worth a changelog line.
-        print("No API changes reported by oasdiff; leaving the changelog alone.")
-        return 0
-
     breaking = sum(1 for c in changes if c.level >= LEVEL_ERR)
-    print(f"{len(changes)} change(s), {breaking} breaking, filed under {args.version}.")
 
-    if not args.write_changelog:
+    if entry:
+        print(f"{len(changes)} change(s), {breaking} breaking, filed under {args.version}.")
+    else:
+        print(f"No API changes reported by oasdiff; filing an empty {args.version} entry.")
+        entry = render_no_changes_entry(args.version, args.date)
+
+    undeclared_breaking = bool(breaking) and args.bump is not None and args.bump != "major"
+
+    # Printed when nothing will be written, and when the run is about to fail --
+    # a reviewer reading a failed run needs to see which changes are breaking,
+    # not just that some are.
+    if undeclared_breaking or not args.write_changelog:
         print()
         print(entry)
+
+    if undeclared_breaking:
+        print(
+            f"::error::oasdiff found {breaking} breaking change(s), but this PR's "
+            f"labels compute a {args.bump} bump. Apply the `{MAJOR_LABEL}` label; "
+            f"the workflow reruns on `labeled` and will recompute the version.",
+            file=sys.stderr,
+        )
+        return EXIT_UNDECLARED_BREAKING
+
+    if not args.write_changelog:
         return 0
 
     existing = ""
