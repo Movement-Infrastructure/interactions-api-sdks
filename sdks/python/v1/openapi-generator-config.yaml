@@ -17,7 +17,7 @@ packageName: ddx_interactions_api
 projectName: ddx-interactions-api
 
 # Rewritten by the version-bump workflow on each sync PR.
-packageVersion: 0.1.0
+packageVersion: 0.2.0
 
 # urllib3-based synchronous client. Async (asyncio) variant is available if
 # we end up needing it.
