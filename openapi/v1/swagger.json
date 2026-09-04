@@ -8,6 +8,10 @@
       "url": "https://demexchange.com/",
       "email": "api@demexchange.com"
     },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
     "version": "v1"
   },
   "servers": [
@@ -785,7 +789,7 @@
           }
         },
         "additionalProperties": false,
-        "description": "Represents an identifier and the namespace its value belongs to."
+        "description": "Represents an identifier and the namespace its value belongs to (e.g. an event, one of its shifts, or a signup)."
       },
       "EventRole": {
         "type": "object",
