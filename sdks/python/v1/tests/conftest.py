@@ -1,4 +1,4 @@
-"""Shared fixtures for the Python v1 SDK smoke suite (MIG-1918).
+"""Shared fixtures for the Python v1 SDK smoke suite.
 
 The SDK is generated with ``library: urllib3`` (a real synchronous HTTP
 client), so the happy-path test points the client at a live localhost server

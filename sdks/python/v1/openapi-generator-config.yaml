@@ -27,11 +27,6 @@ library: urllib3
 gitUserId: Movement-Infrastructure
 gitRepoId: interactions-api-sdks
 packageUrl: https://github.com/Movement-Infrastructure/interactions-api-sdks
-# Note: the Python generator pulls the `authors` field from the spec's
-# `info.contact` block. mercury.json doesn't currently set one, so authors
-# defaults to "OpenAPI Generator Community". Fix is an upstream change in
-# mig-readme-docs (add info.contact to reference/mercury.json), not a
-# generator config override.
 
 globalProperties:
   apiTests: "false"

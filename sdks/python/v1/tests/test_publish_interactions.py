@@ -30,8 +30,8 @@ API_VERSION = "1"
 # without one comes back 400, "Person ID or valid form of contact information
 # (email, phone, or address) required." Since the mock below answers with a
 # canned success no matter what is posted, leaving `person` out kept this test
-# green while asserting a request the real API refuses — found by the MIG-1929
-# staging run.
+# green while asserting a request the real API refuses — found by running this
+# against a live environment.
 REQUEST_BODY = {
     "interactions": [
         {
