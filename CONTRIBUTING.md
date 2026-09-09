@@ -26,7 +26,8 @@ docs/                     # publish leak-audit checklist
 1. `sync-spec.yml` runs hourly at :17 and fetches `reference/mercury.json` from `mig-readme-docs`.
 2. If it differs from the committed spec, the workflow opens a PR against `develop`.
 3. CI regenerates each SDK, bumps the version from the PR's labels, and renders a changelog entry from a spec diff — all in one commit.
-4. Sync PRs merge to `develop`. Promoting `develop` to `main` is what releases.
+4. Sync PRs merge to `develop`, which publishes that version to TestPyPI as a staging release.
+5. Promoting `develop` to `main` publishes the same version to PyPI. That promotion is the release.
 
 Re-running the sync is safe: the branch name (`sync/mercury-<short-sha>`) derives from the upstream commit, so a run that finds an open PR for that SHA leaves it alone. Maintainers can also trigger a sync by hand and point it at an in-flight upstream branch.
 

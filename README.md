@@ -10,7 +10,7 @@ New to the API itself? Start with the [overview](https://docs.movementinfrastruc
 
 | Language | Package | Status |
 | --- | --- | --- |
-| Python | [`ddx-interactions-api`](https://test.pypi.org/project/ddx-interactions-api/) | Pre-release |
+| Python | [`ddx-interactions-api`](https://pypi.org/project/ddx-interactions-api/) | Available |
 | Node.js | — | Planned |
 | C# | — | Planned |
 | Ruby | — | Planned |
@@ -19,16 +19,13 @@ Each SDK lives under `sdks/<language>/v1/` and is generated from `openapi/v1/swa
 
 ## Python
 
-Requires Python 3.8+. The package is a pre-release on TestPyPI while the API stabilizes:
+Requires Python 3.8+.
 
 ```sh
-pip install \
-  --index-url https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ \
-  ddx-interactions-api
+pip install ddx-interactions-api
 ```
 
-The extra index lets the runtime dependencies resolve from PyPI. Once the first stable release ships, this becomes `pip install ddx-interactions-api`.
+Versions are below 1.0 while the API stabilizes, so pin the minor version if you need a stable surface.
 
 ### Authentication
 
