@@ -113,8 +113,8 @@ jobs:
               fail=1
             fi
           done <<'BLOCKERS'
-          team@openapitools.org|Author email is the openapi-generator project's address. Set info.contact in mercury.json.
-          OpenAPI Generator Community|Author is the generator's default. Set info.contact in mercury.json.
+          team@openapitools.org|Author email is the openapi-generator project's address. Set info.contact in the OpenAPI spec.
+          OpenAPI Generator Community|Author is the generator's default. Set info.contact in the OpenAPI spec.
           ^Version: 0\.0\.0|Version is still the 0.0.0 placeholder; the version-bump workflow did not run.
           BLOCKERS
 
