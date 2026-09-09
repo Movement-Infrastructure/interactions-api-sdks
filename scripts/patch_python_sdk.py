@@ -17,6 +17,8 @@ Regex
     `long_description` holds the spec's `info.description`, whose text changes
     whenever the API docs are edited upstream. An exact anchor on that prose
     would hard-fail the pipeline on a routine docs edit.
+
+One precondition runs before any patch: the package must carry a license.
 """
 
 from __future__ import annotations
@@ -27,6 +29,11 @@ import sys
 from pathlib import Path
 
 CERTIFI = "certifi >= 2024.2.2"
+
+# What the generator writes when the spec sets no info.license.
+NO_LICENSE = "NoLicense"
+
+LICENSE_RE = re.compile(r'^license = "(.+)"$', re.M)
 
 CHANGELOG_URL = (
     "https://github.com/Movement-Infrastructure/interactions-api-sdks"
@@ -105,6 +112,30 @@ class PatchError(ValueError):
     """Raised when a generated file is missing or not shaped as expected."""
 
 
+def check_license(root: Path) -> None:
+    """Fail when the spec's `info.license` did not reach the generated package.
+
+    Read from pyproject.toml, which keeps the spec the single source of truth.
+    Absent, or left at the generator's default, means `info.license` was dropped
+    upstream -- so the recovery is an upstream edit, not a change here.
+    """
+    path = root / "pyproject.toml"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise PatchError(f"cannot read {path}: {exc}") from exc
+
+    found = LICENSE_RE.search(text)
+    if not found or found.group(1) == NO_LICENSE:
+        raise PatchError(
+            f"{path} carries no usable license. Set License on the OpenApiInfo "
+            "in minerva's Mercury.Api/MercuryApiServiceCollectionExtensions.cs, "
+            "then let it regenerate into mig-readme-docs and sync here. Editing "
+            "reference/mercury.json by hand does not survive the next Swagger "
+            "regeneration."
+        )
+
+
 def apply_exact(text: str, anchor: str, replacement: str, marker: str, where: str) -> str:
     """Apply one exact-anchor patch. Returns `text` unchanged if already applied."""
     if marker in text:
@@ -137,6 +168,8 @@ def apply_regex(
 
 def patch_sdk(root: Path) -> list[str]:
     """Patch the generated SDK in `root`. Returns the files it changed."""
+    check_license(root)
+
     changed: list[str] = []
 
     by_file: dict[str, list] = {}

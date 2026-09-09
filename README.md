@@ -103,7 +103,7 @@ SDK code is generated, and local edits are overwritten on the next sync — a br
 
 ## License
 
-MIT.
+MIT. See [LICENSE](LICENSE).
 
 ## Contributing
 

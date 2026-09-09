@@ -7,9 +7,11 @@ import pytest
 from patch_python_sdk import (
     CERTIFI,
     CHANGELOG_URL,
+    NO_LICENSE,
     PatchError,
     apply_exact,
     apply_regex,
+    check_license,
     main,
     patch_sdk,
 )
@@ -53,9 +55,22 @@ class Configuration:
         self.verify_ssl = True
 '''
 
+PYPROJECT_TOML = '''\
+[tool.poetry]
+name = "ddx-interactions-api"
+version = "0.1.0"
+license = "MIT"
+'''
 
-def write_sdk(tmp_path, setup_py=SETUP_PY, configuration_py=CONFIGURATION_PY):
+
+def write_sdk(
+    tmp_path,
+    setup_py=SETUP_PY,
+    configuration_py=CONFIGURATION_PY,
+    pyproject_toml=PYPROJECT_TOML,
+):
     (tmp_path / "setup.py").write_text(setup_py, encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml, encoding="utf-8")
     pkg = tmp_path / "ddx_interactions_api"
     pkg.mkdir(exist_ok=True)
     (pkg / "configuration.py").write_text(configuration_py, encoding="utf-8")
@@ -96,7 +111,40 @@ class TestApplyRegex:
             apply_regex("xx a xx", self.PATTERN, "Y", "marker", "f")
 
 
+class TestCheckLicense:
+    def test_accepts_a_real_license(self, tmp_path):
+        assert check_license(write_sdk(tmp_path)) is None
+
+    def test_rejects_the_generator_default(self, tmp_path):
+        # What the generator writes when the spec carries no info.license.
+        without = PYPROJECT_TOML.replace("MIT", NO_LICENSE)
+        with pytest.raises(PatchError, match="no usable license"):
+            check_license(write_sdk(tmp_path, pyproject_toml=without))
+
+    def test_rejects_a_missing_license_field(self, tmp_path):
+        without = PYPROJECT_TOML.replace('license = "MIT"\n', "")
+        with pytest.raises(PatchError, match="no usable license"):
+            check_license(write_sdk(tmp_path, pyproject_toml=without))
+
+    def test_names_the_upstream_fix(self, tmp_path):
+        # The recovery is an upstream edit, so the error has to say where.
+        without = PYPROJECT_TOML.replace("MIT", NO_LICENSE)
+        with pytest.raises(PatchError, match="MercuryApiServiceCollectionExtensions"):
+            check_license(write_sdk(tmp_path, pyproject_toml=without))
+
+    def test_a_missing_pyproject_is_an_error(self, tmp_path):
+        with pytest.raises(PatchError, match="cannot read"):
+            check_license(tmp_path)
+
+
 class TestPatchSdk:
+    def test_an_unlicensed_sdk_is_not_patched(self, tmp_path):
+        without = PYPROJECT_TOML.replace("MIT", NO_LICENSE)
+        root = write_sdk(tmp_path, pyproject_toml=without)
+        with pytest.raises(PatchError, match="no usable license"):
+            patch_sdk(root)
+        assert "_LONG_DESCRIPTION" not in (root / "setup.py").read_text()
+
     def test_adds_python_requires(self, tmp_path):
         patch_sdk(write_sdk(tmp_path))
         assert "python_requires=PYTHON_REQUIRES," in (tmp_path / "setup.py").read_text()
@@ -195,3 +243,7 @@ class TestMain:
 
     def test_a_missing_directory_exits_nonzero(self, tmp_path):
         assert main([str(tmp_path / "nope")]) == 2
+
+    def test_a_missing_license_exits_nonzero(self, tmp_path):
+        without = PYPROJECT_TOML.replace("MIT", NO_LICENSE)
+        assert main([str(write_sdk(tmp_path, pyproject_toml=without))]) == 2
