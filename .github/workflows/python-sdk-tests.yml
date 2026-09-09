@@ -10,8 +10,6 @@ name: Python SDK tests
 # reports a result. If a branch has no committed spec yet (the bootstrap window
 # before the first sync PR merges), the SDK cannot be generated or affected, so
 # the heavy steps are skipped and the job passes.
-#
-# See Plans/MIG-1918-python-sdk-smoke-tests.md.
 
 on:
   pull_request:

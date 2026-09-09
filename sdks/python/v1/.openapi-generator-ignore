@@ -1,4 +1,4 @@
-# openapi-generator ignore file (MIG-1918).
+# openapi-generator ignore file.
 #
 # Files listed here are NOT written or overwritten when the SDK is regenerated
 # (.github/workflows/generate-python-sdk.yml and python-sdk-tests.yml both run

@@ -27,10 +27,6 @@ library: urllib3
 gitUserId: Movement-Infrastructure
 gitRepoId: interactions-api-sdks
 packageUrl: https://github.com/Movement-Infrastructure/interactions-api-sdks
-# Note: `authors` comes from the spec's `info.contact` block, not from here --
-# there is no generator config override for it. If that block is dropped from
-# mercury.json upstream, authors falls back to "OpenAPI Generator Community"
-# and the publish metadata gate fails the release. Fix it in mig-readme-docs.
 
 globalProperties:
   apiTests: "false"

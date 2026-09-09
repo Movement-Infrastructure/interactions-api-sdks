@@ -20,8 +20,7 @@ sdks/python/v1/openapi-generator-config.yaml   export-ignore
 sdks/python/v1/.openapi-generator-ignore       export-ignore
 sdks/python/v1/.openapi-generator/             export-ignore
 
-# Repo tooling & planning docs — not something a source-archive consumer needs.
+# Repo tooling — not something a source-archive consumer needs.
 .github/        export-ignore
-Plans/          export-ignore
 .gitignore      export-ignore
 .gitattributes  export-ignore
