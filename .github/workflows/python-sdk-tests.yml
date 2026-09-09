@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Check out PR
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Check for committed OpenAPI spec
         id: spec
