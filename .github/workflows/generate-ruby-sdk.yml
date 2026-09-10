@@ -1,14 +1,19 @@
 name: Generate Ruby SDK
 
-# On every PR that touches openapi/v1/swagger.json, computes the next gem
-# version from the PR's labels, regenerates sdks/ruby/v1/, and commits both
-# back to the PR branch so the version lands in the generated gemspec.
+# On every PR into develop that touches openapi/v1/swagger.json, computes the
+# next gem version from the PR's labels, regenerates sdks/ruby/v1/, and commits
+# both back to the PR branch so the version lands in the generated gemspec.
 
 on:
   pull_request:
     # `labeled`/`unlabeled` are here so adding or removing a version label
     # after the PR opens recomputes the version.
     types: [opened, synchronize, labeled, unlabeled]
+    # Sync PRs only. On a develop -> main promotion the head ref IS `develop`,
+    # so this job would compute the version against `main` and then try to push
+    # the result to a protected branch. Both are wrong: the version would be
+    # recomputed from the wrong base, and the push is rejected with GH006.
+    branches: [develop]
     paths:
       - openapi/v1/swagger.json
 
