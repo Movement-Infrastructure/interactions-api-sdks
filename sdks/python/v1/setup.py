@@ -13,7 +13,14 @@
 """  # noqa: E501
 
 
+from pathlib import Path
+
 from setuptools import setup, find_packages  # noqa: H301
+
+# Rendered as the whole project page on the package registry.
+_LONG_DESCRIPTION = (Path(__file__).parent / "README.md").read_text(
+    encoding="utf-8"
+)
 
 # To install the library, run the following
 #
@@ -42,12 +49,13 @@ setup(
     keywords=["OpenAPI", "OpenAPI-Generator", "Interactions API"],
     python_requires=PYTHON_REQUIRES,
     install_requires=REQUIRES,
+    project_urls={
+        "Changelog": "https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/CHANGELOG.md",
+    },
     packages=find_packages(exclude=["test", "tests"]),
     include_package_data=True,
     license="MIT",
     long_description_content_type='text/markdown',
-    long_description="""\
-    Interactions API documentation
-    """,  # noqa: E501
+    long_description=_LONG_DESCRIPTION,
     package_data={"ddx_interactions_api": ["py.typed"]},
 )
