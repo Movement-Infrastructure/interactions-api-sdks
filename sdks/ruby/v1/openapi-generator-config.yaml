@@ -35,7 +35,7 @@ library: faraday
 # the defaults are "OpenAPI-Generator" for gemAuthor and "unlicense" for
 # gemLicense, and both would ship straight into the published gem.
 gemAuthor: DDx API Team
-gemAuthorEmail: mig-eng-inbox@demexchange.com
+gemAuthorEmail: api@demexchange.com
 gemHomepage: https://github.com/Movement-Infrastructure/interactions-api-sdks
 gemLicense: MIT
 gemSummary: Ruby client for the DDx Interactions API

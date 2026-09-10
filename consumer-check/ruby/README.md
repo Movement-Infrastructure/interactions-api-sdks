@@ -18,20 +18,19 @@ SDK_SOURCE=path bundle install
 SDK_SOURCE=path bundle exec ruby check.rb
 
 # A pushed branch, resolved the way a consumer would.
-SDK_SOURCE=git SDK_BRANCH=sophia/mig-1935-add-ruby bundle install
-SDK_SOURCE=git SDK_BRANCH=sophia/mig-1935-add-ruby bundle exec ruby check.rb
+SDK_SOURCE=git SDK_BRANCH=<branch> bundle install
+SDK_SOURCE=git SDK_BRANCH=<branch> bundle exec ruby check.rb
 
 # A published version.
 SDK_SOURCE=gem SDK_VERSION=0.2.0.pre.1 bundle install
 SDK_SOURCE=gem SDK_VERSION=0.2.0.pre.1 bundle exec ruby check.rb
 ```
 
-`SDK_BRANCH` defaults to `develop`, which only works once the Ruby SDK has
-merged there -- until then `sdks/ruby/v1/` on `develop` holds just a `.gitkeep`.
+`SDK_BRANCH` defaults to `develop`.
 
-The `git` source clones over SSH because the repo is private. Bundler clones
-without a terminal, so an HTTPS URL fails with `could not read Username for
-'https://github.com'` instead of prompting. You need a working SSH key.
+The `git` source clones over SSH, so you need a working SSH key. Bundler clones
+without a terminal, so a URL that asks for credentials fails with `could not
+read Username for 'https://github.com'` instead of prompting.
 
 Only `gem` exercises the real packaged artifact. `git` resolves files straight
 from the repo, so anything excluded from `s.files` still loads and the omission
@@ -46,7 +45,7 @@ resolved, then exits. With one it also calls `GET /v{version}/auth/me` -- read
 only, and enough to prove connectivity, auth and deserialization together.
 
 ```bash
-DDX_API_HOST=<staging-host> DDX_API_KEY=<key> SDK_SOURCE=path bundle exec ruby check.rb
+DDX_API_HOST=<api-host> DDX_API_KEY=<key> SDK_SOURCE=path bundle exec ruby check.rb
 ```
 
 | Variable | Default |
