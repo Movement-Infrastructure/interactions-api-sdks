@@ -1,4 +1,4 @@
-# openapi-generator ignore file (MIG-1918).
+# openapi-generator ignore file.
 #
 # Files listed here are NOT written or overwritten when the SDK is regenerated
 # (.github/workflows/generate-python-sdk.yml and python-sdk-tests.yml both run
@@ -8,6 +8,11 @@
 tests/**
 requirements-test.txt
 .openapi-generator-ignore
+
+# Written by the oasdiff step in generate-python-sdk.yml, one entry per sync.
+# The generator has no changelog template today; listing it means a future one
+# can't wipe the history.
+CHANGELOG.md
 
 
 # The python generator emits these supporting files, but we don't use them (we

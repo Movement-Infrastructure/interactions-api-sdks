@@ -12,3 +12,11 @@ exclude requirements-test.txt
 exclude openapi-generator-config.yaml
 exclude .openapi-generator-ignore
 prune .openapi-generator
+
+# Ships the API changelog in the sdist. MANIFEST.in has no bearing on the
+# wheel, where a top-level file cannot go at all; wheel consumers reach the
+# changelog through the Changelog link in the package metadata.
+include CHANGELOG.md
+
+# setup.py reads this at build time for long_description.
+include README.md

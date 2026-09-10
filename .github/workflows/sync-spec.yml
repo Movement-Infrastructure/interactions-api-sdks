@@ -1,13 +1,11 @@
 name: Sync OpenAPI spec from mig-readme-docs
 
-# MIG-1916 (workflow), MIG-1920 (scheduling). Pulls reference/mercury.json from
-# mig-readme-docs, compares against the committed openapi/v1/swagger.json, and
-# opens a PR if they differ.
+# Pulls reference/mercury.json from mig-readme-docs, compares against the
+# committed openapi/v1/swagger.json, and opens a PR if they differ.
 #
 # Idempotent on the upstream commit SHA that last touched the spec: a run that
 # finds an open PR for that SHA's sync branch leaves it alone rather than
-# opening a duplicate. See Plans/MIG-1916-scheduled-spec-sync.md and
-# Plans/MIG-1920-schedule-sync-workflow.md.
+# opening a duplicate.
 
 on:
   # Hourly at :17
@@ -45,7 +43,7 @@ jobs:
       # (so subsequent `git push` operations are authenticated as the bot)
       # and by `gh pr create` later. Authoring under this App instead of
       # the default GITHUB_TOKEN is what lets downstream workflows (e.g.
-      # MIG-1917's generate-python-sdk) fire on the resulting events.
+      # generate-python-sdk) fire on the resulting events.
       - name: Mint installation token for this repo
         id: bot-token
         uses: actions/create-github-app-token@v1
@@ -307,7 +305,7 @@ jobs:
           # leaves $BRANCH with no upstream. Git then has no remote-tracking ref
           # to lease against and rejects the push as "stale info" instead of
           # overwriting a branch orphaned by a closed sync PR. That is how every
-          # scheduled run failed before MIG-2317.
+          # scheduled run failed until this was fixed.
           #
           # So fetch the ref explicitly, then name the expected value on the
           # push. The refspec has to be spelled out because checkout narrows
@@ -342,7 +340,7 @@ jobs:
           - Reason: \`${REASON}\`
           - \`openapi/v1/swagger.json\`: +${ADDED} / -${REMOVED} lines
 
-          Opened automatically by \`.github/workflows/sync-spec.yml\` (MIG-1916).
+          Opened automatically by \`.github/workflows/sync-spec.yml\`.
           EOF
 
           gh pr create \
