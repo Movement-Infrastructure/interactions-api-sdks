@@ -20,6 +20,12 @@ jobs:
     steps:
       - name: Check out PR
         uses: actions/checkout@v4
+        with:
+          # This job never pushes. The default leaves an unmasked live token in
+          # .git/config as an http.extraheader, readable by anything that runs
+          # afterwards -- and this job runs `bundle install`, which resolves
+          # and executes third-party gem code.
+          persist-credentials: false
 
       - name: Check for committed OpenAPI spec
         id: spec
