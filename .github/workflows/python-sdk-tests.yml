@@ -81,10 +81,26 @@ jobs:
         if: steps.spec.outputs.present == 'true'
         run: |
           python - <<'PY'
-          import pathlib, sys
+          import pathlib, re, sys
 
           ROOT = pathlib.Path("sdks/python/v1")
           CERTIFI = "certifi >= 2024.2.2"
+
+          # Read the license back out of pyproject.toml so the spec's info.license
+          # stays the single source of truth rather than being hardcoded here.
+          lic = re.search(
+              r'^license = "(.+)"$',
+              (ROOT / "pyproject.toml").read_text(encoding="utf-8"),
+              re.M,
+          )
+          if not lic or lic.group(1) == "NoLicense":
+              sys.exit(
+                  "::error::pyproject.toml carries no usable license. Set License on "
+                  "the OpenApiInfo in minerva's Mercury.Api/"
+                  "MercuryApiServiceCollectionExtensions.cs, then let it regenerate "
+                  "into mig-readme-docs and sync here. Editing reference/mercury.json "
+                  "by hand does not survive the next Swagger regeneration."
+              )
 
           # (file, anchor, replacement, already-applied marker)
           PATCHES = [
@@ -96,6 +112,10 @@ jobs:
                '    "typing-extensions >= 4.7.1",\n]',
                f'    "typing-extensions >= 4.7.1",\n    "{CERTIFI}",\n]',
                CERTIFI),
+              ("setup.py",
+               '    packages=find_packages(exclude=["test", "tests"]),\n',
+               f'    license="{lic.group(1)}",\n    packages=find_packages(exclude=["test", "tests"]),\n',
+               'license="'),
               ("ddx_interactions_api/configuration.py",
                "        self.ssl_ca_cert = ssl_ca_cert\n",
                "        import certifi\n"
