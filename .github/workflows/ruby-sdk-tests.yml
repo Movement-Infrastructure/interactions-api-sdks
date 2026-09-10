@@ -61,7 +61,8 @@ jobs:
             -i openapi/v1/swagger.json \
             -g ruby \
             -o sdks/ruby/v1 \
-            -c sdks/ruby/v1/openapi-generator-config.yaml
+            -c sdks/ruby/v1/openapi-generator-config.yaml \
+            -t templates/ruby
 
       - name: Set up Python
         if: steps.spec.outputs.present == 'true'
@@ -106,6 +107,14 @@ jobs:
               GEMSPEC.write_text(text.replace(ANCHOR, REPLACEMENT), encoding="utf-8")
               print("patched: gemspec file list")
           PY
+
+      # The gemspec ships README.md inside the gem, so it is published content.
+      # Checked on every PR because a dropped `-t templates/ruby` would
+      # silently restore the built-in template, which installs from a git URL
+      # and fills the auth example with credential placeholders.
+      - name: Verify generated README
+        if: steps.spec.outputs.present == 'true'
+        run: python scripts/verify_readme.py sdks/ruby/v1/README.md --language ruby
 
       - name: Set up Ruby
         if: steps.spec.outputs.present == 'true'

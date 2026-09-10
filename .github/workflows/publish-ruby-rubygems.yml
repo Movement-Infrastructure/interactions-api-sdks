@@ -86,6 +86,17 @@ jobs:
           echo "GEM_VERSION=${pre}" >> "$GITHUB_ENV"
           echo "Publishing ${pre} (base ${base})."
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The gemspec ships README.md inside the gem. The PR check sees a
+      # regeneration; this sees the bytes about to be uploaded. Both call it
+      # with the same `--language`, so the two gates cannot drift.
+      - name: Verify README before publishing
+        run: python scripts/verify_readme.py sdks/ruby/v1/README.md --language ruby
+
       - name: Build the gem
         working-directory: sdks/ruby/v1
         run: gem build ddx_interactions_api.gemspec -o "ddx_interactions_api-${GEM_VERSION}.gem"

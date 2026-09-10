@@ -1,0 +1,151 @@
+{{!
+    Overrides the ruby generator's built-in README.mustache. Passed as
+    -t templates/ruby; templates absent from that directory fall back to the
+    ones embedded in the jar, which is why only this file exists.
+
+    NOTE: a mustache comment ends at its first closing brace pair, so no
+    variable or partial tag may appear in this block. Naming one here silently
+    ends the comment and renders the remainder as markup.
+
+    Four defects in the built-in template motivated the override. It tells the
+    reader to build the gem by hand or install it from a git URL rather than
+    from the registry the gem is published to; it names an internal generator
+    class; it fills the authorization example with credential placeholders that
+    read as real instructions; and it carries a build date that would churn
+    this file on every run.
+
+    Unlike the python generator there is no common_README partial to defer to,
+    so the endpoint, model and authorization sections at the bottom are copied
+    from the built-in template. A generator upgrade can change them there
+    without changing them here.
+
+    The Getting Started example is hand-written rather than looped over the
+    first operation, which is what produced the credential placeholders. It
+    calls the auth endpoint, so a spec change that renames that operation will
+    make it wrong without failing anything -- check it on a generator or spec
+    upgrade. It sets no host on purpose: the gate below rejects any host but
+    production, and the client already defaults to it.
+
+    scripts/verify_readme.py gates the rendered output in CI, on both the PR
+    and the publish path.
+}}
+# {{gemName}}
+{{#appDescriptionWithNewLines}}
+{{{.}}}
+{{/appDescriptionWithNewLines}}
+
+Ruby client for the DDx Interactions API, generated from its OpenAPI
+specification.
+
+- API version: {{appVersion}}
+- Gem version: {{gemVersion}}
+- Generator version: {{generatorVersion}}
+{{#infoUrl}}
+
+For more information, please visit [{{{infoUrl}}}]({{{infoUrl}}}).
+{{/infoUrl}}
+
+## Requirements
+
+Ruby {{{gemRequiredRubyVersion}}}
+
+## Installation
+
+```shell
+gem install {{{gemName}}}
+```
+
+Every published version is currently a prerelease (`X.Y.Z.pre.N`), and both
+`gem install` and Bundler skip prereleases unless asked. Add `--pre` to take
+the most recent one:
+
+```shell
+gem install {{{gemName}}} --pre
+```
+
+In a Gemfile, pin the exact version. A pessimistic constraint (`~>`) will not
+select a prerelease:
+
+    gem '{{{gemName}}}', '{{{gemVersion}}}.pre.<build>'
+
+[RubyGems](https://rubygems.org/gems/{{{gemName}}}/versions) lists what is
+published.
+
+## Changelog
+
+API changes are recorded in the
+[changelog](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/ruby/v1/CHANGELOG.md),
+regenerated from a diff of the OpenAPI specification on each sync. Entries
+marked **breaking** require a change on the consumer side.
+
+## Reporting issues
+
+This gem is generated; edits to it are overwritten on the next spec sync.
+Report problems against the API specification rather than the generated code.
+
+## Getting Started
+
+```ruby
+require '{{{gemName}}}'
+
+config = {{{moduleName}}}::Configuration.new
+# HTTP basic auth, with the API key in the password field and an empty
+# username. `config.host` defaults to the production API.
+config.username = ''
+config.password = ENV.fetch('DDX_API_KEY')
+
+client = {{{moduleName}}}::ApiClient.new(config)
+
+begin
+  me = {{{moduleName}}}::AuthenticationDetailsApi.new(client).vversion_auth_me_get('1')
+  p me
+rescue {{{moduleName}}}::ApiError => e
+  # The exception message is only the status line; the body says why.
+  warn "Interactions API returned #{e.code}: #{e.response_body}"
+end
+```
+
+## Documentation for API Endpoints
+
+All URIs are relative to *{{basePath}}*
+
+Class | Method | HTTP request | Description
+------------ | ------------- | ------------- | -------------
+{{#apiInfo}}{{#apis}}{{#operations}}{{#operation}}*{{moduleName}}::{{classname}}* | [**{{operationId}}**]({{apiDocPath}}{{classname}}.md#{{operationId}}) | **{{httpMethod}}** {{path}} | {{{summary}}}
+{{/operation}}{{/operations}}{{/apis}}{{/apiInfo}}
+
+## Documentation for Models
+
+{{#models}}{{#model}} - [{{moduleName}}::{{classname}}]({{modelDocPath}}{{classname}}.md)
+{{/model}}{{/models}}
+
+## Documentation for Authorization
+
+{{^authMethods}}Endpoints do not require authorization.{{/authMethods}}
+{{#hasAuthMethods}}Authentication schemes defined for the API:{{/hasAuthMethods}}
+{{#authMethods}}
+### {{name}}
+
+{{#isApiKey}}
+
+- **Type**: API key
+- **API key parameter name**: {{keyParamName}}
+- **Location**: {{#isKeyInQuery}}URL query string{{/isKeyInQuery}}{{#isKeyInHeader}}HTTP header{{/isKeyInHeader}}
+{{/isApiKey}}
+{{#isBasic}}
+{{#isBasicBasic}}- **Type**: HTTP basic authentication
+{{/isBasicBasic}}{{#isBasicBearer}}- **Type**: Bearer authentication{{#bearerFormat}} ({{{.}}}){{/bearerFormat}}
+{{/isBasicBearer}}{{#isHttpSignature}}- **Type**: HTTP signature authentication
+{{/isHttpSignature}}
+{{/isBasic}}
+{{#isOAuth}}
+
+- **Type**: OAuth
+- **Flow**: {{flow}}
+- **Authorization URL**: {{authorizationUrl}}
+- **Scopes**: {{^scopes}}N/A{{/scopes}}
+{{#scopes}}  - {{scope}}: {{description}}
+{{/scopes}}
+{{/isOAuth}}
+
+{{/authMethods}}
