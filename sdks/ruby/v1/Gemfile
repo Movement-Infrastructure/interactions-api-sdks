@@ -2,9 +2,8 @@ source "https://rubygems.org"
 
 gemspec
 
-# Test-only dependencies for the smoke suite in spec/; runtime deps come from
-# the gemspec. Hand-maintained (see .openapi-generator-ignore) because the
-# generated Gemfile pins an old rubocop and has no HTTP stubbing gem.
+# Test-only deps for spec/. Kept out of regeneration by
+# .openapi-generator-ignore, since the generated Gemfile has no stubbing gem.
 group :development, :test do
   gem "rake", "~> 13.0"
   gem "rspec", "~> 3.13"

@@ -1,9 +1,9 @@
 name: Ruby SDK tests
 
-# On every PR to develop: regenerate sdks/ruby/v1/ from openapi/v1/swagger.json,
-# install it, and run the suite in sdks/ruby/v1/spec/.
+# On every PR to develop: regenerate sdks/ruby/v1/, install it, and run the
+# suite in sdks/ruby/v1/spec/.
 #
-# No `paths:` filter, deliberately. A path-filtered required check shows as
+# No `paths:` filter, deliberately: a path-filtered required check shows as
 # perpetually pending on PRs that don't match it, blocking merge forever.
 # Branches with no committed spec skip the heavy steps and pass.
 
@@ -73,9 +73,8 @@ jobs:
         with:
           python-version: '3.11'
 
-      # The same patch generate-ruby-sdk.yml applies. This job installs what it
-      # just regenerated, so without it CI tests a gem whose file list still
-      # globs the whole directory. Keep the two copies in sync.
+      # The same patch generate-ruby-sdk.yml applies, because this job
+      # installs what it just regenerated. Keep the two copies in sync.
       - name: Patch generated gemspec file list
         if: steps.spec.outputs.present == 'true'
         run: |
@@ -111,9 +110,8 @@ jobs:
               print("patched: gemspec file list")
           PY
 
-      # README.md ships inside the gem, so it is published content. Checked on
-      # every PR because a dropped `-t templates/ruby` silently restores the
-      # built-in template, which installs from a git URL.
+      # README.md ships inside the gem. A dropped `-t templates/ruby` would
+      # silently restore the built-in template, which installs from a git URL.
       - name: Verify generated README
         if: steps.spec.outputs.present == 'true'
         run: python scripts/verify_readme.py sdks/ruby/v1/README.md --language ruby

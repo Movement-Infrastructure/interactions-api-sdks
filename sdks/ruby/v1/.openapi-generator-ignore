@@ -1,7 +1,6 @@
 # Files listed here survive regeneration.
 
-# The smoke suite is hand-written, and the generated Gemfile has no HTTP
-# stubbing gem for it to use.
+# Hand-written; the generated Gemfile has no HTTP stubbing gem.
 spec/**
 Gemfile
 .openapi-generator-ignore

@@ -1,26 +1,22 @@
 name: Publish Ruby SDK to RubyGems
 
-# Builds sdks/ruby/v1 and publishes it to RubyGems on push to `main`. Sync PRs
-# land on `develop`; promoting develop to main is what releases.
+# Publishes sdks/ruby/v1 to RubyGems on push to `main`. Promoting develop to
+# main is what releases.
 #
 # Every publish is a prerelease (`X.Y.Z.pre.<run>`). RubyGems has no sandbox
-# registry, so the version provides the isolation instead: `gem install` and
-# `bundle install` skip prereleases unless the caller passes `--pre` or pins an
-# exact version.
+# registry, so the version is what keeps these builds off consumers: installers
+# skip prereleases unless asked with `--pre` or an exact pin.
 #
-# Authentication is OIDC trusted publishing, so there is no token to mask,
-# leak, or rotate. See docs/publish-leak-audit-checklist.md section 1.
-#
-# RubyGems binds the trusted publisher to this file's name. Renaming the
-# workflow breaks publishing until the publisher config is updated to match.
+# Auth is OIDC trusted publishing, so there is no token to leak or rotate.
+# RubyGems binds that publisher to this file's name, so renaming the workflow
+# breaks publishing until the publisher config is updated to match.
 
 on:
   push:
     branches: [main]
     paths:
       - 'sdks/ruby/v1/**'
-  # Re-run a publish without a new promotion (e.g. after fixing a
-  # RubyGems-side config problem). Gets a fresh run number, so a fresh version.
+  # Re-runs a publish without a new promotion, on a fresh run number.
   workflow_dispatch:
 
 # One publish at a time. Two overlapping runs could race on the same version.
@@ -52,12 +48,9 @@ jobs:
             exit 1
           fi
 
-      # Stamped here and never committed: the suffix belongs to the build, and
-      # scripts/bump_version.py exits 2 if it finds one in `gemVersion`.
-      #
-      # run_number is monotonic because RubyGems refuses to re-push a version
-      # and `yank` does not free it. There is no equivalent of the Python
-      # publish's `skip-existing`.
+      # Never committed: scripts/bump_version.py exits 2 on a suffix in
+      # `gemVersion`. run_number is monotonic because RubyGems refuses to
+      # re-push a version and `yank` does not free it.
       - name: Stamp the prerelease version
         run: |
           set -euo pipefail
@@ -82,9 +75,8 @@ jobs:
         with:
           python-version: '3.11'
 
-      # The gemspec ships README.md inside the gem. The PR check sees a
-      # regeneration; this sees the bytes about to be uploaded. Both call it
-      # with the same `--language`, so the two gates cannot drift.
+      # README.md ships inside the gem. The PR check sees a regeneration,
+      # this sees the bytes about to be uploaded.
       - name: Verify README before publishing
         run: python scripts/verify_readme.py sdks/ruby/v1/README.md --language ruby
 
@@ -92,10 +84,9 @@ jobs:
         working-directory: sdks/ruby/v1
         run: gem build ddx_interactions_api.gemspec -o "ddx_interactions_api-${GEM_VERSION}.gem"
 
-      # Package contents are permanent and world-readable once pushed, and
-      # yanking does not unpublish them. Enumerating on every release makes a
-      # bad s.files glob visible in the run instead of on the registry.
-      # See docs/publish-leak-audit-checklist.md section 3.
+      # Package contents are permanent once pushed; yanking does not
+      # unpublish them. Enumerating makes a bad s.files glob visible here
+      # rather than on the registry. See docs/publish-leak-audit-checklist.md.
       - name: Enumerate artifact contents
         working-directory: sdks/ruby/v1
         run: |
@@ -109,9 +100,8 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # Reads the built artifact rather than the gemspec source, since that is
-      # what gets published. Catches the generator defaults "OpenAPI-Generator"
-      # and "unlicense" before they reach the registry.
+      # Reads the built artifact, not the gemspec source, since that is what
+      # gets published.
       - name: Check gem metadata
         working-directory: sdks/ruby/v1
         run: |
@@ -160,13 +150,12 @@ jobs:
     runs-on: ubuntu-latest
 
     # Keeps publishing off arbitrary branches, and is where a required
-    # reviewer attaches if a release should need a human gate.
+    # reviewer attaches.
     environment:
       name: rubygems
       url: https://rubygems.org/gems/ddx_interactions_api
 
     permissions:
-      # Mints the OIDC token RubyGems exchanges for a push grant.
       id-token: write
       contents: read
 
@@ -182,8 +171,6 @@ jobs:
         with:
           ruby-version: '3.2'
 
-      # Exchanges the OIDC token for a short-lived RubyGems credential and
-      # writes it where `gem push` looks.
       - name: Configure RubyGems credentials
         uses: rubygems/configure-rubygems-credentials@v2.1.0
 

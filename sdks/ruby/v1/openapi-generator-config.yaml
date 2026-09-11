@@ -1,23 +1,17 @@
-# openapi-generator config for the Ruby v1 SDK. Run by
-# .github/workflows/generate-ruby-sdk.yml against generator 7.10.0.
+# Read by .github/workflows/generate-ruby-sdk.yml, generator 7.10.0.
 
-# Underscore_case per RubyGems convention, matching `require "ddx_interactions_api"`.
 gemName: ddx_interactions_api
-
-# Ruby namespace for the generated classes.
 moduleName: DdxInteractionsApi
 
-# Rewritten on each sync PR by scripts/bump_version.py, which the workflow
-# passes `--version-key gemVersion` because the Ruby generator uses that key
-# rather than packageVersion.
+# scripts/bump_version.py rewrites this on each sync PR, and needs
+# `--version-key gemVersion`: the Ruby generator does not use packageVersion.
 gemVersion: 0.1.0
 
-# Typhoeus, the generator's default, binds libcurl through a native extension
-# and needs a compiler wherever the gem is installed. Faraday is pure Ruby.
+# The default, typhoeus, binds libcurl through a native extension and needs a
+# compiler wherever the gem is installed. Faraday is pure Ruby.
 library: faraday
 
-# All four are required. Left unset, the generator publishes "OpenAPI-Generator"
-# as the author and "unlicense" as the license.
+# Unset, these publish as "OpenAPI-Generator" and "unlicense".
 gemAuthor: DDx API Team
 gemAuthorEmail: api@demexchange.com
 gemHomepage: https://github.com/Movement-Infrastructure/interactions-api-sdks

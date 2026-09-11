@@ -1,26 +1,16 @@
 source "https://rubygems.org"
 
-# Installs the SDK from outside its source tree, the way a consumer does. The
-# in-tree suite runs with the gemspec's lib/ already on the load path, so it
-# passes even when s.files omits a file the built gem never ships.
-#
-# SDK_SOURCE picks the build:
-#
-#   path  local working tree, no commit needed
-#   git   a pushed branch. Catches gemspec and dependency breakage, but not
-#         packaging: files excluded from s.files still resolve from git
-#   gem   a published version, e.g. SDK_VERSION=0.2.0.pre.1. The only source
-#         that exercises the real artifact
+# Resolves the SDK the way a consumer would. See README.md for the three
+# SDK_SOURCE values and what each one can and cannot catch.
 case (source = ENV.fetch("SDK_SOURCE", "path"))
 when "path"
   gem "ddx_interactions_api", path: "../../sdks/ruby/v1"
 when "git"
-  # SSH because Bundler clones without a terminal: a URL that asks for
+  # Bundler clones without a terminal, so an HTTPS URL that asks for
   # credentials fails with `could not read Username` instead of prompting.
   gem "ddx_interactions_api",
       git: "git@github.com:Movement-Infrastructure/interactions-api-sdks.git",
       branch: ENV.fetch("SDK_BRANCH", "develop"),
-      # The gemspec is not at the repo root.
       glob: "sdks/ruby/v1/*.gemspec"
 when "gem"
   # An exact pin is what makes Bundler consider a prerelease.

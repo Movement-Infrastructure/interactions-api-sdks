@@ -1,24 +1,21 @@
 {{!
     Overrides the ruby generator's built-in README.mustache, passed as
-    -t templates/ruby. Templates absent from this directory fall back to the
-    jar's copies, which is why it holds only this file.
+    -t templates/ruby. Anything absent from this directory falls back to the
+    jar's copy.
 
     A mustache comment ends at its first closing brace pair, so no variable or
     partial tag can appear in this block without silently ending it.
 
     The built-in template installs from a git URL instead of RubyGems, names an
     internal generator class, fills the auth example with credential
-    placeholders, and stamps a build date that churns the file on every run.
-    This replaces all four.
+    placeholders, and stamps a build date that churns the file every run.
 
-    Ruby has no common_README partial to defer to, so the endpoint, model and
-    authorization sections below are copied from the jar's template and can
-    drift from it on a generator upgrade.
+    Ruby has no common_README partial, so the endpoint, model and authorization
+    sections below are copied from the jar's template and can drift from it.
 
-    The Getting Started example sets no host: the client already defaults to
-    production, and scripts/verify_readme.py, which gates this output in CI,
-    rejects every other host. Doc links are absolute because docs/ is excluded
-    from the gem, leaving the repo as the only place those files exist.
+    Getting Started sets no host because the client already defaults to
+    production, and scripts/verify_readme.py rejects any other. Doc links are
+    absolute because docs/ is excluded from the gem.
 }}
 # {{gemName}}
 {{#appDescriptionWithNewLines}}
