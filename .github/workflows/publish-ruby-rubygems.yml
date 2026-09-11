@@ -35,9 +35,6 @@ jobs:
       - name: Check out release branch
         uses: actions/checkout@v4
         with:
-          # This job never pushes. The default leaves a live token in
-          # .git/config as an http.extraheader, readable by anything that
-          # runs afterwards.
           persist-credentials: false
 
       - name: Set up Ruby
@@ -45,8 +42,6 @@ jobs:
         with:
           ruby-version: '3.2'
 
-      # The generate workflow commits the SDK. Absent means the promotion
-      # happened before the first sync PR merged.
       - name: Verify the generated SDK is present
         run: |
           set -euo pipefail
