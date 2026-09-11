@@ -26,7 +26,7 @@ from typing_extensions import Self
 
 class EventDetails(BaseModel):
     """
-    Represents an identifier and the namespace its value belongs to.
+    Represents an identifier and the namespace its value belongs to (e.g. an event, one of its shifts, or a signup).
     """ # noqa: E501
     id: Annotated[str, Field(min_length=1, strict=True)] = Field(description="The identifier value")
     type: Annotated[str, Field(min_length=1, strict=True)] = Field(description="The namespace the id belongs to, scoped to the field this object appears in: an event namespace in event_id (e.g. \"vendor_event_id\", \"vendor_signup_id\"), or a shift namespace in shifts (e.g. \"vendor_shift_id\").")

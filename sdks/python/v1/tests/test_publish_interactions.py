@@ -23,6 +23,15 @@ API_VERSION = "1"
 
 # Minimal request satisfying InteractionDto's required fields
 # (attemptDateTime, committee, method, outcome, stateCode, vendorSource).
+#
+# `person` is not in the spec's `required` list but the API rejects the request
+# without it: for non-VAN destinations the backend demands either a non-empty
+# `person` array or valid `contactInfo` (email, phone, or address). A body
+# without one comes back 400, "Person ID or valid form of contact information
+# (email, phone, or address) required." Since the mock below answers with a
+# canned success no matter what is posted, leaving `person` out kept this test
+# green while asserting a request the real API refuses — found by running this
+# against a live environment.
 REQUEST_BODY = {
     "interactions": [
         {
@@ -32,6 +41,7 @@ REQUEST_BODY = {
             "committee": [{"type": "Matchbook", "id": "1"}],
             "vendorSource": "Matchbook",
             "outcome": "successful_contact",
+            "person": [{"type": "Matchbook", "id": "1"}],
         }
     ]
 }

@@ -1,14 +1,21 @@
 name: Generate Python SDK
 
-# On every PR that touches openapi/v1/swagger.json, computes the next package
-# version from the PR's labels, regenerates sdks/python/v1/, and commits both
-# back to the PR branch so the version lands in the generated manifest.
+# On every PR into develop that touches openapi/v1/swagger.json, computes the
+# next package version from the PR's labels, regenerates sdks/python/v1/, and
+# commits both back to the PR branch so the version lands in the generated
+# manifest.
 
 on:
   pull_request:
     # `labeled`/`unlabeled` are here so adding or removing a version label
     # after the PR opens recomputes the version.
     types: [opened, synchronize, labeled, unlabeled]
+    # Sync PRs only. On a develop -> main promotion the head ref IS `develop`,
+    # so this job would read the base version from `main`, recompute a bump
+    # that `develop` already applied, re-render changelog entries the sync PRs
+    # already recorded, and then push all of it to a protected branch. The
+    # push is what fails (GH006); the wrong version is the worse half.
+    branches: [develop]
     paths:
       - openapi/v1/swagger.json
 
@@ -33,7 +40,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      # One fetch serves three steps: the version bump reads the base config,
+      # and the changelog reads the base spec and the base changelog.
       - name: Read base-branch package version
+        id: base
         run: |
           set -euo pipefail
 
@@ -45,6 +55,20 @@ jobs:
             echo "::error::$config not found on ${{ github.base_ref }}; cannot determine the current version."
             exit 1
           fi
+
+          # Absent on the bootstrap sync that commits the first spec. No
+          # baseline means nothing to diff, so the changelog steps below are
+          # skipped rather than failing the run.
+          if git show "FETCH_HEAD:openapi/v1/swagger.json" > /tmp/base-swagger.json 2>/dev/null; then
+            echo "has_spec=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_spec=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No spec on ${{ github.base_ref }}; skipping the changelog."
+          fi
+
+          # Absent until the first sync creates it, which the renderer handles.
+          git show "FETCH_HEAD:sdks/python/v1/CHANGELOG.md" > /tmp/base-changelog.md 2>/dev/null \
+            || echo "::notice::No changelog on ${{ github.base_ref }} yet; it will be created."
 
       - name: Compute and apply next version
         id: version
@@ -81,8 +105,51 @@ jobs:
             -i openapi/v1/swagger.json \
             -g python \
             -o sdks/python/v1 \
-            -c sdks/python/v1/openapi-generator-config.yaml
- 
+            -c sdks/python/v1/openapi-generator-config.yaml \
+            -t templates/python
+
+      # Fills in what the generator hardcodes or omits: python_requires,
+      # certifi, the Changelog project URL, and long_description.
+      - name: Patch generated SDK metadata
+        run: python scripts/patch_python_sdk.py sdks/python/v1
+
+      # Pinned like the openapi-generator jar, so a sync PR's changelog can't
+      # change wording because upstream shipped a release.
+      - name: Install oasdiff
+        if: steps.base.outputs.has_spec == 'true'
+        env:
+          OASDIFF_VERSION: 1.30.0
+        run: |
+          set -euo pipefail
+
+          curl -sSL \
+            "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin oasdiff
+
+          oasdiff --version
+
+      # `--bump` makes this a gate: the version comes from the PR's labels, the
+      # breaking changes come from the spec, and when they disagree this fails
+      # before the commit step below, so no wrongly-versioned SDK reaches the
+      # branch. Applying `interactions-api-major` reruns the workflow.
+      - name: Update CHANGELOG.md
+        if: steps.base.outputs.has_spec == 'true'
+        run: |
+          set -euo pipefail
+
+          oasdiff changelog /tmp/base-swagger.json openapi/v1/swagger.json \
+            -f json > /tmp/oasdiff.json
+
+          # The head commit's date rather than today's: a label applied days
+          # later reruns this step, and the entry must not churn on the date.
+          python scripts/render_changelog.py \
+            --oasdiff-json /tmp/oasdiff.json \
+            --version "${{ steps.version.outputs.next }}" \
+            --bump "${{ steps.version.outputs.bump }}" \
+            --date "$(git log -1 --format=%cs)" \
+            --current-changelog /tmp/base-changelog.md \
+            --write-changelog sdks/python/v1/CHANGELOG.md
+
       - name: Commit generated SDK if changed
         run: |
           git config user.name "github-actions[bot]"

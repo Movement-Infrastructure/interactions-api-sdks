@@ -1,12 +1,10 @@
 # SDK publish leak-audit checklist
 
-Reusable pre-publish audit for every language SDK in this repo. Produced by
-[MIG-1928](https://linear.app/movementinfrastructure/issue/MIG-1928); cross-checked per language by
-[MIG-1971](https://linear.app/movementinfrastructure/issue/MIG-1971).
+Reusable pre-publish audit for every language SDK in this repo.
 
 Run this **once per language, against a real build artifact**, before that language's first publish to
-any registry — and again before the test → production registry flip in milestone 9. Copy the
-checklist into the language's audit ticket and tick items there rather than editing this file.
+any registry — and again before the test → production registry flip. Copy the checklist somewhere
+per-language and tick items there rather than editing this file.
 
 Two things are being audited, and they fail in different ways:
 
@@ -48,11 +46,10 @@ Two things are being audited, and they fail in different ways:
 - [ ] The client's debug/verbose mode is **off** in CI. Generated OpenAPI clients wire a debug flag
       straight into the HTTP layer's header tracing (for Python, `Configuration.debug = True` sets
       `http.client.HTTPConnection.debuglevel = 1`), which prints full request headers — including
-      `Authorization` — to stdout. See finding F2 in `Plans/MIG-1928-publish-leak-audit.md`.
+      `Authorization` — to stdout.
 - [ ] No test or example in CI authenticates against a real environment with a real key. If a
-      staging-API test is genuinely needed (see
-      [MIG-1929](https://linear.app/movementinfrastructure/issue/MIG-1929)), keep it out of the
-      published package and out of any job whose logs are broadly readable.
+      staging-API test is genuinely needed, keep it out of the published package and out of any job
+      whose logs are broadly readable.
 - [ ] Failure paths reviewed, not just the happy path. Exception traces and `--verbose` retry output
       are where credentials usually surface. Read the log of a **deliberately failed** publish.
 
@@ -70,7 +67,7 @@ with each other about what "excluded" means.
       - Swift: the published source tree is the git tag itself — audit `git archive` output
 - [ ] **sdist and wheel audited separately.** They are built by different code paths and routinely
       differ. Confirmed on the Python SDK: `find_packages(exclude=[...])` keeps tests out of the wheel
-      while setuptools' default sdist manifest ships `tests/test*.py` anyway (finding F3).
+      while setuptools' default sdist manifest ships `tests/test*.py` anyway.
 - [ ] `.gitattributes export-ignore` is **not** relied on for package exclusion. It only affects
       `git archive`, i.e. GitHub's "Source code (tar.gz)" release assets. It has zero effect on a
       wheel, sdist, npm tarball, gem, or nupkg.
@@ -79,15 +76,15 @@ with each other about what "excluded" means.
       `C:\…`). These leak developer identities and CI layout.
 - [ ] No internal hostnames or non-production environment URLs. **Check the spec's `servers:` block** —
       it is copied verbatim into the client. The Python SDK currently ships
-      `api-dev.movementinfrastructure.org` in its host list (finding F4).
+      `api-dev.movementinfrastructure.org` in its host list.
 - [ ] No internal implementation details in public docstrings — backend type names, namespaces, table
-      or queue names. These come from the spec's schema `description` fields (finding F5).
+      or queue names. These come from the spec's schema `description` fields.
 - [ ] Package metadata is real: author, author email, license, repository URL, version. Generated
       defaults (`OpenAPI Generator Community`, `team@openapitools.org`, `NoLicense`, `0.0.0`) are
-      publish blockers, and the author email is a third party's address (finding F6).
+      publish blockers, and the author email is a third party's address.
 - [ ] **Long description / README audited as published content.** It renders on the registry's public
       project page. The spec's `info.description` flows into it, into the file header of every
-      generated source file, and into `PKG-INFO`/`METADATA` (finding F1).
+      generated source file, and into `PKG-INFO`/`METADATA`.
 - [ ] Artifact scanned with a secret scanner, not just grep — e.g.
       `gitleaks detect --no-git --source <extracted-dir>` or `trufflehog filesystem <dir>`.
       Expect one known false positive in generated Python clients: `password='the-password'` in
@@ -96,8 +93,7 @@ with each other about what "excluded" means.
 ## 4. Repository and history
 
 - [ ] `git log -p` / a history-wide scanner shows no committed credential on **any** ref, including
-      deleted and bot-authored branches. A private repo going public exposes all of them
-      ([MIG-1973](https://linear.app/movementinfrastructure/issue/MIG-1973)).
+      deleted and bot-authored branches. A private repo going public exposes all of them.
 - [ ] GitHub secret scanning and push protection enabled on the repo (free for public repos; requires
       Advanced Security while private).
 - [ ] Any credential found at any point in history is **rotated**, not just deleted. Assume disclosure.
@@ -108,8 +104,7 @@ with each other about what "excluded" means.
       registry serves are not guaranteed identical — this is the only check that covers the publish
       step itself.
 - [ ] Installed into a clean environment and imported, with no credential present, to confirm the
-      package does not depend on something that only existed in CI
-      ([MIG-1929](https://linear.app/movementinfrastructure/issue/MIG-1929)).
+      package does not depend on something that only existed in CI.
 - [ ] Registry project page reviewed as an anonymous visitor.
 
 ---
@@ -121,5 +116,5 @@ with each other about what "excluded" means.
 2. Delete the affected Actions log run and yank the affected package version.
 3. Assume the value was scraped. Public-registry uploads and public repo pushes are indexed within
    minutes.
-4. Record what leaked, how, and the control added, in the language's audit ticket — then add the
-   missing control to this checklist so the next language inherits it.
+4. Record what leaked, how, and the control added — then add the missing control to this
+   checklist so the next language inherits it.

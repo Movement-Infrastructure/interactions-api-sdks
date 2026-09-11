@@ -10,8 +10,6 @@ name: Python SDK tests
 # reports a result. If a branch has no committed spec yet (the bootstrap window
 # before the first sync PR merges), the SDK cannot be generated or affected, so
 # the heavy steps are skipped and the job passes.
-#
-# See Plans/MIG-1918-python-sdk-smoke-tests.md.
 
 on:
   pull_request:
@@ -24,6 +22,11 @@ jobs:
     steps:
       - name: Check out PR
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          # All branch refs, so the drift check below can diff against the base
+          # branch without an authenticated fetch of its own.
+          fetch-depth: 0
 
       - name: Check for committed OpenAPI spec
         id: spec
@@ -65,13 +68,28 @@ jobs:
             -i openapi/v1/swagger.json \
             -g python \
             -o sdks/python/v1 \
-            -c sdks/python/v1/openapi-generator-config.yaml
+            -c sdks/python/v1/openapi-generator-config.yaml \
+            -t templates/python
 
       - name: Set up Python
         if: steps.spec.outputs.present == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      # Same patch generate-python-sdk.yml applies, because this job installs
+      # what it just regenerated. Without it the certifi and Requires-Python
+      # fixes would go untested.
+      - name: Patch generated SDK metadata
+        if: steps.spec.outputs.present == 'true'
+        run: python scripts/patch_python_sdk.py sdks/python/v1
+
+      # The patch above points long_description at the README, making it the
+      # PyPI project page. Checked on every PR because a dropped
+      # `-t templates/python` would silently restore the built-in template.
+      - name: Verify generated README
+        if: steps.spec.outputs.present == 'true'
+        run: python scripts/verify_readme.py sdks/python/v1/README.md
 
       - name: Install generated SDK + test deps
         if: steps.spec.outputs.present == 'true'
@@ -83,3 +101,23 @@ jobs:
       - name: Run smoke tests
         if: steps.spec.outputs.present == 'true'
         run: pytest sdks/python/v1/tests -q
+
+      # The SDK is committed, so it can drift from the spec and the templates
+      # with nothing noticing. This job has already regenerated it, so a diff
+      # means the committed copy is stale. Last, so a drift failure doesn't
+      # hide the test results. Skipped when the spec changed here, because
+      # generate-python-sdk.yml commits the regenerated SDK on those PRs.
+      - name: Check the committed SDK is up to date
+        if: steps.spec.outputs.present == 'true'
+        run: |
+          set -euo pipefail
+
+          if ! git diff --quiet "origin/${{ github.base_ref }}" -- openapi/v1/swagger.json; then
+            echo "::notice::Spec changed in this PR; the generate workflow commits the regenerated SDK."
+            exit 0
+          fi
+
+          if ! git diff --exit-code -- sdks/python/v1; then
+            echo "::error::sdks/python/v1 does not match a fresh generation. Regenerate and commit it."
+            exit 1
+          fi
