@@ -58,14 +58,13 @@ jobs:
             exit 1
           fi
 
-      # The suffix is a property of this build, not of the branch, so it is
-      # stamped here and never committed. It must not go into the generator
-      # config: scripts/bump_version.py parses `gemVersion` as strict A.B.C and
-      # exits 2 on a suffix, which would break the next sync PR.
+      # The .pre.<run_number> suffix is stamped here and never committed,
+      # because it belongs to this build rather than the branch. It must stay
+      # out of the generator config, where bump_version.py parses gemVersion as
+      # strict A.B.C and exits 2 on a suffix.
       #
-      # run_number is monotonic, which matters because RubyGems refuses to
-      # re-push a version and `yank` does not free it. There is no gem-push
-      # equivalent of the Python publish's `skip-existing`.
+      # run_number only ever increases.  A version number on RubyGems is
+      # permanent and can't be reused.
       - name: Stamp the prerelease version
         run: |
           set -euo pipefail
