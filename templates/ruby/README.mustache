@@ -26,8 +26,13 @@
     upgrade. It sets no host on purpose: the gate below rejects any host but
     production, and the client already defaults to it.
 
+    The doc links below are absolute. The generator writes them relative to
+    the SDK directory, but this README ships inside the gem and renders on the
+    gem's page, where a relative link resolves to nothing. docs/ is excluded
+    from the gem itself, so the repo is the only place those files exist.
+
     scripts/verify_readme.py gates the rendered output in CI, on both the PR
-    and the publish path.
+    and the publish path, and rejects a relative docs/ link.
 }}
 # {{gemName}}
 {{#appDescriptionWithNewLines}}
@@ -111,12 +116,12 @@ All URIs are relative to *{{basePath}}*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
-{{#apiInfo}}{{#apis}}{{#operations}}{{#operation}}*{{moduleName}}::{{classname}}* | [**{{operationId}}**]({{apiDocPath}}{{classname}}.md#{{operationId}}) | **{{httpMethod}}** {{path}} | {{{summary}}}
+{{#apiInfo}}{{#apis}}{{#operations}}{{#operation}}*{{moduleName}}::{{classname}}* | [**{{operationId}}**](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/ruby/v1/{{apiDocPath}}{{classname}}.md#{{operationId}}) | **{{httpMethod}}** {{path}} | {{{summary}}}
 {{/operation}}{{/operations}}{{/apis}}{{/apiInfo}}
 
 ## Documentation for Models
 
-{{#models}}{{#model}} - [{{moduleName}}::{{classname}}]({{modelDocPath}}{{classname}}.md)
+{{#models}}{{#model}} - [{{moduleName}}::{{classname}}](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/ruby/v1/{{modelDocPath}}{{classname}}.md)
 {{/model}}{{/models}}
 
 ## Documentation for Authorization

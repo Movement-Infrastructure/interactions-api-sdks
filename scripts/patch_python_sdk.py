@@ -40,6 +40,22 @@ CHANGELOG_URL = (
     "/blob/main/sdks/python/v1/CHANGELOG.md"
 )
 
+DOCS_BASE_URL = (
+    "https://github.com/Movement-Infrastructure/interactions-api-sdks"
+    "/blob/main/sdks/python/v1/docs/"
+)
+
+# The generator's common_README partial writes model and endpoint doc links
+# relative to the SDK directory (`docs/Foo.md`). setup.py points
+# long_description at this README, so it renders as the PyPI project page,
+# where a relative link resolves to nothing -- and docs/ is not in the sdist or
+# the wheel either, so the repo is the only place those files exist. Rewritten
+# here rather than in templates/python/README.mustache because the links come
+# from the partial, not from the part of the template we override.
+_RELATIVE_DOC_LINK_RE = re.compile(
+    r"\]\(docs/([A-Za-z0-9_]+\.md(?:#[A-Za-z0-9_.-]+)?)\)"
+)
+
 # (relative path, anchor, replacement, already-applied marker)
 EXACT_PATCHES = [
     # The template never passes PYTHON_REQUIRES to setup(), so the wheel ships
@@ -166,11 +182,37 @@ def apply_regex(
     return pattern.sub(replacement, text, count=1)
 
 
+def rewrite_doc_links(root: Path) -> bool:
+    """Point the README's relative docs/ links at the repo. Idempotent."""
+    path = root / "README.md"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise PatchError(f"cannot read {path}: {exc}") from exc
+
+    if DOCS_BASE_URL in text:
+        return False
+
+    rewritten, count = _RELATIVE_DOC_LINK_RE.subn(
+        lambda m: f"]({DOCS_BASE_URL}{m.group(1)})", text
+    )
+    if count == 0:
+        raise PatchError(
+            f"{path}: no relative docs/ links found and none already absolute. "
+            f"Generator template changed; update scripts/patch_python_sdk.py."
+        )
+
+    path.write_text(rewritten, encoding="utf-8")
+    return True
+
+
 def patch_sdk(root: Path) -> list[str]:
     """Patch the generated SDK in `root`. Returns the files it changed."""
     check_license(root)
 
     changed: list[str] = []
+    if rewrite_doc_links(root):
+        changed.append("README.md")
 
     by_file: dict[str, list] = {}
     for name, anchor, replacement, marker in EXACT_PATCHES:

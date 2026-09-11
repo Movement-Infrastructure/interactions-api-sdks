@@ -68,6 +68,13 @@ BANNED = [
         re.compile(r"^- Build date:", re.MULTILINE),
         "carries a build date, which churns the README on every run",
     ),
+    # The generator links model and endpoint docs relative to the SDK
+    # directory. This README renders on a registry page, where a relative link
+    # resolves to nothing, and docs/ ships in neither package.
+    (
+        re.compile(r"\]\(docs/[A-Za-z0-9_]+\.md"),
+        "links docs/ relatively; on a registry page that resolves to nothing",
+    ),
 ]
 
 # What templates/<language>/README.mustache exists to produce. The install
