@@ -107,13 +107,11 @@ jobs:
             -c sdks/ruby/v1/openapi-generator-config.yaml \
             -t templates/ruby
 
-      # Identity fields (author, email, license, required ruby version) come
-      # straight from the generator config, so unlike the Python SDK nothing has
-      # to be patched for them. The one exception is the gemspec's file list: the
-      # template globs the whole directory with `find *`, which would publish
-      # docs/, spec/, the Gemfile, the Rakefile and the generator config inside
-      # the gem. The anchor is exact generated text and a miss is fatal, so a
-      # template change fails the build rather than quietly shipping them.
+      # Identity fields (author, email, license, required ruby version) come straight from the generator 
+      # config, so unlike the Python SDK nothing has to be patched for them. By default, the generator's 
+      # template would also include development-only files (docs/, spec/, the Gemfile, the Rakefile, and 
+      # the config for this generator itself), so we replace the generated list with an explicit one. 
+      # The anchor text we match on must be exactly what the generator emits: if it stops matching, build will fail rather than quietly shipping those files.
       # Keep in sync with the copy in ruby-sdk-tests.yml.
       - name: Patch generated gemspec file list
         run: |
