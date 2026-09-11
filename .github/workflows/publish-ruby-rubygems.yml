@@ -2,7 +2,8 @@ name: Publish Ruby SDK to RubyGems
 
 # Builds sdks/ruby/v1 and publishes it to RubyGems on push to the `main` release
 # branch, mirroring publish-python-testpypi.yml. `develop` is where sync PRs
-# land; promoting develop -> main is the deliberate act that releases.
+# Builds sdks/ruby/v1 and publishes it to RubyGems on push to the `main` release
+# branch, mirroring publish-python-testpypi.yml. Sync PRs will be created against `develop`, but will require manual merging to `main` for a release to actually occur.
 #
 # Every publish is a PRERELEASE (`X.Y.Z.pre.<run>`). RubyGems has no sandbox
 # registry -- no equivalent of TestPyPI -- so isolation comes from the version
