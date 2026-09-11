@@ -1,13 +1,11 @@
 name: Ruby SDK tests
 
-# On every PR to develop, regenerate sdks/ruby/v1/ from openapi/v1/swagger.json,
-# install it, and run the smoke + happy-path suite in sdks/ruby/v1/spec/.
+# On every PR to develop: regenerate sdks/ruby/v1/ from openapi/v1/swagger.json,
+# install it, and run the suite in sdks/ruby/v1/spec/.
 #
-# Runs on ALL PRs (no `paths:` filter) on purpose: a required status check that
-# is path-filtered will show as perpetually pending on PRs that don't match the
-# filter, blocking merge forever. Running unconditionally means the check always
-# reports a result. If a branch has no committed spec yet, the SDK cannot be
-# generated or affected, so the heavy steps are skipped and the job passes.
+# No `paths:` filter, deliberately. A path-filtered required check shows as
+# perpetually pending on PRs that don't match it, blocking merge forever.
+# Branches with no committed spec skip the heavy steps and pass.
 
 on:
   pull_request:
@@ -21,10 +19,9 @@ jobs:
       - name: Check out PR
         uses: actions/checkout@v4
         with:
-          # This job never pushes. The default leaves an unmasked live token in
-          # .git/config as an http.extraheader, readable by anything that runs
-          # afterwards -- and this job runs `bundle install`, which resolves
-          # and executes third-party gem code.
+          # This job never pushes. The default leaves a live token in
+          # .git/config as an http.extraheader, and this job runs
+          # `bundle install`, which executes third-party gem code.
           persist-credentials: false
 
       - name: Check for committed OpenAPI spec
@@ -76,9 +73,9 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Same patch generate-ruby-sdk.yml applies, because this job installs what
-      # it just regenerated -- without it CI would test a gem whose file list
-      # still globs the whole directory. Keep the two copies in sync.
+      # The same patch generate-ruby-sdk.yml applies. This job installs what it
+      # just regenerated, so without it CI tests a gem whose file list still
+      # globs the whole directory. Keep the two copies in sync.
       - name: Patch generated gemspec file list
         if: steps.spec.outputs.present == 'true'
         run: |
@@ -114,10 +111,9 @@ jobs:
               print("patched: gemspec file list")
           PY
 
-      # The gemspec ships README.md inside the gem, so it is published content.
-      # Checked on every PR because a dropped `-t templates/ruby` would
-      # silently restore the built-in template, which installs from a git URL
-      # and fills the auth example with credential placeholders.
+      # README.md ships inside the gem, so it is published content. Checked on
+      # every PR because a dropped `-t templates/ruby` silently restores the
+      # built-in template, which installs from a git URL.
       - name: Verify generated README
         if: steps.spec.outputs.present == 'true'
         run: python scripts/verify_readme.py sdks/ruby/v1/README.md --language ruby

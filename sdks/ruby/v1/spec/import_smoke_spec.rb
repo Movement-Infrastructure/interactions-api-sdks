@@ -1,6 +1,5 @@
-# Proves the generated gem loads and exposes the surface consumers depend on.
-# Cheap to run and catches a broken generation before the happy-path spec has to
-# stand up a mock server.
+# The generated gem loads and exposes the surface consumers depend on. Catches
+# a broken generation before the happy-path spec stands up a mock server.
 
 require "spec_helper"
 
@@ -22,9 +21,9 @@ RSpec.describe "generated gem" do
     expect(DdxInteractionsApi::WhoAmIApiKeyDto).to be_a(Class)
   end
 
-  # The suffix is optional because publish-ruby-rubygems.yml stamps
-  # `X.Y.Z.pre.<run>` into version.rb before building. A strict A.B.C matcher
-  # here would fail every publish build.
+  # The suffix is optional: publish-ruby-rubygems.yml stamps `X.Y.Z.pre.<run>`
+  # into version.rb before building, so a strict A.B.C matcher would fail
+  # every publish.
   it "reports the version the generator config set" do
     expect(DdxInteractionsApi::VERSION).to match(/\A\d+\.\d+\.\d+(\.[A-Za-z0-9]+)*\z/)
   end

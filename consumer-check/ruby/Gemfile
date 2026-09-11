@@ -1,32 +1,29 @@
 source "https://rubygems.org"
 
-# Installs the Ruby SDK from outside its own source tree, the way a consumer
-# does. The in-tree suite (sdks/ruby/v1/spec/) runs with the gemspec's own lib/
-# on the load path, so it passes even when s.files omits a file that the built
-# gem therefore never ships. This harness resolves and installs instead.
+# Installs the SDK from outside its source tree, the way a consumer does. The
+# in-tree suite runs with the gemspec's lib/ already on the load path, so it
+# passes even when s.files omits a file the built gem never ships.
 #
-# SDK_SOURCE picks which build to exercise:
+# SDK_SOURCE picks the build:
 #
-#   path  local working tree; no commit needed. The fast loop.
-#   git   a pushed branch, resolved as a consumer would. Catches gemspec and
-#         dependency-resolution breakage, but NOT packaging: files excluded from
-#         s.files still resolve fine from git and only vanish once built.
+#   path  local working tree, no commit needed
+#   git   a pushed branch. Catches gemspec and dependency breakage, but not
+#         packaging: files excluded from s.files still resolve from git
 #   gem   a published version, e.g. SDK_VERSION=0.2.0.pre.1. The only source
-#         that exercises the real artifact.
+#         that exercises the real artifact
 case (source = ENV.fetch("SDK_SOURCE", "path"))
 when "path"
   gem "ddx_interactions_api", path: "../../sdks/ruby/v1"
 when "git"
-  # SSH rather than HTTPS: Bundler clones without a terminal, so a URL that asks
-  # for credentials dies on `could not read Username for 'https://github.com'`
-  # rather than prompting. This matches how origin is configured.
+  # SSH because Bundler clones without a terminal: a URL that asks for
+  # credentials fails with `could not read Username` instead of prompting.
   gem "ddx_interactions_api",
       git: "git@github.com:Movement-Infrastructure/interactions-api-sdks.git",
       branch: ENV.fetch("SDK_BRANCH", "develop"),
-      # The gemspec is not at the repo root, so Bundler needs to be told where.
+      # The gemspec is not at the repo root.
       glob: "sdks/ruby/v1/*.gemspec"
 when "gem"
-  # Prereleases are opt-in: an exact pin is what makes Bundler consider one.
+  # An exact pin is what makes Bundler consider a prerelease.
   gem "ddx_interactions_api", ENV.fetch("SDK_VERSION")
 else
   raise "SDK_SOURCE must be one of: path, git, gem (got #{source.inspect})"

@@ -2,12 +2,11 @@
 # frozen_string_literal: true
 
 # Consumer-side check for the Ruby SDK. Run under `bundle exec` so the gem
-# resolves through consumer-check/ruby/Gemfile rather than the source tree.
+# resolves through this directory's Gemfile rather than the source tree.
 #
-# Without DDX_API_KEY this only loads the gem and reports what it resolved,
-# which is enough to catch a broken build and is safe to run anywhere. With a
-# key it also calls GET /v{version}/auth/me -- read-only, and the cheapest call
-# that proves connectivity, auth and deserialization all work end to end.
+# Without DDX_API_KEY it loads the gem and reports what it resolved. With one it
+# also calls GET /v{version}/auth/me, a read-only call that exercises
+# connectivity, auth and deserialization together.
 
 require "ddx_interactions_api"
 
@@ -15,8 +14,7 @@ API_VERSION = ENV.fetch("DDX_API_VERSION", "1")
 
 spec = Gem.loaded_specs["ddx_interactions_api"]
 
-# Which build actually got installed. The whole point of this harness is that
-# this is a question with a non-obvious answer.
+# Which build actually got installed.
 puts "version:  #{DdxInteractionsApi::VERSION}"
 puts "resolved: #{spec.source}"
 puts "path:     #{spec.full_gem_path}"
@@ -42,8 +40,7 @@ begin
   me = DdxInteractionsApi::AuthenticationDetailsApi.new(client)
                                                    .vversion_auth_me_get(API_VERSION)
 rescue DdxInteractionsApi::ApiError => e
-  # Print the body: the SDK's message is just the status line, and the body is
-  # where the API says why.
+  # The exception message is only the status line; the body says why.
   warn "\nauth/me failed: HTTP #{e.code}"
   warn e.response_body.to_s
   exit 1

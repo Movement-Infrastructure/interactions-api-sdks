@@ -1,10 +1,9 @@
 # POST /v1/interactions against a stubbed server.
 #
-# The spec defines no operationId for the interactions endpoints, so the
-# generator derives the method name from the path and verb, giving
-# `vversion_interactions_post`. `version` is a required positional argument --
-# the client does not default it -- so the request path only resolves to
-# /v1/interactions because the caller passes "1".
+# The OpenAPI spec sets no operationId for these endpoints, so the generator
+# derives `vversion_interactions_post` from the path and verb. `version` is a
+# required positional argument with no default, which is why the path resolves
+# to /v1/interactions only when the caller passes "1".
 
 require "spec_helper"
 require "webmock/rspec"
@@ -42,9 +41,8 @@ RSpec.describe DdxInteractionsApi::InteractionsApi do
     config = DdxInteractionsApi::Configuration.new
     config.scheme = "http"
     config.host = HOST
-    # The endpoint is behind HTTP basic auth with the API key in the password
-    # field and an empty username. The stub ignores it, but setting credentials
-    # exercises the client's auth path.
+    # HTTP basic auth, API key in the password field, empty username. The stub
+    # ignores it, but setting credentials exercises the client's auth path.
     config.username = ""
     config.password = "test"
     DdxInteractionsApi::ApiClient.new(config)

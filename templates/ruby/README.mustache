@@ -1,38 +1,24 @@
 {{!
-    Overrides the ruby generator's built-in README.mustache. Passed as
-    -t templates/ruby; templates absent from that directory fall back to the
-    ones embedded in the jar, which is why only this file exists.
+    Overrides the ruby generator's built-in README.mustache, passed as
+    -t templates/ruby. Templates absent from this directory fall back to the
+    jar's copies, which is why it holds only this file.
 
-    NOTE: a mustache comment ends at its first closing brace pair, so no
-    variable or partial tag may appear in this block. Naming one here silently
-    ends the comment and renders the remainder as markup.
+    A mustache comment ends at its first closing brace pair, so no variable or
+    partial tag can appear in this block without silently ending it.
 
-    Four defects in the built-in template motivated the override. It tells the
-    reader to build the gem by hand or install it from a git URL rather than
-    from the registry the gem is published to; it names an internal generator
-    class; it fills the authorization example with credential placeholders that
-    read as real instructions; and it carries a build date that would churn
-    this file on every run.
+    The built-in template installs from a git URL instead of RubyGems, names an
+    internal generator class, fills the auth example with credential
+    placeholders, and stamps a build date that churns the file on every run.
+    This replaces all four.
 
-    Unlike the python generator there is no common_README partial to defer to,
-    so the endpoint, model and authorization sections at the bottom are copied
-    from the built-in template. A generator upgrade can change them there
-    without changing them here.
+    Ruby has no common_README partial to defer to, so the endpoint, model and
+    authorization sections below are copied from the jar's template and can
+    drift from it on a generator upgrade.
 
-    The Getting Started example is hand-written rather than looped over the
-    first operation, which is what produced the credential placeholders. It
-    calls the auth endpoint, so a spec change that renames that operation will
-    make it wrong without failing anything -- check it on a generator or spec
-    upgrade. It sets no host on purpose: the gate below rejects any host but
-    production, and the client already defaults to it.
-
-    The doc links below are absolute. The generator writes them relative to
-    the SDK directory, but this README ships inside the gem and renders on the
-    gem's page, where a relative link resolves to nothing. docs/ is excluded
-    from the gem itself, so the repo is the only place those files exist.
-
-    scripts/verify_readme.py gates the rendered output in CI, on both the PR
-    and the publish path, and rejects a relative docs/ link.
+    The Getting Started example sets no host: the client already defaults to
+    production, and scripts/verify_readme.py, which gates this output in CI,
+    rejects every other host. Doc links are absolute because docs/ is excluded
+    from the gem, leaving the repo as the only place those files exist.
 }}
 # {{gemName}}
 {{#appDescriptionWithNewLines}}

@@ -1,22 +1,12 @@
-# openapi-generator ignore file.
-#
-# Files listed here are NOT written or overwritten when the SDK is regenerated
-# (.github/workflows/generate-ruby-sdk.yml and ruby-sdk-tests.yml both run the
-# generator into this directory). This protects the hand-written smoke-test
-# suite and its supporting files from being clobbered by regeneration.
+# Files listed here survive regeneration.
 
+# The smoke suite is hand-written, and the generated Gemfile has no HTTP
+# stubbing gem for it to use.
 spec/**
+Gemfile
 .openapi-generator-ignore
 
-# Hand-maintained so the smoke suite's test-only dependencies (webmock) survive
-# regeneration. The generated Gemfile carries no test deps beyond rspec.
-Gemfile
-
-
-# The Ruby generator emits these supporting files, but we don't use them (we
-# have our own CI and test suite). Not generating them keeps them out of the
-# repo and, because the generated gemspec builds its file list with `find *`,
-# out of the published gem as well.
+# Unused: the repo has its own CI.
 .travis.yml
 .gitlab-ci.yml
 .rubocop.yml
