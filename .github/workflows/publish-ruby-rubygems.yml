@@ -38,9 +38,7 @@ jobs:
       - name: Check out release branch
         uses: actions/checkout@v4
         with:
-          # This job never pushes. The default leaves an unmasked live token in
-          # .git/config as an http.extraheader, readable by any build tooling
-          # that runs afterwards.
+          # We don't need access to the credentials since the job never pushes, so we want to avoid persisting them in config
           persist-credentials: false
 
       - name: Set up Ruby
