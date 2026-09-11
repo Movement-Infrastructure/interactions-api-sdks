@@ -17,7 +17,7 @@ packageName: ddx_interactions_api
 projectName: ddx-interactions-api
 
 # Rewritten by the version-bump workflow on each sync PR.
-packageVersion: 0.1.0
+packageVersion: 0.2.0
 
 # urllib3-based synchronous client. Async (asyncio) variant is available if
 # we end up needing it.
@@ -27,11 +27,6 @@ library: urllib3
 gitUserId: Movement-Infrastructure
 gitRepoId: interactions-api-sdks
 packageUrl: https://github.com/Movement-Infrastructure/interactions-api-sdks
-# Note: the Python generator pulls the `authors` field from the spec's
-# `info.contact` block. mercury.json doesn't currently set one, so authors
-# defaults to "OpenAPI Generator Community". Fix is an upstream change in
-# mig-readme-docs (add info.contact to reference/mercury.json), not a
-# generator config override.
 
 globalProperties:
   apiTests: "false"

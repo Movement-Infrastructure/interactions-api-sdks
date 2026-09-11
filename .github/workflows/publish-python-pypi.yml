@@ -1,28 +1,32 @@
-name: Publish Python SDK to TestPyPI
+name: Publish Python SDK to PyPI
 
-# Builds sdks/python/v1 and publishes it to TestPyPI on every push to
-# `develop`, so a version exists on a real registry and can be installed from
-# one before anyone promotes it. The production release is a separate workflow,
-# publish-python-pypi.yml, which runs on `main`.
+# Builds sdks/python/v1 and publishes it to PyPI on push to the `main` release
+# branch. `develop` is where sync PRs land and where publish-python-testpypi.yml
+# stages every version; promoting develop -> main is the deliberate act that
+# releases it publicly.
 #
 # Authentication is OIDC trusted publishing — there is no token, so nothing to
 # mask, leak, or rotate.
 #
-# IMPORTANT: TestPyPI's trusted publisher is bound to this file's NAME. Renaming
+# IMPORTANT: PyPI's trusted publisher is bound to this file's NAME. Renaming
 # this workflow breaks publishing until the publisher config is updated to match.
+#
+# A PyPI upload is permanent. A release can be yanked, but its version number
+# can never be reused, so a mistake here is not recoverable the way a bad
+# TestPyPI upload is.
 
 on:
   push:
-    branches: [develop]
+    branches: [main]
     paths:
       - 'sdks/python/v1/**'
-  # Re-run a publish without a new merge (e.g. after fixing a TestPyPI-side
+  # Re-run a publish without a new promotion (e.g. after fixing a PyPI-side
   # config problem).
   workflow_dispatch:
 
 # One publish at a time. Two overlapping runs could race on the same version.
 concurrency:
-  group: publish-python-testpypi
+  group: publish-python-pypi
   cancel-in-progress: false
 
 jobs:
@@ -140,11 +144,11 @@ jobs:
     # Keeps the publish capability off arbitrary branches, and is where a
     # required reviewer attaches if we want a human gate before a release.
     environment:
-      name: testpypi
-      url: https://test.pypi.org/project/ddx-interactions-api/
+      name: pypi
+      url: https://pypi.org/project/ddx-interactions-api/
 
     permissions:
-      # Mints the short-lived OIDC token TestPyPI exchanges for an upload grant.
+      # Mints the short-lived OIDC token PyPI exchanges for an upload grant.
       id-token: write
 
     steps:
@@ -154,13 +158,13 @@ jobs:
           name: python-sdk-dist
           path: dist/
 
-      - name: Publish to TestPyPI
+      # No repository-url: the action defaults to PyPI.
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: https://test.pypi.org/legacy/
-          # A merge to develop that touches the SDK without bumping the version
-          # would otherwise fail here on a duplicate upload. This is staging,
-          # so skipping is right; publish-python-pypi.yml sets it to false,
-          # where a silent skip would hide a real mistake.
-          skip-existing: true
+          # Deliberately not skip-existing. A promotion carrying a version
+          # already on PyPI is a mistake -- the bump did not run, or the
+          # promotion was opened twice -- and it has to fail rather than pass
+          # green having uploaded nothing.
+          skip-existing: false
           print-hash: true
