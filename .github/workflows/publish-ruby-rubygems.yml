@@ -48,8 +48,8 @@ jobs:
         with:
           ruby-version: '3.2'
 
-      # The SDK is committed by the generate workflow. If it's absent, the
-      # promotion happened before the first sync PR merged.
+      # The SDK is committed by the generate workflow. If it's absent, someone merged develop to main 
+      # before the generate workflow output ever made it onto develop
       - name: Verify the generated SDK is present
         run: |
           set -euo pipefail
