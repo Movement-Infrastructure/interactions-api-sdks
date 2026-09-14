@@ -10,6 +10,9 @@ specification.
 
 For more information, please visit [https://demexchange.com/](https://demexchange.com/).
 
+For support for this package or the DDx Interactions API please contact us
+at <api@demexchange.com>
+
 ## Requirements
 
 Ruby >= 3.0
