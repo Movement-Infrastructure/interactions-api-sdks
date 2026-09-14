@@ -10,9 +10,8 @@ assembly to catch a broken SDK before a PR merges.
   `InteractionsBatchResultDto`, the templated path resolves, basic auth is sent,
   and the request body serializes as the API expects.
 - `StubHttpMessageHandler.cs` — captures the outgoing request and returns a
-  canned response. Hand-rolled rather than pulling in a mocking library: the
-  generated client accepts an `HttpClient`, so a ~40-line handler is enough and
-  keeps the test project's dependencies to xUnit alone.
+  canned response. Hand-rolled because the generated client accepts an
+  `HttpClient`, so a short handler keeps the dependencies to xUnit alone.
 
 ## Running locally
 
@@ -22,7 +21,8 @@ The tests reference the generated client, so generate and patch it first:
 # from the repo root — requires Java 17 for openapi-generator 7.10.0
 java -jar .cache/openapi-generator-cli.jar generate \
   -i openapi/v1/swagger.json -g csharp \
-  -o sdks/csharp/v1 -c sdks/csharp/v1/openapi-generator-config.yaml
+  -o sdks/csharp/v1 -c sdks/csharp/v1/openapi-generator-config.yaml \
+  -t templates/csharp
 
 python scripts/patch_dotnet_sdk.py \
   sdks/csharp/v1/src/Ddx.InteractionsApi/Ddx.InteractionsApi.csproj
@@ -31,9 +31,7 @@ cd sdks/csharp/v1
 dotnet test test/Ddx.InteractionsApi.Test/Ddx.InteractionsApi.Test.csproj
 ```
 
-In CI this is done for you by `.github/workflows/csharp-sdk-tests.yml`, which
-regenerates the SDK from the spec on every PR and runs this suite as a required
-check.
+`.github/workflows/csharp-sdk-tests.yml` does the same on every PR.
 
 ## Notes
 
@@ -45,6 +43,6 @@ check.
   tree. Inside it, the namespace `Ddx.InteractionsApi` shadows the class
   `Ddx.InteractionsApi.Api.InteractionsApi` and the type can't be named without
   full qualification. Consumers outside `Ddx.*` are unaffected.
-- The happy-path test calls `VversionInteractionsPost`, an auto-derived slug —
-  the spec defines no `operationId` for the interactions endpoints, so the
-  generator names methods from the path and verb.
+- The happy-path test calls `VversionInteractionsPost`. The spec sets no
+  `operationId` for the interactions endpoints, so the generator derives method
+  names from the path and verb.

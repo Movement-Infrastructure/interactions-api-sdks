@@ -1,0 +1,145 @@
+{{!
+    Overrides the csharp generator's built-in README.mustache, passed as
+    -t templates/csharp. Anything absent from this directory falls back to the
+    jar's copy.
+
+    A mustache comment ends at its first closing brace pair, so no variable or
+    partial tag can appear in this block without silently ending it.
+
+    The built-in template tells consumers to build a DLL with build.sh or
+    build.bat, which this config does not generate; documents `nuget pack` and
+    publishing to a local feed, which is maintainer work rather than consumer
+    work; names an internal generator class; emits an empty "Frameworks
+    supported" heading, because it reads targetFrameworks (plural) which does
+    not resolve; and fills the auth example with credential placeholders.
+
+    C# has no common_README partial, so the endpoint, model and authorization
+    sections below are copied from the jar's template and can drift from it.
+
+    Getting Started sets no host because the client already defaults to
+    production, and scripts/verify_readme.py rejects any other. Doc links are
+    absolute because docs/ is not in the NuGet package.
+}}
+# {{packageName}}
+{{#appDescriptionWithNewLines}}
+{{{.}}}
+{{/appDescriptionWithNewLines}}
+
+C# client for the DDx Interactions API, generated from its OpenAPI
+specification.
+
+- API version: {{appVersion}}
+- Package version: {{packageVersion}}
+- Generator version: {{generatorVersion}}
+{{#infoUrl}}
+
+For more information, please visit [{{{infoUrl}}}]({{{infoUrl}}}).
+{{/infoUrl}}
+
+## Requirements
+
+{{targetFramework}}
+
+## Installation
+
+```shell
+dotnet add package {{packageName}}
+```
+
+Then import the namespaces:
+
+```csharp
+using {{packageName}}.Api;
+using {{packageName}}.Client;
+using {{packageName}}.Model;
+```
+
+## Changelog
+
+API changes are recorded in the
+[changelog](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/csharp/v1/CHANGELOG.md),
+regenerated from a diff of the OpenAPI specification on each sync. Entries
+marked **breaking** require a change on the consumer side.
+
+## Reporting issues
+
+This package is generated; edits to it are overwritten on the next spec sync.
+Report problems against the API specification rather than the generated code.
+
+## Getting Started
+
+```csharp
+using System;
+using {{packageName}}.Api;
+using {{packageName}}.Client;
+
+// HTTP basic auth, API key in the password field, empty username.
+// Configuration.BasePath already defaults to the production API.
+var config = new Configuration
+{
+    Username = "",
+    Password = Environment.GetEnvironmentVariable("DDX_API_KEY"),
+};
+
+var api = new AuthenticationDetailsApi(config);
+
+try
+{
+    var me = api.VversionAuthMeGet("1");
+    Console.WriteLine(me.ToJson());
+}
+catch (ApiException e)
+{
+    // The exception message is only the status line; ErrorContent says why.
+    Console.Error.WriteLine($"Interactions API returned {e.ErrorCode}: {e.ErrorContent}");
+}
+```
+
+<a id="documentation-for-api-endpoints"></a>
+## Documentation for API Endpoints
+
+All URIs are relative to *{{{basePath}}}*
+
+Class | Method | HTTP request | Description
+------------ | ------------- | ------------- | -------------
+{{#apiInfo}}{{#apis}}{{#operations}}{{#operation}}*{{classname}}* | [**{{operationId}}**](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/csharp/v1/{{apiDocPath}}{{classname}}.md#{{operationIdLowerCase}}) | **{{httpMethod}}** {{path}} | {{{summary}}}
+{{/operation}}{{/operations}}{{/apis}}{{/apiInfo}}
+
+<a id="documentation-for-models"></a>
+## Documentation for Models
+
+{{#modelPackage}}
+{{#models}}{{#model}} - [{{{modelPackage}}}.{{{classname}}}](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/csharp/v1/{{modelDocPath}}{{{classname}}}.md)
+{{/model}}{{/models}}
+{{/modelPackage}}
+{{^modelPackage}}
+No model defined in this package
+{{/modelPackage}}
+
+<a id="documentation-for-authorization"></a>
+## Documentation for Authorization
+
+{{^authMethods}}Endpoints do not require authorization.{{/authMethods}}
+{{#hasAuthMethods}}Authentication schemes defined for the API:{{/hasAuthMethods}}
+{{#authMethods}}
+<a id="{{name}}"></a>
+### {{name}}
+
+{{#isApiKey}}- **Type**: API key
+- **API key parameter name**: {{keyParamName}}
+- **Location**: {{#isKeyInQuery}}URL query string{{/isKeyInQuery}}{{#isKeyInHeader}}HTTP header{{/isKeyInHeader}}
+{{/isApiKey}}
+{{#isBasicBasic}}- **Type**: HTTP basic authentication
+{{/isBasicBasic}}
+{{#isBasicBearer}}- **Type**: Bearer Authentication
+{{/isBasicBearer}}
+{{#isHttpSignature}}- **Type**: HTTP signature authentication
+{{/isHttpSignature}}
+{{#isOAuth}}- **Type**: OAuth
+- **Flow**: {{flow}}
+- **Authorization URL**: {{authorizationUrl}}
+- **Scopes**: {{^scopes}}N/A{{/scopes}}
+{{#scopes}}  - {{scope}}: {{description}}
+{{/scopes}}
+{{/isOAuth}}
+{{/authMethods}}

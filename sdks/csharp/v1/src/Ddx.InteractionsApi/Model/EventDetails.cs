@@ -28,7 +28,7 @@ using OpenAPIDateConverter = Ddx.InteractionsApi.Client.OpenAPIDateConverter;
 namespace Ddx.InteractionsApi.Model
 {
     /// <summary>
-    /// Represents an identifier and the namespace its value belongs to.
+    /// Represents an identifier and the namespace its value belongs to (e.g. an event, one of its shifts, or a signup).
     /// </summary>
     [DataContract(Name = "EventDetails")]
     public partial class EventDetails : IValidatableObject

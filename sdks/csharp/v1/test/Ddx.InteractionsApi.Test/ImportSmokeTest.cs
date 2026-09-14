@@ -7,13 +7,11 @@ using Xunit;
 namespace InteractionsApiSdkTests;
 
 /// <summary>
-/// Proves the generated assembly builds and exposes the surface consumers
-/// depend on. Cheap to run and catches a broken generation before the
-/// happy-path test has to stand up a stubbed transport.
+/// The generated assembly builds and exposes the surface consumers depend on.
+/// Catches a broken generation before the happy-path test stands up a stub.
 ///
-/// These names are stable across regenerations: the API classes come from the
-/// spec's tags ("Interactions", "Authentication Details") and the models from
-/// the component schema names.
+/// These names survive regeneration: API classes come from the spec's tags,
+/// models from the component schema names.
 /// </summary>
 public class ImportSmokeTest
 {
@@ -43,8 +41,7 @@ public class ImportSmokeTest
     [Fact]
     public void ReportsTheVersionTheGeneratorConfigSet()
     {
-        // Tracks packageVersion in openapi-generator-config.yaml, which the
-        // version-bump workflow rewrites on each sync PR.
+        // Tracks packageVersion in openapi-generator-config.yaml.
         Assert.Matches(new Regex(@"^\d+\.\d+\.\d+"), Configuration.Version);
     }
 

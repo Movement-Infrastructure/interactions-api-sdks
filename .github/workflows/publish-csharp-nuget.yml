@@ -1,0 +1,183 @@
+name: Publish C# SDK to NuGet
+
+# Builds sdks/csharp/v1 and publishes it to NuGet.org on push to `main`. Sync
+# PRs land on `develop`; promoting develop to main is what releases.
+#
+# Auth is OIDC trusted publishing: NuGet/login exchanges the job's OIDC token
+# for an API key valid about an hour, so there is no stored key to rotate.
+# NuGet binds that policy to this file's name, so renaming the workflow breaks
+# publishing until the policy is updated to match.
+#
+# A NuGet push is permanent. A version can be unlisted but never reused, so a
+# mistake here is not recoverable.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sdks/csharp/v1/**'
+  # Re-runs a publish without a new promotion.
+  workflow_dispatch:
+
+# One publish at a time. Two overlapping runs could race on the same version.
+concurrency:
+  group: publish-csharp-nuget
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v4
+        with:
+          # This job never pushes. The default leaves a live token in
+          # .git/config as an http.extraheader, readable by anything that
+          # runs afterwards.
+          persist-credentials: false
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The generate workflow commits the SDK. Absent means the promotion
+      # happened before the first sync PR merged.
+      - name: Verify the generated SDK is present
+        run: |
+          set -euo pipefail
+
+          if [ ! -f sdks/csharp/v1/src/Ddx.InteractionsApi/Ddx.InteractionsApi.csproj ]; then
+            echo "::error::No csproj in sdks/csharp/v1."
+            echo "::error::The generated SDK has not been committed yet; nothing to publish."
+            exit 1
+          fi
+
+      # The generator hardcodes the csproj identity fields to "OpenAPI". The PR
+      # check sees a regeneration, this sees the bytes about to be packed.
+      - name: Patch generated SDK
+        run: python scripts/patch_dotnet_sdk.py sdks/csharp/v1/src/Ddx.InteractionsApi/Ddx.InteractionsApi.csproj
+
+      - name: Pack
+        run: |
+          set -euo pipefail
+
+          dotnet pack sdks/csharp/v1/src/Ddx.InteractionsApi/Ddx.InteractionsApi.csproj \
+            --configuration Release \
+            --output dist
+
+      # Package contents are permanent once pushed; unlisting does not remove
+      # them. Enumerating makes a bad include visible here rather than on the
+      # registry. See docs/publish-leak-audit-checklist.md.
+      - name: Enumerate artifact contents
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Published artifact contents"
+            for pkg in dist/*.nupkg; do
+              echo "### $(basename "$pkg")"
+              echo '```'
+              unzip -l "$pkg"
+              echo '```'
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Reads the packed .nuspec, not the csproj source, since that is what
+      # gets published.
+      - name: Check package metadata
+        run: |
+          set -euo pipefail
+
+          pkg=$(ls dist/*.nupkg | head -1)
+          unzip -p "$pkg" '*.nuspec' > /tmp/packed.nuspec
+
+          python - <<'PY'
+          import re, sys, xml.etree.ElementTree as ET
+
+          root = ET.parse("/tmp/packed.nuspec").getroot()
+          ns = {"n": root.tag.split("}")[0].strip("{")} if "}" in root.tag else {}
+          def get(tag):
+              node = root.find(f".//n:{tag}", ns) if ns else root.find(f".//{tag}")
+              return (node.text or "").strip() if node is not None else ""
+
+          failures = []
+          version, authors = get("version"), get("authors")
+
+          if authors.lower() in ("", "openapi"):
+              failures.append(f"Authors is the generator default ({authors!r}). patch_dotnet_sdk.py did not run.")
+          if get("owners").lower() == "openapi":
+              failures.append("Owners is the generator default.")
+          if version.startswith("0.0.0"):
+              failures.append("Version is the 0.0.0 placeholder; the version bump did not run.")
+          if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+              failures.append(f"Version {version!r} is not a plain A.B.C release version.")
+          if not get("licenseExpression") and not get("license"):
+              failures.append("No license on the package.")
+
+          for f in failures:
+              print(f"::error::{f}")
+          if failures:
+              print("::error::Refusing to publish with generated-default metadata.")
+              sys.exit(1)
+
+          print(f"Metadata checks passed: {get('id')} {version} by {authors}")
+          PY
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: csharp-sdk-nupkg
+          path: dist/*.nupkg
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+
+    # Keeps publishing off arbitrary branches, and is where a required
+    # reviewer attaches.
+    environment:
+      name: nuget
+      url: https://www.nuget.org/packages/Ddx.InteractionsApi/
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: csharp-sdk-nupkg
+          path: dist/
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # Exchanges the OIDC token for a short-lived NuGet API key. `user` is the
+      # nuget.org account the trusted publishing policy belongs to, held as a
+      # repo variable so it is not hardcoded here.
+      - name: NuGet login
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+
+      # No --skip-duplicate. A promotion carrying a version already on NuGet is
+      # a mistake, and it has to fail rather than pass green having uploaded
+      # nothing.
+      - name: Push to NuGet
+        run: |
+          set -euo pipefail
+
+          dotnet nuget push dist/*.nupkg \
+            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json

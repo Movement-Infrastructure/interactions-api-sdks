@@ -1,5 +1,5 @@
 # Ddx.InteractionsApi.Model.EventDetails
-Represents an identifier and the namespace its value belongs to.
+Represents an identifier and the namespace its value belongs to (e.g. an event, one of its shifts, or a signup).
 
 ## Properties
 

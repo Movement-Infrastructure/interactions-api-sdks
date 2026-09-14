@@ -1,14 +1,17 @@
 name: Generate C# SDK
 
-# On every PR that touches openapi/v1/swagger.json, computes the next package
+# On every PR into develop touching openapi/v1/swagger.json: bumps the package
 # version from the PR's labels, regenerates sdks/csharp/v1/, and commits both
-# back to the PR branch so the version lands in the generated manifest.
+# back to the PR branch.
 
 on:
   pull_request:
-    # `labeled`/`unlabeled` are here so adding or removing a version label
-    # after the PR opens recomputes the version.
+    # `labeled`/`unlabeled` so a label change recomputes the version.
     types: [opened, synchronize, labeled, unlabeled]
+    # Sync PRs only. On a develop-to-main promotion the head ref is `develop`
+    # itself, so this would version against `main` and push to a protected
+    # branch, failing with GH006.
+    branches: [develop]
     paths:
       - openapi/v1/swagger.json
 
@@ -30,7 +33,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      # One fetch for three steps: the bump reads the base config, the
+      # changelog reads the base spec and changelog.
       - name: Read base-branch package version
+        id: base
         run: |
           set -euo pipefail
 
@@ -43,8 +49,21 @@ jobs:
             exit 1
           fi
 
-      # No --version-key: the C# generator spells the key `packageVersion`,
-      # which is bump_version.py's default.
+          # Absent on the bootstrap sync. With no baseline to diff, the
+          # changelog steps below skip instead of failing.
+          if git show "FETCH_HEAD:openapi/v1/swagger.json" > /tmp/base-csharp-swagger.json 2>/dev/null; then
+            echo "has_spec=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_spec=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No spec on ${{ github.base_ref }}; skipping the changelog."
+          fi
+
+          # Absent until the first sync creates it, which the renderer handles.
+          git show "FETCH_HEAD:sdks/csharp/v1/CHANGELOG.md" > /tmp/base-csharp-changelog.md 2>/dev/null \
+            || echo "::notice::No changelog on ${{ github.base_ref }} yet; it will be created."
+
+      # No --version-key: the C# generator uses `packageVersion`, which is
+      # bump_version.py's default.
       - name: Compute and apply next version
         id: version
         run: |
@@ -80,14 +99,47 @@ jobs:
             -i openapi/v1/swagger.json \
             -g csharp \
             -o sdks/csharp/v1 \
-            -c sdks/csharp/v1/openapi-generator-config.yaml
+            -c sdks/csharp/v1/openapi-generator-config.yaml \
+            -t templates/csharp
 
       # Fills in the csproj identity fields the generator hardcodes to
-      # "OpenAPI". Regenerated on every run, so this is not optional. Shared
-      # with csharp-sdk-tests.yml rather than duplicated, and unit-tested by
-      # tooling-tests.yml.
+      # "OpenAPI". Runs on every regeneration, so it is not optional.
       - name: Patch generated SDK
         run: python scripts/patch_dotnet_sdk.py sdks/csharp/v1/src/Ddx.InteractionsApi/Ddx.InteractionsApi.csproj
+
+      # Pinned so an upstream release cannot change changelog wording.
+      - name: Install oasdiff
+        if: steps.base.outputs.has_spec == 'true'
+        env:
+          OASDIFF_VERSION: 1.30.0
+        run: |
+          set -euo pipefail
+
+          curl -sSL \
+            "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin oasdiff
+
+          oasdiff --version
+
+      # `--bump` makes this a gate: labels give the version, the spec gives
+      # the breaking changes, and a disagreement fails the run before the
+      # commit below. Applying `interactions-api-major` reruns the workflow.
+      - name: Update CHANGELOG.md
+        if: steps.base.outputs.has_spec == 'true'
+        run: |
+          set -euo pipefail
+
+          oasdiff changelog /tmp/base-csharp-swagger.json openapi/v1/swagger.json \
+            -f json > /tmp/oasdiff-csharp.json
+
+          # The head commit's date, so a rerun days later does not churn.
+          python scripts/render_changelog.py \
+            --oasdiff-json /tmp/oasdiff-csharp.json \
+            --version "${{ steps.version.outputs.next }}" \
+            --bump "${{ steps.version.outputs.bump }}" \
+            --date "$(git log -1 --format=%cs)" \
+            --current-changelog /tmp/base-csharp-changelog.md \
+            --write-changelog sdks/csharp/v1/CHANGELOG.md
 
       - name: Commit generated SDK if changed
         run: |

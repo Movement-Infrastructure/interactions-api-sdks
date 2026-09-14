@@ -4,11 +4,9 @@ name: C# SDK tests
 # openapi/v1/swagger.json, build it, and run the smoke + happy-path suite in
 # sdks/csharp/v1/test/.
 #
-# Runs on ALL PRs (no `paths:` filter) on purpose: a required status check that
-# is path-filtered will show as perpetually pending on PRs that don't match the
-# filter, blocking merge forever. Running unconditionally means the check always
-# reports a result. If a branch has no committed spec yet, the SDK cannot be
-# generated or affected, so the heavy steps are skipped and the job passes.
+# No `paths:` filter, deliberately: a path-filtered required check shows as
+# perpetually pending on PRs that don't match it, blocking merge forever.
+# Branches with no committed spec skip the heavy steps and pass.
 
 on:
   pull_request:
@@ -62,7 +60,8 @@ jobs:
             -i openapi/v1/swagger.json \
             -g csharp \
             -o sdks/csharp/v1 \
-            -c sdks/csharp/v1/openapi-generator-config.yaml
+            -c sdks/csharp/v1/openapi-generator-config.yaml \
+            -t templates/csharp
 
       - name: Set up Python
         if: steps.spec.outputs.present == 'true'
@@ -70,9 +69,9 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Same patch generate-csharp-sdk.yml applies, because this job builds what
-      # it just regenerated -- without it CI would test a package still
-      # attributed to "OpenAPI", and the identity fix would go unverified.
+      # The same patch generate-csharp-sdk.yml applies, because this job builds
+      # what it just regenerated. Without it CI tests a package still
+      # attributed to "OpenAPI".
       - name: Patch generated SDK
         if: steps.spec.outputs.present == 'true'
         run: python scripts/patch_dotnet_sdk.py sdks/csharp/v1/src/Ddx.InteractionsApi/Ddx.InteractionsApi.csproj
