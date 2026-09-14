@@ -142,6 +142,7 @@ Class | Method | HTTP request | Description
  - [Outcome](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/Outcome.md)
  - [OutcomeDetailOperation](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/OutcomeDetailOperation.md)
  - [PersonIdentifier](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/PersonIdentifier.md)
+ - [ProblemDetails](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/ProblemDetails.md)
  - [RejectedInteractionDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/RejectedInteractionDto.md)
  - [RejectedInteractionsDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/RejectedInteractionsDto.md)
  - [SimpleDestinationDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/SimpleDestinationDto.md)
