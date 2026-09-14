@@ -9,9 +9,6 @@ tests/**
 requirements-test.txt
 .openapi-generator-ignore
 
-# Hand-written UAT guide living in the generator-owned docs/ directory.
-docs/uat.md
-
 # Written by the oasdiff step in generate-python-sdk.yml, one entry per sync.
 # The generator has no changelog template today; listing it means a future one
 # can't wipe the history.
