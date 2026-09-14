@@ -190,13 +190,16 @@ def rewrite_doc_links(root: Path) -> bool:
     except OSError as exc:
         raise PatchError(f"cannot read {path}: {exc}") from exc
 
-    if DOCS_BASE_URL in text:
-        return False
-
     rewritten, count = _RELATIVE_DOC_LINK_RE.subn(
         lambda m: f"]({DOCS_BASE_URL}{m.group(1)})", text
     )
     if count == 0:
+        # Attempt the rewrite before deciding, rather than testing for
+        # DOCS_BASE_URL up front: any absolute link into docs/ contains that
+        # prefix, so a hand-written one (the UAT guide) would read as
+        # "already applied" and leave every model link relative.
+        if DOCS_BASE_URL in text:
+            return False
         raise PatchError(
             f"{path}: no relative docs/ links found and none already absolute. "
             f"Generator template changed; update scripts/patch_python_sdk.py."

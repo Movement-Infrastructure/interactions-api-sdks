@@ -5,6 +5,9 @@ spec/**
 Gemfile
 .openapi-generator-ignore
 
+# Hand-written UAT guide living in the generator-owned docs/ directory.
+docs/uat.md
+
 # Unused: the repo has its own CI.
 .travis.yml
 .gitlab-ci.yml

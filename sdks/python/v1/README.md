@@ -43,27 +43,26 @@ Report problems against the API specification rather than the generated code.
 
 ## Getting Started
 
+Validating an integration end to end? The [UAT guide](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/uat.md)
+walks through install, authentication, submitting an interaction, and confirming
+it reached the Exchange.
+
 ```python
 
 import ddx_interactions_api
 from ddx_interactions_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to https://api.movementinfrastructure.org
-# See configuration.py for a list of all supported configuration parameters.
-configuration = ddx_interactions_api.Configuration(
-    host = "https://api.movementinfrastructure.org"
-)
+# Authentication is HTTP basic, with your API key in the password field and an
+# empty username. The key has the form "<keyId>.<secret>".
+#
+# The host defaults to https://api.movementinfrastructure.org. Pass host= to target another server.
+# See configuration.py for all supported parameters.
+import os
 
-# The client must configure the authentication and authorization parameters
-# in accordance with the API server security policy.
-# Examples for each auth method are provided below, use the example that
-# satisfies your auth use case.
-
-# Configure HTTP basic authorization: Basic
 configuration = ddx_interactions_api.Configuration(
-    username = os.environ["USERNAME"],
-    password = os.environ["PASSWORD"]
+    username = "",
+    password = os.environ["DDX_API_KEY"],
 )
 
 
@@ -142,6 +141,7 @@ Class | Method | HTTP request | Description
  - [Outcome](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/Outcome.md)
  - [OutcomeDetailOperation](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/OutcomeDetailOperation.md)
  - [PersonIdentifier](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/PersonIdentifier.md)
+ - [ProblemDetails](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/ProblemDetails.md)
  - [RejectedInteractionDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/RejectedInteractionDto.md)
  - [RejectedInteractionsDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/RejectedInteractionsDto.md)
  - [SimpleDestinationDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/SimpleDestinationDto.md)

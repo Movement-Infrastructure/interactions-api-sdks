@@ -53,6 +53,10 @@ Report problems against the API specification rather than the generated code.
 
 ## Getting Started
 
+Validating an integration end to end? The [UAT guide](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/ruby/v1/docs/uat.md)
+walks through install, authentication, submitting an interaction, and confirming
+it reached the Exchange.
+
 ```ruby
 require 'ddx_interactions_api'
 
@@ -132,6 +136,7 @@ Class | Method | HTTP request | Description
  - [DdxInteractionsApi::Outcome](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/ruby/v1/docs/Outcome.md)
  - [DdxInteractionsApi::OutcomeDetailOperation](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/ruby/v1/docs/OutcomeDetailOperation.md)
  - [DdxInteractionsApi::PersonIdentifier](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/ruby/v1/docs/PersonIdentifier.md)
+ - [DdxInteractionsApi::ProblemDetails](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/ruby/v1/docs/ProblemDetails.md)
  - [DdxInteractionsApi::RejectedInteractionDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/ruby/v1/docs/RejectedInteractionDto.md)
  - [DdxInteractionsApi::RejectedInteractionsDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/ruby/v1/docs/RejectedInteractionsDto.md)
  - [DdxInteractionsApi::SimpleDestinationDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/ruby/v1/docs/SimpleDestinationDto.md)
