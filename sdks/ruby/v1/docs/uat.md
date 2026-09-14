@@ -1,38 +1,20 @@
 # Ruby SDK UAT guide
 
-End-to-end validation of the published Ruby gem against **production**: install
-from RubyGems, authenticate, submit an interaction, and confirm it reached the
-Exchange.
+End-to-end validation of the published Ruby gem: install from RubyGems, authenticate, submit an interaction, and confirm it reached the Exchange.
 
 Each step says what "good" looks like, so you can tell a real failure from
 expected output.
-
-**Report anything that does not match** on the
-[Mercury SDKs project](https://linear.app/ddx/project/mercury-sdks-4d0ee2eb499d),
-or open an issue on this repo. Include the gem version, the command you ran,
-and the `correlationId`.
-
-> **This guide targets production.** There is no dry-run mode and no test flag.
-> Anything the API accepts is a real record, and if your key has Destinations
-> configured it is forwarded to those systems. Step 3 tells you how to check
-> that before you submit anything.
-
-> **Blocked until the first release.** `ddx_interactions_api` is not yet on
-> RubyGems, so step 2 cannot run. Everything else is ready; start this UAT once
-> the first publish lands.
 
 ---
 
 ## 1. Prerequisites
 
-- **Ruby 3.0 or later.** macOS system Ruby is 2.6 and will fail to resolve. The
-  repo pins 3.2.11 in `.ruby-version`.
+- **Ruby 3.0 or later.** 
 - **An Interactions API key for production.** See
   [Authentication](https://docs.movementinfrastructure.org/docs/interactions-api-authentication).
 
-Your key looks like `12345.<secret>` — a numeric key ID, a dot, then a base64
-secret. **Both halves are required.** A bare secret is rejected before the key
-is looked up, with a generic 401.
+Your key should look like `12345.<secret>` — a numeric key ID, a dot, then a base64
+secret. **Both halves are required.**
 
 Keys are environment-specific. A key issued for the public test server will not
 work against production.
@@ -77,7 +59,7 @@ finds nothing.
 `--install-dir` keeps the gem out of your system Ruby, which is what makes this
 a clean-environment test.
 
-### What good looks like
+### Expected result
 
 ```bash
 gem list ddx_interactions_api
@@ -90,9 +72,6 @@ The gem name is underscored, and so is the require path
 ---
 
 ## 3. Authenticate, and check what your key can reach
-
-The smallest call that proves connectivity, credentials, and deserialization
-work together — and it tells you how far a submission will travel.
 
 ```ruby
 require "ddx_interactions_api"
@@ -118,7 +97,7 @@ puts "destinations: #{me.destinations&.any? ? me.destinations : 'none'}"
 puts "van key:      #{me.van_api_key ? 'present' : 'none'}"
 ```
 
-### What good looks like
+### Expected Result
 
 `target:` prints `https://api.movementinfrastructure.org`, and your workspace
 name and ID print without an exception.
@@ -185,7 +164,7 @@ puts "accepted: #{result.accepted_interactions.count}  rejected: #{result.reject
 end
 ```
 
-### What good looks like
+### Expected Result
 
 A `correlationId`, and `accepted` equal to the number of rows you sent.
 
@@ -234,7 +213,7 @@ end
 
 Run with `CORRELATION_ID=<id from step 4>`.
 
-### What good looks like
+### Expected Result
 
 One row per accepted interaction, progressing to a terminal status.
 

@@ -1,21 +1,9 @@
 # Python SDK UAT guide
 
-End-to-end validation of the published Python SDK against **production**:
-install from PyPI, authenticate, submit an interaction, and confirm it reached
-the Exchange.
+End-to-end validation of the published Python SDK: install from PyPI, authenticate, submit an interaction, and confirm it reached the Exchange.
 
 Each step says what "good" looks like, so you can tell a real failure from
 expected output.
-
-**Report anything that does not match** on the
-[Mercury SDKs project](https://linear.app/ddx/project/mercury-sdks-4d0ee2eb499d),
-or open an issue on this repo. Include the package version, the command you
-ran, and the `correlationId` or the `x-correlation-id` response header.
-
-> **This guide targets production.** There is no dry-run mode and no test flag.
-> Anything the API accepts is a real record, and if your key has Destinations
-> configured it is forwarded to those systems. Step 3 tells you how to check
-> that before you submit anything.
 
 ---
 
@@ -25,9 +13,8 @@ ran, and the `correlationId` or the `x-correlation-id` response header.
 - **An Interactions API key for production.** See
   [Authentication](https://docs.movementinfrastructure.org/docs/interactions-api-authentication).
 
-Your key looks like `12345.<secret>` — a numeric key ID, a dot, then a base64
-secret. **Both halves are required.** A bare secret is rejected before the key
-is looked up, with a generic 401.
+Your key should look like `12345.<secret>` — a numeric key ID, a dot, then a base64
+secret. **Both halves are required.**
 
 Keys are environment-specific. A key issued for the public test server will not
 work against production.
@@ -63,8 +50,7 @@ source .venv/bin/activate
 
 pip install ddx-interactions-api
 ```
-
-### What good looks like
+### Expected result
 
 ```bash
 pip show ddx-interactions-api | grep -E '^(Name|Version)'
@@ -72,18 +58,12 @@ pip show ddx-interactions-api | grep -E '^(Name|Version)'
 #   Version: <latest release>
 ```
 
-pip should report `Collecting ddx-interactions-api` from PyPI, not a local
-path — that is what proves you are testing the published artifact.
-
 The install name is hyphenated; the import name is underscored
 (`import ddx_interactions_api`).
 
 ---
 
 ## 3. Authenticate, and check what your key can reach
-
-The smallest call that proves connectivity, credentials, and deserialization
-work together — and it tells you how far a submission will travel.
 
 ```bash
 python - <<'PY'
@@ -108,7 +88,7 @@ PY
 `Configuration` takes no `host`, so it defaults to production
 (`https://api.movementinfrastructure.org`).
 
-### What good looks like
+### Expected Result
 
 `target:` prints the production host, and your workspace name and ID print
 without an exception.
@@ -163,7 +143,7 @@ for row in (result.rejected_interactions.data or []):
 PY
 ```
 
-### What good looks like
+### Expected Result
 
 A `correlationId`, and `accepted` equal to the number of rows you sent.
 
@@ -211,7 +191,7 @@ for row in (statuses.data or []):
 PY
 ```
 
-### What good looks like
+### Expected Result
 
 One row per accepted interaction, progressing to a terminal status.
 
