@@ -58,6 +58,7 @@ from ddx_interactions_api.models.minerva_metadata_dto import MinervaMetadataDto
 from ddx_interactions_api.models.outcome import Outcome
 from ddx_interactions_api.models.outcome_detail_operation import OutcomeDetailOperation
 from ddx_interactions_api.models.person_identifier import PersonIdentifier
+from ddx_interactions_api.models.problem_details import ProblemDetails
 from ddx_interactions_api.models.rejected_interaction_dto import RejectedInteractionDto
 from ddx_interactions_api.models.rejected_interactions_dto import RejectedInteractionsDto
 from ddx_interactions_api.models.simple_destination_dto import SimpleDestinationDto

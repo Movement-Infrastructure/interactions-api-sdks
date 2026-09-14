@@ -1084,8 +1084,8 @@ class InteractionsApi:
 
         _response_types_map: Dict[str, Optional[str]] = {
             '200': "InteractionsBatchResultDto",
-            '207': None,
-            '400': None,
+            '207': "InteractionsBatchResultDto",
+            '400': "ProblemDetails",
         }
         response_data = self.api_client.call_api(
             *_param,
@@ -1157,8 +1157,8 @@ class InteractionsApi:
 
         _response_types_map: Dict[str, Optional[str]] = {
             '200': "InteractionsBatchResultDto",
-            '207': None,
-            '400': None,
+            '207': "InteractionsBatchResultDto",
+            '400': "ProblemDetails",
         }
         response_data = self.api_client.call_api(
             *_param,
@@ -1230,8 +1230,8 @@ class InteractionsApi:
 
         _response_types_map: Dict[str, Optional[str]] = {
             '200': "InteractionsBatchResultDto",
-            '207': None,
-            '400': None,
+            '207': "InteractionsBatchResultDto",
+            '400': "ProblemDetails",
         }
         response_data = self.api_client.call_api(
             *_param,

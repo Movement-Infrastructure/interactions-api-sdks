@@ -5,7 +5,7 @@ Python client for the DDx Interactions API, generated from its OpenAPI
 specification.
 
 - API version: v1
-- Package version: 0.2.0
+- Package version: 0.3.0
 - Generator version: 7.10.0
 
 For more information, please visit [https://demexchange.com/](https://demexchange.com/).
