@@ -124,7 +124,7 @@ Full models are documented in each SDK's own README: [Python](sdks/python/v1/REA
 
 ## Versioning
 
-SDK versions are semantic; a major bump means the API changed in a way that requires work on your side. Each SDK ships a changelog generated from a diff of the specification, with breaking entries marked — [Python](sdks/python/v1/CHANGELOG.md), [Ruby](sdks/ruby/v1/CHANGELOG.md).
+SDK versions are semantic; a major bump means the API changed in a way that requires work on your side. Each SDK ships a changelog generated from a diff of the specification, with breaking entries marked: [Python](sdks/python/v1/CHANGELOG.md), [Ruby](sdks/ruby/v1/CHANGELOG.md).
 
 The SDK version tracks the package, not the API. The API version (`v1`) appears in the request path and changes far less often.
 
