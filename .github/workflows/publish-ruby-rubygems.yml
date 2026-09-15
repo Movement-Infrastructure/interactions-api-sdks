@@ -7,7 +7,7 @@ name: Publish Ruby SDK to RubyGems
 # registry, so the version is what keeps these builds off consumers: installers
 # skip prereleases unless asked with `--pre` or an exact pin.
 #
-# Auth is OIDC trusted publishing, so there is no token to leak or rotate.
+# Auth is OIDC trusted publishing. There is no token to leak or rotate.
 # RubyGems binds that publisher to this file's name, so renaming the workflow
 # breaks publishing until the publisher config is updated to match.
 

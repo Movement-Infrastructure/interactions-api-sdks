@@ -135,10 +135,10 @@ jobs:
         working-directory: sdks/ruby/v1
         run: bundle exec rspec
 
-      # The SDK is committed, so it can drift from the spec and the templates
-      # with nothing noticing. This job has already regenerated it, so any
-      # difference means the committed copy is stale. Last, so a drift failure
-      # doesn't hide the test results. Skipped when the spec changed here,
+      # The committed SDK can drift from the spec and the templates with
+      # nothing noticing. This job has already regenerated it, so any
+      # difference means the committed copy is stale. Placed last to keep a
+      # drift failure from hiding the test results. Skipped when the spec changed here,
       # because generate-ruby-sdk.yml commits the regenerated SDK on those PRs.
       #
       # `git status`, not `git diff`: a new model adds an untracked file, which

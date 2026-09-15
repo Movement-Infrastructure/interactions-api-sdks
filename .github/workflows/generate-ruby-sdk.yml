@@ -62,9 +62,7 @@ jobs:
           git show "FETCH_HEAD:sdks/ruby/v1/CHANGELOG.md" > /tmp/base-ruby-changelog.md 2>/dev/null \
             || echo "::notice::No changelog on ${{ github.base_ref }} yet; it will be created."
 
-      # The Ruby generator spells the version key `gemVersion`, not
-      # `packageVersion`. Passing the wrong key is an error rather than a silent
-      # no-op, which is what keeps a stuck version from reaching the registry.
+
       - name: Compute and apply next version
         id: version
         run: |
@@ -104,11 +102,6 @@ jobs:
             -c sdks/ruby/v1/openapi-generator-config.yaml \
             -t templates/ruby
 
-      # The generated gemspec globs the whole directory with `find *`, which
-      # would publish docs/, spec/, the Gemfile, the Rakefile and the generator
-      # config inside the gem. The anchor is exact generated text and a miss is
-      # fatal, so a template change fails the build instead of shipping them.
-      # Keep in sync with the copy in ruby-sdk-tests.yml.
       - name: Patch generated gemspec file list
         run: |
           python - <<'PY'

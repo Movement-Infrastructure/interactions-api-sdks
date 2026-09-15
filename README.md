@@ -17,7 +17,7 @@ New to the API itself? Start with the [overview](https://docs.movementinfrastruc
 
 Each SDK lives under `sdks/<language>/v1/` and is generated from `openapi/v1/swagger.json`.
 
-Versions are below 1.0 while the API stabilizes, so pin the minor version if you need a stable surface. The Ruby gem is published as a prerelease (`X.Y.Z.pre.N`), which `gem install` and `bundle install` ignore unless you ask for one — pass `--pre` or pin an exact version.
+Versions are below 1.0 while the API stabilizes, so pin the minor version if you need a stable surface. The Ruby gem is published as a prerelease (`X.Y.Z.pre.N`), which `gem install` and `bundle install` ignore unless you ask for one. Pass `--pre` or pin an exact version.
 
 ## Authentication
 
@@ -81,7 +81,7 @@ gem install ddx_interactions_api --pre
 require "ddx_interactions_api"
 
 config = DdxInteractionsApi::Configuration.new
-# Host only — the scheme is a separate field and defaults to https.
+# Host only. The scheme is a separate field and defaults to https.
 config.host = "api-dev.movementinfrastructure.org"
 config.username = ""
 config.password = ENV.fetch("DDX_API_KEY")
