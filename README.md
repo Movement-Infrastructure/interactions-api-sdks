@@ -120,7 +120,7 @@ Method names are derived from the path and the verb, so they are the same in eve
 | `vversion_interactions_transactions_get` | `GET /v1/interactions/transactions` |
 | `vversion_auth_me_get` | `GET /v1/auth/me` |
 
-Full models are documented in each SDK's own README — [Python](sdks/python/v1/README.md), [Ruby](sdks/ruby/v1/README.md) — and the `docs/` directory beside it. The interactive reference is at [docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
+Full models are documented in each SDK's own README: [Python](sdks/python/v1/README.md), [Ruby](sdks/ruby/v1/README.md). A corresponding `docs/` directory can be found alongside the README. The interactive reference is at [docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
 
 ## Versioning
 
