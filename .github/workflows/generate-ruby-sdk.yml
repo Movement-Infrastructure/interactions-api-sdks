@@ -8,9 +8,9 @@ on:
   pull_request:
     # `labeled`/`unlabeled` so a label change recomputes the version.
     types: [opened, synchronize, labeled, unlabeled]
-    # Sync PRs only. On a develop-to-main promotion the head ref is `develop`
-    # itself, so this would version against `main` and push to a protected
-    # branch, failing with GH006.
+ # The PR that merges develop into main has `develop` as its head ref, so
+    # without this filter the job would compute the version from `main` and
+    # push to a protected branch, failing with GH006.
     branches: [develop]
     paths:
       - openapi/v1/swagger.json
