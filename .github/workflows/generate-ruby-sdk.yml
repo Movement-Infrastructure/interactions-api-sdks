@@ -8,9 +8,9 @@ on:
   pull_request:
     # `labeled`/`unlabeled` so a label change recomputes the version.
     types: [opened, synchronize, labeled, unlabeled]
-    # Sync PRs only. On a develop-to-main promotion the head ref is `develop`
-    # itself, so this would version against `main` and push to a protected
-    # branch, failing with GH006.
+ # The PR that merges develop into main has `develop` as its head ref, so
+    # without this filter the job would compute the version from `main` and
+    # push to a protected branch, failing with GH006.
     branches: [develop]
     paths:
       - openapi/v1/swagger.json
@@ -62,9 +62,7 @@ jobs:
           git show "FETCH_HEAD:sdks/ruby/v1/CHANGELOG.md" > /tmp/base-ruby-changelog.md 2>/dev/null \
             || echo "::notice::No changelog on ${{ github.base_ref }} yet; it will be created."
 
-      # The Ruby generator spells the version key `gemVersion`, not
-      # `packageVersion`. Passing the wrong key is an error rather than a silent
-      # no-op, which is what keeps a stuck version from reaching the registry.
+
       - name: Compute and apply next version
         id: version
         run: |
@@ -104,11 +102,6 @@ jobs:
             -c sdks/ruby/v1/openapi-generator-config.yaml \
             -t templates/ruby
 
-      # The generated gemspec globs the whole directory with `find *`, which
-      # would publish docs/, spec/, the Gemfile, the Rakefile and the generator
-      # config inside the gem. The anchor is exact generated text and a miss is
-      # fatal, so a template change fails the build instead of shipping them.
-      # Keep in sync with the copy in ruby-sdk-tests.yml.
       - name: Patch generated gemspec file list
         run: |
           python - <<'PY'
@@ -157,9 +150,9 @@ jobs:
 
           oasdiff --version
 
-      # `--bump` makes this a gate: labels give the version, the spec gives
-      # the breaking changes, and a disagreement fails the run before the
-      # commit below. Applying `interactions-api-major` reruns the workflow.
+# `--bump` fails the run when the spec diff has a breaking change but the
+      # PR is not labeled `interactions-api-major`. Adding that label reruns
+      # the workflow.
       - name: Update CHANGELOG.md
         if: steps.base.outputs.has_spec == 'true'
         run: |
@@ -168,7 +161,7 @@ jobs:
           oasdiff changelog /tmp/base-ruby-swagger.json openapi/v1/swagger.json \
             -f json > /tmp/oasdiff-ruby.json
 
-          # The head commit's date, so a rerun days later does not churn.
+          # The head commit's date, so a rerun days later does not regenerate unless there's a new commit.
           python scripts/render_changelog.py \
             --oasdiff-json /tmp/oasdiff-ruby.json \
             --version "${{ steps.version.outputs.next }}" \

@@ -14,8 +14,8 @@ Required
     applying -- otherwise visible only as a wrong page on the registry.
 
 The required list lives here rather than in each caller's argv: several
-workflows run this, and a gate the publish path spells differently from the PR
-path is a gate that does not hold. `--language` selects between the lists; only
+workflows run this, and if the gate from the publish path is spelled differently 
+from the PR path it will not hold `--language` selects between the lists; only
 the language name travels in argv, so the two paths for a language cannot
 disagree about the content.
 """

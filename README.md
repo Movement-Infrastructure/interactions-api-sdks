@@ -17,7 +17,7 @@ New to the API itself? Start with the [overview](https://docs.movementinfrastruc
 
 Each SDK lives under `sdks/<language>/v1/` and is generated from `openapi/v1/swagger.json`.
 
-Versions are below 1.0 while the API stabilizes, so pin the minor version if you need a stable surface. The Ruby gem is published as a prerelease (`X.Y.Z.pre.N`), which `gem install` and `bundle install` ignore unless you ask for one — pass `--pre` or pin an exact version.
+Versions are below 1.0 while the API stabilizes, so pin the minor version if you need a stable surface. The Ruby gem is published as a prerelease (`X.Y.Z.pre.N`), which `gem install` and `bundle install` ignore unless you ask for one. Pass `--pre` or pin an exact version.
 
 ## Authentication
 
@@ -81,7 +81,7 @@ gem install ddx_interactions_api --pre
 require "ddx_interactions_api"
 
 config = DdxInteractionsApi::Configuration.new
-# Host only — the scheme is a separate field and defaults to https.
+# Host only. The scheme is a separate field and defaults to https.
 config.host = "api-dev.movementinfrastructure.org"
 config.username = ""
 config.password = ENV.fetch("DDX_API_KEY")
@@ -120,11 +120,11 @@ Method names are derived from the path and the verb, so they are the same in eve
 | `vversion_interactions_transactions_get` | `GET /v1/interactions/transactions` |
 | `vversion_auth_me_get` | `GET /v1/auth/me` |
 
-Full models are documented in each SDK's own README — [Python](sdks/python/v1/README.md), [Ruby](sdks/ruby/v1/README.md) — and the `docs/` directory beside it. The interactive reference is at [docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
+Full models are documented in each SDK's own README: [Python](sdks/python/v1/README.md), [Ruby](sdks/ruby/v1/README.md). A corresponding `docs/` directory can be found alongside the README. The interactive reference is at [docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
 
 ## Versioning
 
-SDK versions are semantic; a major bump means the API changed in a way that requires work on your side. Each SDK ships a changelog generated from a diff of the specification, with breaking entries marked — [Python](sdks/python/v1/CHANGELOG.md), [Ruby](sdks/ruby/v1/CHANGELOG.md).
+SDK versions are semantic; a major bump means the API changed in a way that requires work on your side. Each SDK ships a changelog generated from a diff of the specification, with breaking entries marked: [Python](sdks/python/v1/CHANGELOG.md), [Ruby](sdks/ruby/v1/CHANGELOG.md).
 
 The SDK version tracks the package, not the API. The API version (`v1`) appears in the request path and changes far less often.
 
