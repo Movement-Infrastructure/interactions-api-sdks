@@ -168,7 +168,7 @@ jobs:
           oasdiff changelog /tmp/base-ruby-swagger.json openapi/v1/swagger.json \
             -f json > /tmp/oasdiff-ruby.json
 
-          # The head commit's date, so a rerun days later does not churn.
+          # The head commit's date, so a rerun days later does not regenerate unless there's a new commit.
           python scripts/render_changelog.py \
             --oasdiff-json /tmp/oasdiff-ruby.json \
             --version "${{ steps.version.outputs.next }}" \
