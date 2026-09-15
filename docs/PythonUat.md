@@ -30,6 +30,7 @@ python3 - <<'PY'
 import base64, os
 
 parts = os.environ["DDX_API_KEY"].split(".", 1)
+kid, secret = parts[0], parts[1] if len(parts) > 1 else ""
 print("key id numeric:", kid.isdigit())
 try:
     if not secret:
@@ -179,9 +180,31 @@ The cap is **100 interactions per request**.
 
 ## 5. Put the interaction ID in your environment
 
+Step 4 ran in a subprocess and could not set this for you. Export it the same
+way you exported the key in step 1, using an `interactionId` from the accepted
+list:
+
 ```bash
 export INTERACTION_ID='<interactionId from step 4>'
 ```
+
+Check the shape before going further:
+
+```bash
+python3 - <<'PY'
+import os, uuid
+
+value = os.environ.get("INTERACTION_ID", "")
+try:
+    uuid.UUID(value)
+    print("interaction id is a GUID:", value)
+except ValueError:
+    print("interaction id is NOT a GUID:", value or "(unset)")
+PY
+```
+
+It has to be a GUID. A `correlationId` will not work: that route accepts a GUID
+only, and correlation IDs are either a numeric trace ID or `mig-` prefixed.
 
 ---
 

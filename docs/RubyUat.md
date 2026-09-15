@@ -193,9 +193,26 @@ The cap is **100 interactions per request**.
 
 ## 5. Put the interaction ID in your environment
 
+Step 4 ran in a subprocess and could not set this for you. Export it the same
+way you exported the key in step 1, using an `interactionId` from the accepted
+list:
+
 ```bash
 export INTERACTION_ID='<interactionId from step 4>'
 ```
+
+Check the shape before going further:
+
+```bash
+ruby -e '
+  value = ENV.fetch("INTERACTION_ID", "")
+  puts "interaction id is a GUID: #{value.match?(/\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/)}"
+  puts "value: #{value.empty? ? "(unset)" : value}"
+'
+```
+
+It has to be a GUID. A `correlationId` will not work: that route accepts a GUID
+only, and correlation IDs are either a numeric trace ID or `mig-` prefixed.
 
 ---
 
