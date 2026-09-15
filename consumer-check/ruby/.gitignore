@@ -1,0 +1,5 @@
+# The lock pins whichever SDK_SOURCE was last used, so committing it would
+# break the next run against a different source.
+Gemfile.lock
+.bundle/
+vendor/

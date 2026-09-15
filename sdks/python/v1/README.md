@@ -10,6 +10,9 @@ specification.
 
 For more information, please visit [https://demexchange.com/](https://demexchange.com/).
 
+For support for this package or the DDx Interactions API please contact us
+at <api@demexchange.com>
+
 ## Requirements
 
 Python 3.8+
@@ -86,71 +89,71 @@ All URIs are relative to *https://api.movementinfrastructure.org*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
-*AuthenticationDetailsApi* | [**vversion_auth_me_get**](docs/AuthenticationDetailsApi.md#vversion_auth_me_get) | **GET** /v{version}/auth/me | Get authentication context
-*InteractionsApi* | [**vversion_interactions_exchange_status_get**](docs/InteractionsApi.md#vversion_interactions_exchange_status_get) | **GET** /v{version}/interactions/exchange-status | Get Exchange pipeline statuses by correlation or interaction ID
-*InteractionsApi* | [**vversion_interactions_exchange_status_range_get**](docs/InteractionsApi.md#vversion_interactions_exchange_status_range_get) | **GET** /v{version}/interactions/exchange-status/range | Get Exchange pipeline statuses by date range
-*InteractionsApi* | [**vversion_interactions_interaction_id_transactions_get**](docs/InteractionsApi.md#vversion_interactions_interaction_id_transactions_get) | **GET** /v{version}/interactions/{interactionId}/transactions | Get external API transactions by interactionId
-*InteractionsApi* | [**vversion_interactions_post**](docs/InteractionsApi.md#vversion_interactions_post) | **POST** /v{version}/interactions | Post interactions data
-*InteractionsApi* | [**vversion_interactions_transactions_get**](docs/InteractionsApi.md#vversion_interactions_transactions_get) | **GET** /v{version}/interactions/transactions | Get external API transaction logs by date range
+*AuthenticationDetailsApi* | [**vversion_auth_me_get**](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/AuthenticationDetailsApi.md#vversion_auth_me_get) | **GET** /v{version}/auth/me | Get authentication context
+*InteractionsApi* | [**vversion_interactions_exchange_status_get**](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InteractionsApi.md#vversion_interactions_exchange_status_get) | **GET** /v{version}/interactions/exchange-status | Get Exchange pipeline statuses by correlation or interaction ID
+*InteractionsApi* | [**vversion_interactions_exchange_status_range_get**](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InteractionsApi.md#vversion_interactions_exchange_status_range_get) | **GET** /v{version}/interactions/exchange-status/range | Get Exchange pipeline statuses by date range
+*InteractionsApi* | [**vversion_interactions_interaction_id_transactions_get**](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InteractionsApi.md#vversion_interactions_interaction_id_transactions_get) | **GET** /v{version}/interactions/{interactionId}/transactions | Get external API transactions by interactionId
+*InteractionsApi* | [**vversion_interactions_post**](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InteractionsApi.md#vversion_interactions_post) | **POST** /v{version}/interactions | Post interactions data
+*InteractionsApi* | [**vversion_interactions_transactions_get**](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InteractionsApi.md#vversion_interactions_transactions_get) | **GET** /v{version}/interactions/transactions | Get external API transaction logs by date range
 
 
 ## Documentation For Models
 
- - [AcceptedInteractionDto](docs/AcceptedInteractionDto.md)
- - [AcceptedInteractionsDto](docs/AcceptedInteractionsDto.md)
- - [ActivistCode](docs/ActivistCode.md)
- - [ActivistCodeOutcomeDetails](docs/ActivistCodeOutcomeDetails.md)
- - [Address](docs/Address.md)
- - [AddressChannelDetails](docs/AddressChannelDetails.md)
- - [CanvasserDetails](docs/CanvasserDetails.md)
- - [CommitteeDetails](docs/CommitteeDetails.md)
- - [CommunicationConsent](docs/CommunicationConsent.md)
- - [CommunicationConsentOutcomeDetails](docs/CommunicationConsentOutcomeDetails.md)
- - [CommunicationConsentStatus](docs/CommunicationConsentStatus.md)
- - [ContactInfo](docs/ContactInfo.md)
- - [ContactMethod](docs/ContactMethod.md)
- - [DynamicChannelDetails](docs/DynamicChannelDetails.md)
- - [DynamicOutcomeDetails](docs/DynamicOutcomeDetails.md)
- - [EventDetails](docs/EventDetails.md)
- - [EventRole](docs/EventRole.md)
- - [EventSignup](docs/EventSignup.md)
- - [EventSignupOutcomeDetails](docs/EventSignupOutcomeDetails.md)
- - [EventSignupStatus](docs/EventSignupStatus.md)
- - [EventSignupStatusValue](docs/EventSignupStatusValue.md)
- - [ExchangeInteractionStatus](docs/ExchangeInteractionStatus.md)
- - [ExchangeInteractionStatusDto](docs/ExchangeInteractionStatusDto.md)
- - [ExchangeInteractionStatusDtoCursorPaginatedResponseDto](docs/ExchangeInteractionStatusDtoCursorPaginatedResponseDto.md)
- - [ExternalApiKeyStatus](docs/ExternalApiKeyStatus.md)
- - [ExternalApiKeyType](docs/ExternalApiKeyType.md)
- - [ExternalTransactionStatus](docs/ExternalTransactionStatus.md)
- - [InitiativeDto](docs/InitiativeDto.md)
- - [InteractionDto](docs/InteractionDto.md)
- - [InteractionDtoChannel](docs/InteractionDtoChannel.md)
- - [InteractionDtoOutcomesDetailedInner](docs/InteractionDtoOutcomesDetailedInner.md)
- - [InteractionErrorDto](docs/InteractionErrorDto.md)
- - [InteractionVanFieldsDto](docs/InteractionVanFieldsDto.md)
- - [InteractionsBatchResultDto](docs/InteractionsBatchResultDto.md)
- - [InteractionsDto](docs/InteractionsDto.md)
- - [InteractionsExternalApiTransactionDto](docs/InteractionsExternalApiTransactionDto.md)
- - [InteractionsExternalApiTransactionDtoGetResponseDto](docs/InteractionsExternalApiTransactionDtoGetResponseDto.md)
- - [InteractionsExternalApiTransactionLogDto](docs/InteractionsExternalApiTransactionLogDto.md)
- - [MercuryDestinationVanApiKeyDto](docs/MercuryDestinationVanApiKeyDto.md)
- - [MinervaMetadataDto](docs/MinervaMetadataDto.md)
- - [Outcome](docs/Outcome.md)
- - [OutcomeDetailOperation](docs/OutcomeDetailOperation.md)
- - [PersonIdentifier](docs/PersonIdentifier.md)
- - [ProblemDetails](docs/ProblemDetails.md)
- - [RejectedInteractionDto](docs/RejectedInteractionDto.md)
- - [RejectedInteractionsDto](docs/RejectedInteractionsDto.md)
- - [SimpleDestinationDto](docs/SimpleDestinationDto.md)
- - [SimpleMovementAppDto](docs/SimpleMovementAppDto.md)
- - [SimpleWorkspaceDto](docs/SimpleWorkspaceDto.md)
- - [SurveyResponse](docs/SurveyResponse.md)
- - [SurveyResponseOutcomeDetails](docs/SurveyResponseOutcomeDetails.md)
- - [VanApiKeyDto](docs/VanApiKeyDto.md)
- - [VanDatabaseMode](docs/VanDatabaseMode.md)
- - [WhoAmIApiKeyDto](docs/WhoAmIApiKeyDto.md)
- - [WorkspaceTypeDto](docs/WorkspaceTypeDto.md)
+ - [AcceptedInteractionDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/AcceptedInteractionDto.md)
+ - [AcceptedInteractionsDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/AcceptedInteractionsDto.md)
+ - [ActivistCode](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/ActivistCode.md)
+ - [ActivistCodeOutcomeDetails](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/ActivistCodeOutcomeDetails.md)
+ - [Address](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/Address.md)
+ - [AddressChannelDetails](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/AddressChannelDetails.md)
+ - [CanvasserDetails](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/CanvasserDetails.md)
+ - [CommitteeDetails](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/CommitteeDetails.md)
+ - [CommunicationConsent](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/CommunicationConsent.md)
+ - [CommunicationConsentOutcomeDetails](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/CommunicationConsentOutcomeDetails.md)
+ - [CommunicationConsentStatus](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/CommunicationConsentStatus.md)
+ - [ContactInfo](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/ContactInfo.md)
+ - [ContactMethod](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/ContactMethod.md)
+ - [DynamicChannelDetails](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/DynamicChannelDetails.md)
+ - [DynamicOutcomeDetails](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/DynamicOutcomeDetails.md)
+ - [EventDetails](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/EventDetails.md)
+ - [EventRole](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/EventRole.md)
+ - [EventSignup](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/EventSignup.md)
+ - [EventSignupOutcomeDetails](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/EventSignupOutcomeDetails.md)
+ - [EventSignupStatus](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/EventSignupStatus.md)
+ - [EventSignupStatusValue](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/EventSignupStatusValue.md)
+ - [ExchangeInteractionStatus](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/ExchangeInteractionStatus.md)
+ - [ExchangeInteractionStatusDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/ExchangeInteractionStatusDto.md)
+ - [ExchangeInteractionStatusDtoCursorPaginatedResponseDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/ExchangeInteractionStatusDtoCursorPaginatedResponseDto.md)
+ - [ExternalApiKeyStatus](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/ExternalApiKeyStatus.md)
+ - [ExternalApiKeyType](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/ExternalApiKeyType.md)
+ - [ExternalTransactionStatus](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/ExternalTransactionStatus.md)
+ - [InitiativeDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InitiativeDto.md)
+ - [InteractionDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InteractionDto.md)
+ - [InteractionDtoChannel](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InteractionDtoChannel.md)
+ - [InteractionDtoOutcomesDetailedInner](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InteractionDtoOutcomesDetailedInner.md)
+ - [InteractionErrorDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InteractionErrorDto.md)
+ - [InteractionVanFieldsDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InteractionVanFieldsDto.md)
+ - [InteractionsBatchResultDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InteractionsBatchResultDto.md)
+ - [InteractionsDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InteractionsDto.md)
+ - [InteractionsExternalApiTransactionDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InteractionsExternalApiTransactionDto.md)
+ - [InteractionsExternalApiTransactionDtoGetResponseDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InteractionsExternalApiTransactionDtoGetResponseDto.md)
+ - [InteractionsExternalApiTransactionLogDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/InteractionsExternalApiTransactionLogDto.md)
+ - [MercuryDestinationVanApiKeyDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/MercuryDestinationVanApiKeyDto.md)
+ - [MinervaMetadataDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/MinervaMetadataDto.md)
+ - [Outcome](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/Outcome.md)
+ - [OutcomeDetailOperation](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/OutcomeDetailOperation.md)
+ - [PersonIdentifier](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/PersonIdentifier.md)
+ - [ProblemDetails](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/ProblemDetails.md)
+ - [RejectedInteractionDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/RejectedInteractionDto.md)
+ - [RejectedInteractionsDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/RejectedInteractionsDto.md)
+ - [SimpleDestinationDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/SimpleDestinationDto.md)
+ - [SimpleMovementAppDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/SimpleMovementAppDto.md)
+ - [SimpleWorkspaceDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/SimpleWorkspaceDto.md)
+ - [SurveyResponse](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/SurveyResponse.md)
+ - [SurveyResponseOutcomeDetails](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/SurveyResponseOutcomeDetails.md)
+ - [VanApiKeyDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/VanApiKeyDto.md)
+ - [VanDatabaseMode](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/VanDatabaseMode.md)
+ - [WhoAmIApiKeyDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/WhoAmIApiKeyDto.md)
+ - [WorkspaceTypeDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/python/v1/docs/WorkspaceTypeDto.md)
 
 
 <a id="documentation-for-authorization"></a>

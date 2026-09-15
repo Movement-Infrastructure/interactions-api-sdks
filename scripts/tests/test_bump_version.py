@@ -330,3 +330,71 @@ class TestMain:
         exit_code = main(["--current-config", str(path)])
         assert exit_code == 2
         assert "error:" in capsys.readouterr().err
+
+
+# Trimmed from a Ruby generator config. The Ruby generator spells the version
+# key `gemVersion`, which is the whole reason --version-key exists.
+RUBY_CONFIG = """\
+# openapi-generator config for the Ruby v1 SDK.
+
+gemName: ddx_interactions_api
+moduleName: DdxInteractionsApi
+
+# Placeholder; the version-bump workflow rewrites this on each sync PR.
+gemVersion: 1.4.2
+
+library: faraday
+"""
+
+
+class TestVersionKey:
+    def test_reads_a_non_default_key(self):
+        assert read_package_version(RUBY_CONFIG, "gemVersion") == Version(1, 4, 2)
+
+    def test_writes_a_non_default_key(self):
+        updated = write_package_version(RUBY_CONFIG, Version(1, 5, 0), "gemVersion")
+
+        assert "gemVersion: 1.5.0" in updated
+        # Comments and every other line survive the rewrite.
+        assert "# Placeholder; the version-bump workflow rewrites this" in updated
+        assert "library: faraday" in updated
+
+    def test_default_key_does_not_silently_match_a_ruby_config(self):
+        """The failure mode this guards: a no-op bump that reports success."""
+        with pytest.raises(VersionError, match="no `packageVersion:` line"):
+            read_package_version(RUBY_CONFIG)
+
+    def test_wrong_key_is_an_error_not_a_no_op(self):
+        with pytest.raises(VersionError, match="no `npmVersion:` line"):
+            write_package_version(RUBY_CONFIG, Version(1, 5, 0), "npmVersion")
+
+    def test_rejects_a_key_that_is_not_an_identifier(self):
+        """A key carrying regex metacharacters would change what the pattern means."""
+        with pytest.raises(VersionError, match="invalid version key"):
+            read_package_version(RUBY_CONFIG, "gem.*")
+
+    def test_main_rewrites_a_non_default_key(self, tmp_path, capsys):
+        path = tmp_path / "ruby.yaml"
+        path.write_text(RUBY_CONFIG, encoding="utf-8")
+
+        exit_code = main(
+            [
+                "--current-config", str(path),
+                "--write-config", str(path),
+                "--version-key", "gemVersion",
+                "--labels-json", json.dumps([PATCH_LABEL]),
+            ]
+        )
+
+        assert exit_code == 0
+        assert "gemVersion: 1.4.3" in path.read_text(encoding="utf-8")
+        assert "wrote gemVersion: 1.4.3" in capsys.readouterr().out
+
+    def test_main_fails_when_the_key_is_wrong_for_the_config(self, tmp_path, capsys):
+        path = tmp_path / "ruby.yaml"
+        path.write_text(RUBY_CONFIG, encoding="utf-8")
+
+        exit_code = main(["--current-config", str(path)])
+
+        assert exit_code == 2
+        assert "no `packageVersion:` line" in capsys.readouterr().err

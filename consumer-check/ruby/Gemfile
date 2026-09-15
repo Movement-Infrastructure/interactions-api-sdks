@@ -1,0 +1,20 @@
+source "https://rubygems.org"
+
+# Resolves the SDK the way a consumer would. See README.md for the three
+# SDK_SOURCE values and what each one can and cannot catch.
+case (source = ENV.fetch("SDK_SOURCE", "path"))
+when "path"
+  gem "ddx_interactions_api", path: "../../sdks/ruby/v1"
+when "git"
+  # Bundler clones without a terminal, so an HTTPS URL that asks for
+  # credentials fails with `could not read Username` instead of prompting.
+  gem "ddx_interactions_api",
+      git: "git@github.com:Movement-Infrastructure/interactions-api-sdks.git",
+      branch: ENV.fetch("SDK_BRANCH", "develop"),
+      glob: "sdks/ruby/v1/*.gemspec"
+when "gem"
+  # An exact pin is what makes Bundler consider a prerelease.
+  gem "ddx_interactions_api", ENV.fetch("SDK_VERSION")
+else
+  raise "SDK_SOURCE must be one of: path, git, gem (got #{source.inspect})"
+end

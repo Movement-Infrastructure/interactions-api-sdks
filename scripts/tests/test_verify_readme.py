@@ -1,6 +1,15 @@
 """Unit tests for scripts/verify_readme.py."""
 
-from verify_readme import PRODUCTION_HOST, REQUIRED, check, main
+import pytest
+
+from verify_readme import (
+    PRODUCTION_HOST,
+    REQUIRED_BY_LANGUAGE,
+    check,
+    main,
+)
+
+REQUIRED = REQUIRED_BY_LANGUAGE["python"]
 
 # What templates/python/README.mustache produces. Kept short; the rules under
 # test are about what must and must not appear, not about length.
@@ -139,3 +148,98 @@ class TestMain:
 
     def test_missing_file_exits_two(self, tmp_path):
         assert main([str(tmp_path / "nope.md")]) == 2
+
+
+# What templates/ruby/README.mustache produces. The ruby generator has no
+# common_README partial, so this template renders the whole page itself.
+GOOD_RUBY = """\
+# ddx_interactions_api
+
+DdxInteractionsApi - the Ruby gem for the Interactions API
+
+Ruby client for the DDx Interactions API, generated from its OpenAPI
+specification.
+
+- API version: v1
+- Gem version: 0.1.0
+
+## Requirements
+
+Ruby >= 3.0
+
+## Installation
+
+```shell
+gem install ddx_interactions_api
+```
+
+## Changelog
+
+API changes are recorded in the changelog.
+
+## Getting Started
+
+```ruby
+config.username = ''
+config.password = ENV.fetch('DDX_API_KEY')
+```
+
+All URIs are relative to *https://api.movementinfrastructure.org*
+"""
+
+# The two install routes the built-in ruby template offers instead of the
+# registry. Both are what the override exists to remove.
+DEFAULT_RUBY_INSTALL = """\
+## Installation
+
+### Build a gem
+
+```shell
+gem build ddx_interactions_api.gemspec
+```
+
+```shell
+gem install ./ddx_interactions_api-0.1.0.gem
+```
+
+### Install from Git
+
+    gem 'ddx_interactions_api', :git => 'https://github.com/Movement-Infrastructure/interactions-api-sdks.git'
+"""
+
+
+class TestRuby:
+    RUBY = REQUIRED_BY_LANGUAGE["ruby"]
+
+    def test_a_good_ruby_readme_has_no_problems(self):
+        assert check(GOOD_RUBY, self.RUBY) == []
+
+    def test_rejects_the_built_in_git_install(self):
+        problems = check(DEFAULT_RUBY_INSTALL, self.RUBY)
+        assert any("git URL" in p for p in problems)
+
+    def test_the_built_in_local_gem_install_does_not_satisfy_the_requirement(self):
+        """`gem install ./ddx_interactions_api-0.1.0.gem` must not count."""
+        problems = check(DEFAULT_RUBY_INSTALL, self.RUBY)
+        assert any("gem install ddx_interactions_api" in p for p in problems)
+
+    def test_the_python_list_does_not_silently_pass_a_ruby_readme(self):
+        """The failure mode this guards: a gate that checks the wrong language."""
+        problems = check(GOOD_RUBY, REQUIRED_BY_LANGUAGE["python"])
+        assert any("pip install" in p for p in problems)
+
+    def test_main_applies_the_ruby_list(self, tmp_path):
+        target = tmp_path / "README.md"
+        target.write_text(GOOD_RUBY, encoding="utf-8")
+        assert main([str(target), "--language", "ruby"]) == 0
+
+    def test_main_defaults_to_python_and_so_fails_a_ruby_readme(self, tmp_path):
+        target = tmp_path / "README.md"
+        target.write_text(GOOD_RUBY, encoding="utf-8")
+        assert main([str(target)]) == 1
+
+    def test_main_rejects_an_unknown_language(self, tmp_path):
+        target = tmp_path / "README.md"
+        target.write_text(GOOD_RUBY, encoding="utf-8")
+        with pytest.raises(SystemExit):
+            main([str(target), "--language", "cobol"])

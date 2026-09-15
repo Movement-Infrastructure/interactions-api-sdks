@@ -1,0 +1,11 @@
+source "https://rubygems.org"
+
+gemspec
+
+# Test-only deps for spec/. Kept out of regeneration by
+# .openapi-generator-ignore, since the generated Gemfile has no stubbing gem.
+group :development, :test do
+  gem "rake", "~> 13.0"
+  gem "rspec", "~> 3.13"
+  gem "webmock", "~> 3.23"
+end
