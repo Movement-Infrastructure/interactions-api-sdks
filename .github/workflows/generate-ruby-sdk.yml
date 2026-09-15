@@ -157,9 +157,9 @@ jobs:
 
           oasdiff --version
 
-      # `--bump` makes this a gate: labels give the version, the spec gives
-      # the breaking changes, and a disagreement fails the run before the
-      # commit below. Applying `interactions-api-major` reruns the workflow.
+# `--bump` fails the run when the spec diff has a breaking change but the
+      # PR is not labeled `interactions-api-major`. Adding that label reruns
+      # the workflow.
       - name: Update CHANGELOG.md
         if: steps.base.outputs.has_spec == 'true'
         run: |
