@@ -26,15 +26,19 @@ export DDX_API_KEY='12345.your-secret-here'
 Check the shape before going further:
 
 ```bash
-python3 -c "
+python3 - <<'PY'
 import base64, os
-kid, _, secret = os.environ['DDX_API_KEY'].partition('.')
-print('key id numeric:', kid.isdigit())
+
+parts = os.environ["DDX_API_KEY"].split(".", 1)
+print("key id numeric:", kid.isdigit())
 try:
-    base64.b64decode(secret, validate=True); print('secret is valid base64: True')
+    if not secret:
+        raise ValueError("no dot separator in key")
+    base64.b64decode(secret, validate=True)
+    print("secret is valid base64: True")
 except Exception as e:
-    print('secret is NOT valid base64:', e)
-"
+    print("secret is NOT valid base64:", e)
+PY
 ```
 
 Both must be true.
@@ -137,9 +141,12 @@ with sdk.ApiClient(cfg) as client:
 print("correlationId:", result.correlation_id)
 print("accepted:", result.accepted_interactions.count,
       " rejected:", result.rejected_interactions.count)
+for row in (result.accepted_interactions.data or []):
+    print(f"  accepted idx {row.index}: interactionId {row.interaction_id}")
 for row in (result.rejected_interactions.data or []):
     for err in (row.errors or []):
-        print(f"  rejected idx {row.index}: {err.field_name}: {err.error_message}")
+        print(f"  rejected idx {row.index}: {err.var_field}: {err.error_message}")
+
 PY
 ```
 
@@ -147,7 +154,7 @@ PY
 
 A `correlationId`, and `accepted` equal to the number of rows you sent.
 
-**Keep the `correlationId`** — it is the only handle for step 5.
+**Keep an `interactionId`** from the accepted list. Step 5 takes one.
 
 A mixed batch returns **HTTP 207** rather than 200. That is expected, not an
 error: the result object is populated either way, and
@@ -156,9 +163,6 @@ error: the result object is populated either way, and
 The cap is **100 interactions per request**.
 
 ### Valid enum values
-
-These are **not** shipped in the package, and a bad value fails locally before
-any request is sent:
 
 - `method`: `unknown`, `mail`, `letter`, `digital_ad`, `email`, `text`,
   `text_broadcast`, `robo_call`, `dialer_call`, `phone_call`, `door_knock`,
@@ -173,30 +177,50 @@ any request is sent:
 
 ---
 
-## 5. Verify it reached the Exchange
+## 5. Look up the interaction's transaction records
 
 ```bash
-CORRELATION_ID=<id from step 4> python - <<'PY'
+INTERACTION_ID=<id from step 4> python - <<'PY'
 import os
 import ddx_interactions_api as sdk
 
 cfg = sdk.Configuration(username="", password=os.environ["DDX_API_KEY"])
 
 with sdk.ApiClient(cfg) as client:
-    statuses = sdk.InteractionsApi(client).vversion_interactions_exchange_status_get(
-        "1", correlation_id=os.environ["CORRELATION_ID"], limit=100)
+    txns = sdk.InteractionsApi(client).vversion_interactions_interaction_id_transactions_get(
+        os.environ["INTERACTION_ID"], "1", show_only_failed_transactions=False)
 
-for row in (statuses.data or []):
-    print(f"  {row.interaction_id}  {row.status}")
+print("count:", txns.metadata.count if txns.metadata else 0)
+for row in (txns.data or []):
+    print(f"  {row.date_created_utc}  {row.status}")
+    for log in (row.logs or []):
+        print(f"      HTTP {log.response_status_code}  {log.response}")
 PY
 ```
 
 ### Expected Result
 
-One row per accepted interaction, progressing to a terminal status.
+The call returns immediately. What it contains depends on where your workspace
+sends interactions, which step 3 told you:
 
-The Exchange is asynchronous, so an immediate call may return an early status
-or no rows. Re-run after a few seconds before calling it a failure.
+- **Destinations or a VAN key present**: a row per delivery attempt, each with a
+  status of `Received`, `Processing`, `Success`, `Failed`, `Invalid`,
+  `Duplicate`, or `InternalError`, plus any response logs recorded for it.
+- **Neither present**: `count: 0` and no rows. Transaction records are written
+  when an interaction is forwarded to an external system such as VAN. An
+  interaction that stops at the Exchange never gets one.
+
+`count: 0` is a valid result, not a failure. What this step verifies is that the
+call authenticates, returns a parsed response, and reports whatever records
+exist for the interaction you submitted.
+
+`show_only_failed_transactions` is set to false on purpose. It defaults to true,
+which returns only `Failed`, `Invalid`, and `Duplicate` rows and would hide a
+successful delivery.
+
+Exchange delivery is reported by a different endpoint,
+`interactions/exchange-status`. It advances on a scheduled transformation rather
+than on your request and can lag by up to an hour, so it is outside this UAT.
 
 The interactive reference is at
 [docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
@@ -218,7 +242,8 @@ project page point back at this repo, and the interactive reference is at
 | `401 Unauthorized`, empty body | Key missing the `<keyId>.` prefix; secret not valid base64; key issued for a different environment; key revoked or expired; workspace suppressed; or the key lacks the required role. |
 | `ValidationError` before any request | A bad `method` or `outcome`. Validated client-side, so the batch never leaves your machine. |
 | Rows rejected with a per-row error | Per-row validation. Read `rejected_interactions.data[].errors`. |
-| Status query returns nothing | The Exchange is asynchronous. Retry after a few seconds. |
+| `404` from step 5 | You passed the `correlationId`. That route takes a GUID `interactionId` only, and correlation IDs are either a numeric trace ID or `mig-` prefixed. Use an ID from the accepted list in step 4. |
+| Step 5 returns `count: 0` | Either the workspace sends nowhere external, so no transaction record is ever written, or `show_only_failed_transactions` was left at its default of true. |
 
 ### On that 401
 
@@ -237,5 +262,6 @@ the `x-correlation-id` response header.
 - [ ] Reviewed `destinations` / `van key` before submitting
 - [ ] Submitted an interaction and received a `correlationId`
 - [ ] Rejected rows, if any, reported a usable per-row reason
-- [ ] Exchange status reached a terminal state for each accepted interaction
+- [ ] Retrieved transaction records for an accepted `interactionId`,
+      with `show_only_failed_transactions` set to false
 - [ ] Filed anything unexpected, with version and `correlationId`

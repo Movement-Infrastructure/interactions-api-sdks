@@ -31,7 +31,8 @@ ruby -rbase64 -e '
   kid, secret = ENV.fetch("DDX_API_KEY").split(".", 2)
   puts "key id numeric: #{kid.to_s.match?(/\A\d+\z/)}"
   begin
-    Base64.strict_decode64(secret.to_s)
+    raise "no dot separator in key" if secret.to_s.empty?
+    Base64.strict_decode64(secret)
     puts "secret is valid base64: true"
   rescue => e
     puts "secret is NOT valid base64: #{e.message}"
@@ -157,9 +158,12 @@ end
 
 puts "correlationId: #{result.correlation_id}"
 puts "accepted: #{result.accepted_interactions.count}  rejected: #{result.rejected_interactions.count}"
+(result.accepted_interactions.data || []).each do |row|
+  puts "  accepted idx #{row.index}: interactionId #{row.interaction_id}"
+end
 (result.rejected_interactions.data || []).each do |row|
   (row.errors || []).each do |err|
-    puts "  rejected idx #{row.index}: #{err.field_name}: #{err.error_message}"
+    puts "  rejected idx #{row.index}: #{err.field}: #{err.error_message}"
   end
 end
 ```
@@ -168,13 +172,11 @@ end
 
 A `correlationId`, and `accepted` equal to the number of rows you sent.
 
-**Keep the `correlationId`** — it is the only handle for step 5.
+**Keep an `interactionId`** from the accepted list. Step 5 takes one.
 
 The cap is **100 interactions per request**.
 
 ### Valid enum values
-
-These are **not** shipped in the gem:
 
 - `method`: `unknown`, `mail`, `letter`, `digital_ad`, `email`, `text`,
   `text_broadcast`, `robo_call`, `dialer_call`, `phone_call`, `door_knock`,
@@ -189,7 +191,7 @@ These are **not** shipped in the gem:
 
 ---
 
-## 5. Verify it reached the Exchange
+## 5. Look up the interaction's transaction records
 
 ```ruby
 require "ddx_interactions_api"
@@ -202,23 +204,44 @@ interactions = DdxInteractionsApi::InteractionsApi.new(
   DdxInteractionsApi::ApiClient.new(config)
 )
 
-statuses = interactions.vversion_interactions_exchange_status_get(
-  "1", correlation_id: ENV.fetch("CORRELATION_ID"), limit: 100
+txns = interactions.vversion_interactions_interaction_id_transactions_get(
+  ENV.fetch("INTERACTION_ID"), "1", show_only_failed_transactions: false
 )
 
-(statuses.data || []).each do |row|
-  puts "  #{row.interaction_id}  #{row.status}"
+puts "count: #{txns.metadata&.count || 0}"
+(txns.data || []).each do |row|
+  puts "  #{row.date_created_utc}  #{row.status}"
+  (row.logs || []).each do |log|
+    puts "      HTTP #{log.response_status_code}  #{log.response}"
+  end
 end
 ```
 
-Run with `CORRELATION_ID=<id from step 4>`.
+Run with `INTERACTION_ID=<id from step 4>`.
 
 ### Expected Result
 
-One row per accepted interaction, progressing to a terminal status.
+The call returns immediately. What it contains depends on where your workspace
+sends interactions, which step 3 told you:
 
-The Exchange is asynchronous, so an immediate call may return an early status
-or no rows. Re-run after a few seconds before calling it a failure.
+- **Destinations or a VAN key present**: a row per delivery attempt, each with a
+  status of `Received`, `Processing`, `Success`, `Failed`, `Invalid`,
+  `Duplicate`, or `InternalError`, plus any response logs recorded for it.
+- **Neither present**: `count: 0` and no rows. Transaction records are written
+  when an interaction is forwarded to an external system such as VAN. An
+  interaction that stops at the Exchange never gets one.
+
+`count: 0` is a valid result, not a failure. What this step verifies is that the
+call authenticates, returns a parsed response, and reports whatever records
+exist for the interaction you submitted.
+
+`show_only_failed_transactions` is set to false on purpose. It defaults to true,
+which returns only `Failed`, `Invalid`, and `Duplicate` rows and would hide a
+successful delivery.
+
+Exchange delivery is reported by a different endpoint,
+`interactions/exchange-status`. It advances on a scheduled transformation rather
+than on your request and can lag by up to an hour, so it is outside this UAT.
 
 The interactive reference is at
 [docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
@@ -234,7 +257,8 @@ The interactive reference is at
 | `401 Unauthorized`, empty body | Key missing the `<keyId>.` prefix; secret not valid base64; key issued for a different environment; key revoked or expired; workspace suppressed; or the key lacks the required role. |
 | `ArgumentError: ... is not a valid attribute` | A misspelled field name. `build_from_hash` rejects unknown keys. |
 | Rows rejected with a per-row error | Per-row validation. Read `rejected_interactions.data[].errors`. |
-| Status query returns nothing | The Exchange is asynchronous. Retry after a few seconds. |
+| `404` from step 5 | You passed the `correlationId`. That route takes a GUID `interactionId` only, and correlation IDs are either a numeric trace ID or `mig-` prefixed. Use an ID from the accepted list in step 4. |
+| Step 5 returns `count: 0` | Either the workspace sends nowhere external, so no transaction record is ever written, or `show_only_failed_transactions` was left at its default of true. |
 
 ### On that 401
 
@@ -265,5 +289,6 @@ and the interactive reference is at
 - [ ] Reviewed `destinations` / `van key` before submitting
 - [ ] Submitted an interaction and received a `correlationId`
 - [ ] Rejected rows, if any, reported a usable per-row reason
-- [ ] Exchange status reached a terminal state for each accepted interaction
+- [ ] Retrieved transaction records for an accepted `interactionId`,
+      with `show_only_failed_transactions` set to false
 - [ ] Filed anything unexpected, with version and `correlationId`
