@@ -13,7 +13,7 @@ expected output.
 - **An Interactions API key for production.** See
   [Authentication](https://docs.movementinfrastructure.org/docs/interactions-api-authentication).
 
-Your key should look like `12345.<secret>` — a numeric key ID, a dot, then a base64
+Your key should look like `12345.<secret>`: a numeric key ID, a dot, then a base64
 secret. **Both halves are required.**
 
 Keys are environment-specific. A key issued for the public test server will not
@@ -100,8 +100,8 @@ without an exception.
 **Read the `destinations` and `van key` lines before continuing.** They decide
 what step 4 actually does:
 
-- **Both empty** — interactions land in the Exchange and go no further.
-- **Either populated** — what you submit is forwarded to those systems, and for
+- **Both empty** - interactions land in the Exchange and go no further.
+- **Either populated** - what you submit is forwarded to those systems, and for
   VAN that means real canvass responses. Coordinate before submitting.
 
 Authentication is HTTP Basic with the **API key in the password field and an
@@ -154,7 +154,7 @@ PY
 
 A `correlationId`, and `accepted` equal to the number of rows you sent.
 
-**Keep an `interactionId`** from the accepted list. Step 5 takes one.
+**Keep an `interactionId`** from the accepted list. Step 5 exports it.
 
 A mixed batch returns **HTTP 207** rather than 200. That is expected, not an
 error: the result object is populated either way, and
@@ -177,10 +177,18 @@ The cap is **100 interactions per request**.
 
 ---
 
-## 5. Look up the interaction's transaction records
+## 5. Put the interaction ID in your environment
 
 ```bash
-INTERACTION_ID=<id from step 4> python - <<'PY'
+export INTERACTION_ID='<interactionId from step 4>'
+```
+
+---
+
+## 6. Look up the interaction's transaction records
+
+```bash
+python - <<'PY'
 import os
 import ddx_interactions_api as sdk
 
@@ -227,7 +235,7 @@ The interactive reference is at
 
 ---
 
-## 6. Where the model docs live
+## 7. Where the model docs live
 
 `docs/*.md` are not shipped inside the package. The model links on the PyPI
 project page point back at this repo, and the interactive reference is at
@@ -235,19 +243,19 @@ project page point back at this repo, and the interactive reference is at
 
 ---
 
-## 7. Common failure modes
+## 8. Common failure modes
 
 | Symptom | Likely cause |
 |---|---|
 | `401 Unauthorized`, empty body | Key missing the `<keyId>.` prefix; secret not valid base64; key issued for a different environment; key revoked or expired; workspace suppressed; or the key lacks the required role. |
 | `ValidationError` before any request | A bad `method` or `outcome`. Validated client-side, so the batch never leaves your machine. |
 | Rows rejected with a per-row error | Per-row validation. Read `rejected_interactions.data[].errors`. |
-| `404` from step 5 | You passed the `correlationId`. That route takes a GUID `interactionId` only, and correlation IDs are either a numeric trace ID or `mig-` prefixed. Use an ID from the accepted list in step 4. |
-| Step 5 returns `count: 0` | Either the workspace sends nowhere external, so no transaction record is ever written, or `show_only_failed_transactions` was left at its default of true. |
+| `404` from step 6 | You passed the `correlationId`. That route takes a GUID `interactionId` only, and correlation IDs are either a numeric trace ID or `mig-` prefixed. Use an ID from the accepted list in step 4. |
+| Step 6 returns `count: 0` | Either the workspace sends nowhere external, so no transaction record is ever written, or `show_only_failed_transactions` was left at its default of true. |
 
 ### On that 401
 
-The 401 is deliberately generic and covers several distinct causes — including
+The 401 is deliberately generic and covers several distinct causes: including
 a **valid key that simply lacks the required role**, which is an authorization
 failure reported as an authentication one. If the key shape checks out in
 step 1, ask the API team to check server-side logs rather than guessing. Quote
@@ -255,7 +263,7 @@ the `x-correlation-id` response header.
 
 ---
 
-## 8. Sign-off checklist
+## 9. Sign-off checklist
 
 - [ ] Installed from PyPI into a clean virtualenv
 - [ ] `auth/me` returned the expected workspace
