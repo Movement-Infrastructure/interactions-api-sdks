@@ -53,6 +53,10 @@ Report problems against the API specification rather than the generated code.
 
 ## Getting Started
 
+Validating an integration end to end? The [UAT guide](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/docs/RubyUat.md)
+walks through install, authentication, submitting an interaction, and confirming
+it reached the Exchange.
+
 ```ruby
 require 'ddx_interactions_api'
 

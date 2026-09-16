@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: API access, API keys, or Destinations
+    url: mailto:api@demexchange.com
+    about: Anything about the Interactions API itself rather than an SDK is handled by email.
+  - name: Interactions API reference
+    url: https://docs.movementinfrastructure.org/reference/interactions
+    about: Endpoint, field, and enum documentation for the API these SDKs wrap.

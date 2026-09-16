@@ -318,3 +318,18 @@ class TestDocLinks:
 
     def test_patch_sdk_reports_the_readme_as_changed(self, tmp_path):
         assert "README.md" in patch_sdk(write_sdk(tmp_path))
+
+    def test_a_hand_written_absolute_link_does_not_block_the_rewrite(self, tmp_path):
+        """Regression: the UAT link contains DOCS_BASE_URL as a prefix."""
+        readme = (
+            "# ddx-interactions-api\n\n"
+            f"See the [UAT guide]({DOCS_BASE_URL}uat.md).\n\n"
+            " - [ActivistCode](docs/ActivistCode.md)\n"
+        )
+        root = write_sdk(tmp_path, readme_md=readme)
+
+        assert rewrite_doc_links(root) is True
+        text = (root / "README.md").read_text(encoding="utf-8")
+        assert "](docs/" not in text
+        assert f"]({DOCS_BASE_URL}ActivistCode.md)" in text
+        assert f"]({DOCS_BASE_URL}uat.md)" in text
