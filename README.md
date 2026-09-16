@@ -12,7 +12,7 @@ New to the API itself? Start with the [overview](https://docs.movementinfrastruc
 | --- | --- | --- |
 | Python | [`ddx-interactions-api`](https://pypi.org/project/ddx-interactions-api/) | Available |
 | Ruby | [`ddx_interactions_api`](https://rubygems.org/gems/ddx_interactions_api) | Prerelease |
-| Node.js | — | Planned |
+| Node.js | `ddx-interactions-api` | Unreleased |
 | C# | — | Planned |
 
 Each SDK lives under `sdks/<language>/v1/` and is generated from `openapi/v1/swagger.json`.
@@ -105,6 +105,53 @@ end
 statuses = interactions.vversion_interactions_exchange_status_get(
   "1", correlation_id: result.correlation_id
 )
+```
+
+### Node.js
+
+Requires Node 18+.
+
+```sh
+npm install ddx-interactions-api
+```
+
+```typescript
+import {
+  Configuration,
+  InteractionsApi,
+  ResponseError,
+  type InteractionsDto,
+} from 'ddx-interactions-api';
+
+// basePath is a full URL, scheme included. The Ruby client splits the two
+// into separate fields.
+const interactions = new InteractionsApi(
+  new Configuration({
+    basePath: 'https://api-dev.movementinfrastructure.org',
+    username: '',
+    password: process.env.DDX_API_KEY,
+  }),
+);
+
+const interactionsDto: InteractionsDto = {
+  // See sdks/node/v1/src/models/InteractionsDto.ts for the full shape.
+  interactions: [],
+};
+
+let result;
+try {
+  result = await interactions.vversionInteractionsPost({ version: '1', interactionsDto });
+} catch (e) {
+  if (!(e instanceof ResponseError)) throw e;
+  // The thrown error carries only the status line. The body says why.
+  throw new Error(`Interactions API returned ${e.response.status}: ${await e.response.text()}`);
+}
+
+// The correlation ID follows the batch through the Exchange.
+const statuses = await interactions.vversionInteractionsExchangeStatusGet({
+  version: '1',
+  correlationId: result?.correlationId,
+});
 ```
 
 ## Endpoints

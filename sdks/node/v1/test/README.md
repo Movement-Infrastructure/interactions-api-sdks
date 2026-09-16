@@ -18,7 +18,8 @@ The tests import the generated client, so generate and patch it first:
 # from the repo root — requires Java 17 for openapi-generator 7.10.0
 java -jar .cache/openapi-generator-cli.jar generate \
   -i openapi/v1/swagger.json -g typescript-fetch \
-  -o sdks/node/v1 -c sdks/node/v1/openapi-generator-config.yaml
+  -o sdks/node/v1 -c sdks/node/v1/openapi-generator-config.yaml \
+  -t templates/node
 
 python scripts/patch_node_sdk.py sdks/node/v1 --expect-name ddx-interactions-api
 
@@ -39,6 +40,6 @@ check.
 - These files are protected from regeneration by `../.openapi-generator-ignore`.
 - Tests import from `../src`, not `../dist`. `npm run build` is a separate CI
   step, so a compile failure is reported on its own rather than as a test error.
-- The happy-path test calls `vversionInteractionsPost`, an auto-derived slug —
-  the spec defines no `operationId` for the interactions endpoints, so the
-  generator names methods from the path and verb.
+- The happy-path test calls `vversionInteractionsPost`. The spec defines no
+  `operationId` for the interactions endpoints, so the generator names methods
+  from the path and verb.

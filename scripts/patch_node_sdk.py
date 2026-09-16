@@ -25,8 +25,8 @@ to be manually kept in sync.
 
 Idempotent: it sets values rather than splicing text, so re-running changes
 nothing. It does NOT touch `version` -- that flows from `npmVersion` in the
-generator config via bump_version.py, and overwriting it here would silently
-undo the bump.
+generator config via bump_version.py, and overwriting it here would undo
+the bump.
 """
 
 from __future__ import annotations
@@ -61,8 +61,8 @@ TEST_SCRIPTS = {
     "test": "vitest run",
 }
 
-# Confines the build to the generated client. Without it the test suite lands
-# in dist/ and its dependencies get type-checked by the build.
+# Confines the build to the generated client. Without it the test suite is
+# compiled into dist/ and its dependencies are type-checked by the build.
 TSCONFIG_INCLUDE = ["src"]
 
 # Generator defaults that must never reach a registry.
@@ -78,7 +78,7 @@ def patch_package(package: dict, expected_name: str | None = None) -> dict:
 
     Mutates and returns the same dict. Raises PatchError if the generator
     produced something unrecognisable, so a template change fails the build
-    rather than silently publishing a package missing these fields.
+    rather than publishing a package missing these fields.
     """
     if not isinstance(package, dict):
         raise PatchError("package.json did not parse to an object")

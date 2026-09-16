@@ -2,13 +2,17 @@ name: Generate Node SDK
 
 # On every PR that touches openapi/v1/swagger.json, computes the next package
 # version from the PR's labels, regenerates sdks/node/v1/, and commits both back
-# to the PR branch so the version lands in the generated manifest.
+# to the PR branch so the version reaches the generated manifest.
 
 on:
   pull_request:
     # `labeled`/`unlabeled` are here so adding or removing a version label
     # after the PR opens recomputes the version.
     types: [opened, synchronize, labeled, unlabeled]
+    # The PR that merges develop into main has `develop` as its head ref, so
+    # without this filter the job would compute the version from `main` and
+    # push to a protected branch, failing with GH006.
+    branches: [develop]
     paths:
       - openapi/v1/swagger.json
 
@@ -30,7 +34,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      # One fetch for three steps: the bump reads the base config, the
+      # changelog reads the base spec and changelog.
       - name: Read base-branch package version
+        id: base
         run: |
           set -euo pipefail
 
@@ -42,6 +49,19 @@ jobs:
             echo "::error::$config not found on ${{ github.base_ref }}; cannot determine the current version."
             exit 1
           fi
+
+          # Absent on the bootstrap sync. With no baseline to diff, the
+          # changelog steps below skip instead of failing.
+          if git show "FETCH_HEAD:openapi/v1/swagger.json" > /tmp/base-node-swagger.json 2>/dev/null; then
+            echo "has_spec=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_spec=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No spec on ${{ github.base_ref }}; skipping the changelog."
+          fi
+
+          # Absent until the first sync creates it, which the renderer handles.
+          git show "FETCH_HEAD:sdks/node/v1/CHANGELOG.md" > /tmp/base-node-changelog.md 2>/dev/null \
+            || echo "::notice::No changelog on ${{ github.base_ref }} yet; it will be created."
 
       # The TypeScript generators spell the version key `npmVersion`, not
       # `packageVersion`. Passing the wrong key is an error rather than a
@@ -82,7 +102,8 @@ jobs:
             -i openapi/v1/swagger.json \
             -g typescript-fetch \
             -o sdks/node/v1 \
-            -c sdks/node/v1/openapi-generator-config.yaml
+            -c sdks/node/v1/openapi-generator-config.yaml \
+            -t templates/node
 
       # Fills in the package.json fields the generator hardcodes or omits, and
       # confines tsc to src/. Both are regenerated on every run, so this is not
@@ -90,6 +111,40 @@ jobs:
       # unit-tested by tooling-tests.yml.
       - name: Patch generated SDK
         run: python scripts/patch_node_sdk.py sdks/node/v1 --expect-name ddx-interactions-api
+
+      # Pinned so an upstream release cannot change changelog wording.
+      - name: Install oasdiff
+        if: steps.base.outputs.has_spec == 'true'
+        env:
+          OASDIFF_VERSION: 1.30.0
+        run: |
+          set -euo pipefail
+
+          curl -sSL \
+            "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin oasdiff
+
+          oasdiff --version
+
+      # `--bump` makes this a gate: labels give the version, the spec gives the
+      # breaking changes, and a disagreement fails the run before the commit
+      # below. Applying `interactions-api-major` reruns the workflow.
+      - name: Update CHANGELOG.md
+        if: steps.base.outputs.has_spec == 'true'
+        run: |
+          set -euo pipefail
+
+          oasdiff changelog /tmp/base-node-swagger.json openapi/v1/swagger.json \
+            -f json > /tmp/oasdiff-node.json
+
+          # The head commit's date, so a rerun days later does not churn.
+          python scripts/render_changelog.py \
+            --oasdiff-json /tmp/oasdiff-node.json \
+            --version "${{ steps.version.outputs.next }}" \
+            --bump "${{ steps.version.outputs.bump }}" \
+            --date "$(git log -1 --format=%cs)" \
+            --current-changelog /tmp/base-node-changelog.md \
+            --write-changelog sdks/node/v1/CHANGELOG.md
 
       - name: Commit generated SDK if changed
         run: |
