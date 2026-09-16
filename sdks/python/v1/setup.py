@@ -29,7 +29,7 @@ _LONG_DESCRIPTION = (Path(__file__).parent / "README.md").read_text(
 # prerequisite: setuptools
 # http://pypi.python.org/pypi/setuptools
 NAME = "ddx-interactions-api"
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 PYTHON_REQUIRES = ">= 3.8"
 REQUIRES = [
     "urllib3 >= 1.25.3, < 3.0.0",

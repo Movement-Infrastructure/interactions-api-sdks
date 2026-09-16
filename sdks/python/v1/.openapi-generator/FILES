@@ -52,6 +52,7 @@ ddx_interactions_api/models/minerva_metadata_dto.py
 ddx_interactions_api/models/outcome.py
 ddx_interactions_api/models/outcome_detail_operation.py
 ddx_interactions_api/models/person_identifier.py
+ddx_interactions_api/models/problem_details.py
 ddx_interactions_api/models/rejected_interaction_dto.py
 ddx_interactions_api/models/rejected_interactions_dto.py
 ddx_interactions_api/models/simple_destination_dto.py
@@ -110,6 +111,7 @@ docs/MinervaMetadataDto.md
 docs/Outcome.md
 docs/OutcomeDetailOperation.md
 docs/PersonIdentifier.md
+docs/ProblemDetails.md
 docs/RejectedInteractionDto.md
 docs/RejectedInteractionsDto.md
 docs/SimpleDestinationDto.md

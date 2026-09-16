@@ -7,6 +7,7 @@ import pytest
 from patch_python_sdk import (
     CERTIFI,
     CHANGELOG_URL,
+    DOCS_BASE_URL,
     NO_LICENSE,
     PatchError,
     apply_exact,
@@ -14,6 +15,7 @@ from patch_python_sdk import (
     check_license,
     main,
     patch_sdk,
+    rewrite_doc_links,
 )
 
 # Trimmed from the real generated setup.py. Every defect the patches address is
@@ -63,14 +65,34 @@ license = "MIT"
 '''
 
 
+# Trimmed from the generated README. The relative doc links are what the
+# generator's common_README partial emits, and what has to be rewritten before
+# this file becomes the PyPI project page.
+README_MD = """\
+# ddx-interactions-api
+
+## Documentation for API Endpoints
+
+Class | Method | HTTP request
+*InteractionsApi* | [**vversion_interactions_post**](docs/InteractionsApi.md#vversion_interactions_post) | **POST** /v{version}/interactions
+
+## Documentation For Models
+
+ - [ActivistCode](docs/ActivistCode.md)
+ - [Address](docs/Address.md)
+"""
+
+
 def write_sdk(
     tmp_path,
     setup_py=SETUP_PY,
     configuration_py=CONFIGURATION_PY,
     pyproject_toml=PYPROJECT_TOML,
+    readme_md=README_MD,
 ):
     (tmp_path / "setup.py").write_text(setup_py, encoding="utf-8")
     (tmp_path / "pyproject.toml").write_text(pyproject_toml, encoding="utf-8")
+    (tmp_path / "README.md").write_text(readme_md, encoding="utf-8")
     pkg = tmp_path / "ddx_interactions_api"
     pkg.mkdir(exist_ok=True)
     (pkg / "configuration.py").write_text(configuration_py, encoding="utf-8")
@@ -198,7 +220,11 @@ class TestPatchSdk:
 
     def test_reports_the_files_it_changed(self, tmp_path):
         changed = patch_sdk(write_sdk(tmp_path))
-        assert set(changed) == {"setup.py", "ddx_interactions_api/configuration.py"}
+        assert set(changed) == {
+            "README.md",
+            "setup.py",
+            "ddx_interactions_api/configuration.py",
+        }
 
     def test_is_idempotent(self, tmp_path):
         root = write_sdk(tmp_path)
@@ -247,3 +273,63 @@ class TestMain:
     def test_a_missing_license_exits_nonzero(self, tmp_path):
         without = PYPROJECT_TOML.replace("MIT", NO_LICENSE)
         assert main([str(write_sdk(tmp_path, pyproject_toml=without))]) == 2
+
+
+class TestDocLinks:
+    """The README becomes the PyPI project page, where `docs/Foo.md` is a dead link."""
+
+    def test_rewrites_relative_model_links(self, tmp_path):
+        root = write_sdk(tmp_path)
+        assert rewrite_doc_links(root) is True
+
+        readme = (root / "README.md").read_text(encoding="utf-8")
+        assert f"]({DOCS_BASE_URL}ActivistCode.md)" in readme
+        assert "](docs/" not in readme
+
+    def test_keeps_the_anchor_on_endpoint_links(self, tmp_path):
+        """Endpoint links carry a #operationId fragment that must survive."""
+        root = write_sdk(tmp_path)
+        rewrite_doc_links(root)
+
+        readme = (root / "README.md").read_text(encoding="utf-8")
+        assert (
+            f"]({DOCS_BASE_URL}InteractionsApi.md#vversion_interactions_post)" in readme
+        )
+
+    def test_is_idempotent(self, tmp_path):
+        root = write_sdk(tmp_path)
+        rewrite_doc_links(root)
+        once = (root / "README.md").read_text(encoding="utf-8")
+
+        assert rewrite_doc_links(root) is False
+        assert (root / "README.md").read_text(encoding="utf-8") == once
+
+    def test_no_links_at_all_is_an_error(self, tmp_path):
+        """The failure mode this guards: the partial stopped emitting doc links."""
+        root = write_sdk(tmp_path, readme_md="# ddx-interactions-api\n")
+        with pytest.raises(PatchError, match="no relative docs/ links"):
+            rewrite_doc_links(root)
+
+    def test_missing_readme_is_an_error(self, tmp_path):
+        root = write_sdk(tmp_path)
+        (root / "README.md").unlink()
+        with pytest.raises(PatchError, match="cannot read"):
+            rewrite_doc_links(root)
+
+    def test_patch_sdk_reports_the_readme_as_changed(self, tmp_path):
+        assert "README.md" in patch_sdk(write_sdk(tmp_path))
+
+    def test_a_hand_written_absolute_link_does_not_block_the_rewrite(self, tmp_path):
+        """Regression: the UAT link contains DOCS_BASE_URL as a prefix."""
+        readme = (
+            "# ddx-interactions-api\n\n"
+            f"See the [UAT guide]({DOCS_BASE_URL}uat.md).\n\n"
+            " - [ActivistCode](docs/ActivistCode.md)\n"
+        )
+        root = write_sdk(tmp_path, readme_md=readme)
+
+        assert rewrite_doc_links(root) is True
+        text = (root / "README.md").read_text(encoding="utf-8")
+        assert "](docs/" not in text
+        assert f"]({DOCS_BASE_URL}ActivistCode.md)" in text
+        assert f"]({DOCS_BASE_URL}uat.md)" in text

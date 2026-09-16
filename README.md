@@ -11,23 +11,15 @@ New to the API itself? Start with the [overview](https://docs.movementinfrastruc
 | Language | Package | Status |
 | --- | --- | --- |
 | Python | [`ddx-interactions-api`](https://pypi.org/project/ddx-interactions-api/) | Available |
+| Ruby | [`ddx_interactions_api`](https://rubygems.org/gems/ddx_interactions_api) | Prerelease |
 | Node.js | — | Planned |
 | C# | — | Planned |
-| Ruby | — | Planned |
 
 Each SDK lives under `sdks/<language>/v1/` and is generated from `openapi/v1/swagger.json`.
 
-## Python
+Versions are below 1.0 while the API stabilizes, so pin the minor version if you need a stable surface. The Ruby gem is published as a prerelease (`X.Y.Z.pre.N`), which `gem install` and `bundle install` ignore unless you ask for one. Pass `--pre` or pin an exact version.
 
-Requires Python 3.8+.
-
-```sh
-pip install ddx-interactions-api
-```
-
-Versions are below 1.0 while the API stabilizes, so pin the minor version if you need a stable surface.
-
-### Authentication
+## Authentication
 
 HTTP Basic, with your API key in the **password** field and the username left empty. [Authentication](https://docs.movementinfrastructure.org/docs/interactions-api-authentication) covers how to request a key.
 
@@ -36,9 +28,17 @@ HTTP Basic, with your API key in the **password** field and the username left em
 | `https://api.movementinfrastructure.org` | Production (SDK default) |
 | `https://api-dev.movementinfrastructure.org` | Public test server |
 
-### Quick start
+## Quick start
 
-Posting a batch of interactions, up to 100 per request:
+Posting a batch of interactions, up to 100 per request. Every client takes the API version as its first positional argument, and the response carries a correlation ID for following the batch through the Exchange.
+
+### Python
+
+Requires Python 3.8+.
+
+```sh
+pip install ddx-interactions-api
+```
 
 ```python
 import os
@@ -55,24 +55,61 @@ configuration = ddx_interactions_api.Configuration(
 with ddx_interactions_api.ApiClient(configuration) as api_client:
     interactions = ddx_interactions_api.InteractionsApi(api_client)
     payload = ddx_interactions_api.InteractionsDto(
-        # See docs/InteractionsDto.md in the package for the full shape.
+        # See sdks/python/v1/docs/InteractionsDto.md for the full shape.
     )
 
     try:
         result = interactions.vversion_interactions_post("1", interactions_dto=payload)
     except ApiException as e:
         print(f"Interactions API returned {e.status}: {e.body}")
+    else:
+        # The correlation ID follows the batch through the Exchange.
+        statuses = interactions.vversion_interactions_exchange_status_get(
+            "1", correlation_id=result.correlation_id
+        )
 ```
 
-The response carries a correlation ID for following the batch through the Exchange:
+### Ruby
 
-```python
+Requires Ruby 3.0+.
+
+```sh
+gem install ddx_interactions_api --pre
+```
+
+```ruby
+require "ddx_interactions_api"
+
+config = DdxInteractionsApi::Configuration.new
+# Host only. The scheme is a separate field and defaults to https.
+config.host = "api-dev.movementinfrastructure.org"
+config.username = ""
+config.password = ENV.fetch("DDX_API_KEY")
+
+interactions = DdxInteractionsApi::InteractionsApi.new(
+  DdxInteractionsApi::ApiClient.new(config)
+)
+payload = DdxInteractionsApi::InteractionsDto.new(
+  # See sdks/ruby/v1/docs/InteractionsDto.md for the full shape.
+  interactions: []
+)
+
+begin
+  result = interactions.vversion_interactions_post("1", interactions_dto: payload)
+rescue DdxInteractionsApi::ApiError => e
+  # The exception message is just the status line; the body says why.
+  abort "Interactions API returned #{e.code}: #{e.response_body}"
+end
+
+# The correlation ID follows the batch through the Exchange.
 statuses = interactions.vversion_interactions_exchange_status_get(
-    "1", correlation_id=result.correlation_id
+  "1", correlation_id: result.correlation_id
 )
 ```
 
-### Endpoints
+## Endpoints
+
+Method names are derived from the path and the verb, so they are the same in every language:
 
 | Method | Endpoint |
 | --- | --- |
@@ -83,11 +120,11 @@ statuses = interactions.vversion_interactions_exchange_status_get(
 | `vversion_interactions_transactions_get` | `GET /v1/interactions/transactions` |
 | `vversion_auth_me_get` | `GET /v1/auth/me` |
 
-Full models are documented in [`sdks/python/v1/README.md`](sdks/python/v1/README.md) and its `docs/` directory. The interactive reference is at [docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
+Full models are documented in each SDK's own README: [Python](sdks/python/v1/README.md), [Ruby](sdks/ruby/v1/README.md). A corresponding `docs/` directory can be found alongside the README. The interactive reference is at [docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
 
 ## Versioning
 
-SDK versions are semantic; a major bump means the API changed in a way that requires work on your side. Each SDK ships a changelog generated from a diff of the specification, with breaking entries marked: [Python changelog](sdks/python/v1/CHANGELOG.md).
+SDK versions are semantic; a major bump means the API changed in a way that requires work on your side. Each SDK ships a changelog generated from a diff of the specification, with breaking entries marked: [Python](sdks/python/v1/CHANGELOG.md), [Ruby](sdks/ruby/v1/CHANGELOG.md).
 
 The SDK version tracks the package, not the API. The API version (`v1`) appears in the request path and changes far less often.
 

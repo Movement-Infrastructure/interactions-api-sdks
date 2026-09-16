@@ -1,0 +1,180 @@
+name: Publish Ruby SDK to RubyGems
+
+# Publishes sdks/ruby/v1 to RubyGems on push to `main`. Promoting develop to
+# main is what releases.
+#
+# Every publish is a prerelease (`X.Y.Z.pre.<run>`). RubyGems has no sandbox
+# registry, so the version is what keeps these builds off consumers: installers
+# skip prereleases unless asked with `--pre` or an exact pin.
+#
+# Auth is OIDC trusted publishing. There is no token to leak or rotate.
+# RubyGems binds that publisher to this file's name, so renaming the workflow
+# breaks publishing until the publisher config is updated to match.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sdks/ruby/v1/**'
+  # Re-runs a publish without a new promotion, on a fresh run number.
+  workflow_dispatch:
+
+# One publish at a time. Two overlapping runs could race on the same version.
+concurrency:
+  group: publish-ruby-rubygems
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      - name: Verify the generated SDK is present
+        run: |
+          set -euo pipefail
+
+          if [ ! -f sdks/ruby/v1/ddx_interactions_api.gemspec ]; then
+            echo "::error::No gemspec in sdks/ruby/v1."
+            echo "::error::The generated SDK has not been committed yet; nothing to publish."
+            exit 1
+          fi
+
+      # Never committed: scripts/bump_version.py exits 2 on a suffix in
+      # `gemVersion`. run_number is monotonic because RubyGems refuses to
+      # re-push a version and `yank` does not free it.
+      - name: Stamp the prerelease version
+        run: |
+          set -euo pipefail
+
+          base=$(sed -nE 's/^gemVersion:[[:space:]]*"?([^"[:space:]#]+)"?.*/\1/p' \
+                 sdks/ruby/v1/openapi-generator-config.yaml)
+
+          if [ -z "$base" ]; then
+            echo "::error::Could not read gemVersion from openapi-generator-config.yaml."
+            exit 1
+          fi
+
+          pre="${base}.pre.${GITHUB_RUN_NUMBER}"
+          sed -i "s/VERSION = '.*'/VERSION = '${pre}'/" \
+            sdks/ruby/v1/lib/ddx_interactions_api/version.rb
+
+          echo "GEM_VERSION=${pre}" >> "$GITHUB_ENV"
+          echo "Publishing ${pre} (base ${base})."
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # README.md ships inside the gem. The PR check sees a regeneration,
+      # this sees the bytes about to be uploaded.
+      - name: Verify README before publishing
+        run: python scripts/verify_readme.py sdks/ruby/v1/README.md --language ruby
+
+      - name: Build the gem
+        working-directory: sdks/ruby/v1
+        run: gem build ddx_interactions_api.gemspec -o "ddx_interactions_api-${GEM_VERSION}.gem"
+
+      # Package contents are permanent once pushed; yanking does not
+      # unpublish them. Enumerating makes a bad s.files glob visible here
+      # rather than on the registry. See docs/publish-leak-audit-checklist.md.
+      - name: Enumerate artifact contents
+        working-directory: sdks/ruby/v1
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Published artifact contents"
+            echo "### gem: ddx_interactions_api-${GEM_VERSION}.gem"
+            echo '```'
+            tar -xOf "ddx_interactions_api-${GEM_VERSION}.gem" data.tar.gz | tar -tzf - | sort
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Reads the built artifact, not the gemspec source, since that is what
+      # gets published.
+      - name: Check gem metadata
+        working-directory: sdks/ruby/v1
+        run: |
+          set -euo pipefail
+
+          ruby -rrubygems/package -e '
+            spec = Gem::Package.new(ARGV[0]).spec
+            fails = 0
+            check = lambda do |cond, msg|
+              if cond
+                puts "::error::#{msg}"
+                fails += 1
+              end
+            end
+
+            check.call(spec.authors.any? { |a| a =~ /OpenAPI[- ]Generator/i },
+                       "Author is the generator default. Set gemAuthor in openapi-generator-config.yaml.")
+            check.call(spec.email.to_a.any? { |e| e =~ /openapitools\.org/i },
+                       "Author email is the openapi-generator project address. Set gemAuthorEmail.")
+            check.call(spec.license.to_s.empty? || spec.license =~ /\Aunlicense\z/i,
+                       "License is unset or the generator default. Set gemLicense.")
+            check.call(spec.version.to_s.start_with?("0.0.0"),
+                       "Version is the 0.0.0 placeholder; the version bump did not run.")
+            check.call(spec.homepage.to_s.empty?,
+                       "Homepage is unset. Set gemHomepage.")
+            check.call(!spec.version.prerelease?,
+                       "Version #{spec.version} is not a prerelease. This workflow only publishes prereleases.")
+
+            if fails.zero?
+              puts "Metadata checks passed: #{spec.name} #{spec.version} (#{spec.license})"
+            else
+              puts "::error::Refusing to publish with generated-default metadata."
+              exit 1
+            end
+          ' "ddx_interactions_api-${GEM_VERSION}.gem"
+
+      - name: Upload gem artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruby-sdk-gem
+          path: sdks/ruby/v1/*.gem
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+
+    # Keeps publishing off arbitrary branches, and is where a required
+    # reviewer attaches.
+    environment:
+      name: rubygems
+      url: https://rubygems.org/gems/ddx_interactions_api
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download gem artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ruby-sdk-gem
+          path: dist/
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      - name: Configure RubyGems credentials
+        uses: rubygems/configure-rubygems-credentials@v2.1.0
+
+      - name: Push to RubyGems
+        run: |
+          set -euo pipefail
+          gem push dist/*.gem
