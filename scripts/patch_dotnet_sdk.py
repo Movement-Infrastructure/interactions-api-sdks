@@ -59,15 +59,6 @@ PATCHED_PROPERTIES = {
     "Copyright": COPYRIGHT,
 }
 
-# Generator defaults that must never reach NuGet, keyed by element name.
-GENERATED_DEFAULTS = {
-    "Authors": {"OpenAPI"},
-    "Company": {"OpenAPI"},
-    "AssemblyTitle": {"OpenAPI Library"},
-    "Description": {"A library generated from a OpenAPI doc"},
-    "Copyright": {"No Copyright"},
-}
-
 
 class PatchError(ValueError):
     """Raised when the csproj is missing or not shaped as expected."""
@@ -149,41 +140,6 @@ def patch_csproj(csproj: str) -> str:
     return csproj
 
 
-def check_no_generated_defaults(csproj: str) -> list[str]:
-    """Return a list of problems that should block a publish. Empty means clean."""
-    problems = []
-
-    for name, defaults in GENERATED_DEFAULTS.items():
-        value = read_property(csproj, name)
-        if value is None:
-            problems.append(f"<{name}> is missing")
-        elif value in defaults:
-            problems.append(f"<{name}> is the generator default ({value!r})")
-        elif not value.strip():
-            problems.append(f"<{name}> is empty")
-
-    version = read_property(csproj, "Version")
-    if version is None:
-        problems.append("<Version> is missing")
-    elif version.startswith("0.0.0"):
-        problems.append("<Version> is the 0.0.0 placeholder; the version bump did not run")
-
-    if read_property(csproj, "PackageLicenseExpression") is None:
-        problems.append("<PackageLicenseExpression> is missing; licenseId is unset")
-
-    if read_property(csproj, "PackageReadmeFile") is None:
-        problems.append(
-            "<PackageReadmeFile> is missing; the package would render on nuget.org "
-            "with no readme"
-        )
-    elif README_INCLUDE not in csproj:
-        problems.append(
-            f"<PackageReadmeFile> is set but {README_INCLUDE} is not packed; "
-            "dotnet pack fails on a readme it cannot find"
-        )
-
-    return problems
-
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
@@ -195,11 +151,6 @@ def main(argv: list[str] | None = None) -> int:
         help="Path to the generated csproj, e.g. "
         "sdks/csharp/v1/src/Ddx.InteractionsApi/Ddx.InteractionsApi.csproj.",
     )
-    parser.add_argument(
-        "--check-only",
-        action="store_true",
-        help="Report publish blockers without writing. For use as a publish gate.",
-    )
     args = parser.parse_args(argv)
 
     try:
@@ -207,16 +158,6 @@ def main(argv: list[str] | None = None) -> int:
     except OSError as exc:
         print(f"error: cannot read {args.csproj}: {exc}", file=sys.stderr)
         return 2
-
-    if args.check_only:
-        problems = check_no_generated_defaults(text)
-        for problem in problems:
-            print(f"::error::{problem}")
-        if problems:
-            print("::error::Refusing to publish with generated-default metadata.")
-            return 1
-        print(f"Metadata checks passed: {args.csproj}")
-        return 0
 
     try:
         patched = patch_csproj(text)

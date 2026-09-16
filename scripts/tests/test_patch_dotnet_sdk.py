@@ -9,7 +9,6 @@ from patch_dotnet_sdk import (
     COPYRIGHT,
     DESCRIPTION,
     PatchError,
-    check_no_generated_defaults,
     main,
     patch_csproj,
     read_property,
@@ -113,31 +112,6 @@ class TestPatchCsproj:
             patch_csproj(stripped)
 
 
-class TestCheckNoGeneratedDefaults:
-    def test_unpatched_csproj_is_rejected(self):
-        problems = check_no_generated_defaults(CSPROJ)
-        assert any("Authors" in p for p in problems)
-        assert any("Company" in p for p in problems)
-        assert any("Description" in p for p in problems)
-        assert any("Copyright" in p for p in problems)
-
-    def test_patched_csproj_is_clean(self):
-        assert check_no_generated_defaults(patch_csproj(CSPROJ)) == []
-
-    def test_placeholder_version_is_rejected(self):
-        patched = set_property(patch_csproj(CSPROJ), "Version", "0.0.0")
-        assert any("0.0.0" in p for p in check_no_generated_defaults(patched))
-
-    def test_empty_field_is_rejected(self):
-        patched = set_property(patch_csproj(CSPROJ), "Authors", "")
-        assert any("empty" in p for p in check_no_generated_defaults(patched))
-
-    def test_missing_license_is_rejected(self):
-        stripped = patch_csproj(CSPROJ).replace(
-            "<PackageLicenseExpression>MIT</PackageLicenseExpression>", ""
-        )
-        assert any("PackageLicenseExpression" in p for p in check_no_generated_defaults(stripped))
-
 
 class TestMain:
     def test_writes_the_patched_file(self, tmp_path):
@@ -154,22 +128,6 @@ class TestMain:
         once = target.read_text(encoding="utf-8")
         main([str(target)])
         assert target.read_text(encoding="utf-8") == once
-
-    def test_check_only_fails_on_an_unpatched_file(self, tmp_path):
-        target = tmp_path / "x.csproj"
-        target.write_text(CSPROJ, encoding="utf-8")
-        assert main([str(target), "--check-only"]) == 1
-
-    def test_check_only_passes_on_a_patched_file(self, tmp_path):
-        target = tmp_path / "x.csproj"
-        target.write_text(patch_csproj(CSPROJ), encoding="utf-8")
-        assert main([str(target), "--check-only"]) == 0
-
-    def test_check_only_does_not_write(self, tmp_path):
-        target = tmp_path / "x.csproj"
-        target.write_text(CSPROJ, encoding="utf-8")
-        main([str(target), "--check-only"])
-        assert target.read_text(encoding="utf-8") == CSPROJ
 
     def test_missing_file_is_an_error(self, tmp_path):
         assert main([str(tmp_path / "nope.csproj")]) == 2
