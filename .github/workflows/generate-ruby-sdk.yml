@@ -1,0 +1,185 @@
+name: Generate Ruby SDK
+
+# On every PR into develop touching openapi/v1/swagger.json: bumps the gem
+# version from the PR's labels, regenerates sdks/ruby/v1/, and commits both
+# back to the PR branch.
+
+on:
+  pull_request:
+    # `labeled`/`unlabeled` so a label change recomputes the version.
+    types: [opened, synchronize, labeled, unlabeled]
+ # The PR that merges develop into main has `develop` as its head ref, so
+    # without this filter the job would compute the version from `main` and
+    # push to a protected branch, failing with GH006.
+    branches: [develop]
+    paths:
+      - openapi/v1/swagger.json
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # One fetch for three steps: the bump reads the base config, the
+      # changelog reads the base spec and changelog.
+      - name: Read base-branch gem version
+        id: base
+        run: |
+          set -euo pipefail
+
+          config=sdks/ruby/v1/openapi-generator-config.yaml
+
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+
+          if ! git show "FETCH_HEAD:$config" > /tmp/base-ruby-config.yaml; then
+            echo "::error::$config not found on ${{ github.base_ref }}; cannot determine the current version."
+            exit 1
+          fi
+
+          # Absent on the bootstrap sync. With no baseline to diff, the
+          # changelog steps below skip instead of failing.
+          if git show "FETCH_HEAD:openapi/v1/swagger.json" > /tmp/base-ruby-swagger.json 2>/dev/null; then
+            echo "has_spec=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_spec=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No spec on ${{ github.base_ref }}; skipping the changelog."
+          fi
+
+          # Absent until the first sync creates it, which the renderer handles.
+          git show "FETCH_HEAD:sdks/ruby/v1/CHANGELOG.md" > /tmp/base-ruby-changelog.md 2>/dev/null \
+            || echo "::notice::No changelog on ${{ github.base_ref }} yet; it will be created."
+
+
+      - name: Compute and apply next version
+        id: version
+        run: |
+          python scripts/bump_version.py \
+            --current-config /tmp/base-ruby-config.yaml \
+            --write-config sdks/ruby/v1/openapi-generator-config.yaml \
+            --version-key gemVersion \
+            --labels-json '${{ toJSON(github.event.pull_request.labels.*.name) }}'
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Cache openapi-generator jar
+        id: cache-generator
+        uses: actions/cache@v4
+        with:
+          path: .cache/openapi-generator-cli.jar
+          key: openapi-generator-7.10.0
+
+      - name: Download openapi-generator jar
+        if: steps.cache-generator.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .cache
+          curl -sSL \
+            https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/7.10.0/openapi-generator-cli-7.10.0.jar \
+            -o .cache/openapi-generator-cli.jar
+
+      - name: Generate Ruby SDK
+        run: |
+          java -jar .cache/openapi-generator-cli.jar generate \
+            -i openapi/v1/swagger.json \
+            -g ruby \
+            -o sdks/ruby/v1 \
+            -c sdks/ruby/v1/openapi-generator-config.yaml \
+            -t templates/ruby
+
+      - name: Patch generated gemspec file list
+        run: |
+          python - <<'PY'
+          import pathlib, sys
+
+          GEMSPEC = pathlib.Path("sdks/ruby/v1/ddx_interactions_api.gemspec")
+          MARKER = 'Dir["lib/**/*"]'
+          ANCHOR = (
+              '  s.files         = `find *`.split("\\n").uniq.sort.select { |f| !f.empty? }\n'
+              '  s.test_files    = `find spec/*`.split("\\n")\n'
+          )
+          REPLACEMENT = (
+              '  # Ship the library and its README only. The generator globs the whole\n'
+              '  # directory, which would publish docs/, spec/, the Gemfile, the Rakefile\n'
+              '  # and the generator config inside the gem.\n'
+              '  s.files         = Dir["lib/**/*"].select { |f| File.file?(f) } + ["README.md"]\n'
+              '  s.test_files    = []\n'
+          )
+
+          text = GEMSPEC.read_text(encoding="utf-8")
+          if MARKER in text:
+              print("already applied: gemspec file list")
+          else:
+              hits = text.count(ANCHOR)
+              if hits != 1:
+                  sys.exit(
+                      f"::error::{GEMSPEC}: file-list anchor matched {hits} times, "
+                      f"expected 1. Generator template changed; update this step and "
+                      f"its copy in ruby-sdk-tests.yml."
+                  )
+              GEMSPEC.write_text(text.replace(ANCHOR, REPLACEMENT), encoding="utf-8")
+              print("patched: gemspec file list")
+          PY
+
+      # Pinned so an upstream release cannot change changelog wording.
+      - name: Install oasdiff
+        if: steps.base.outputs.has_spec == 'true'
+        env:
+          OASDIFF_VERSION: 1.30.0
+        run: |
+          set -euo pipefail
+
+          curl -sSL \
+            "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin oasdiff
+
+          oasdiff --version
+
+# `--bump` fails the run when the spec diff has a breaking change but the
+      # PR is not labeled `interactions-api-major`. Adding that label reruns
+      # the workflow.
+      - name: Update CHANGELOG.md
+        if: steps.base.outputs.has_spec == 'true'
+        run: |
+          set -euo pipefail
+
+          oasdiff changelog /tmp/base-ruby-swagger.json openapi/v1/swagger.json \
+            -f json > /tmp/oasdiff-ruby.json
+
+          # The head commit's date, so a rerun days later does not regenerate unless there's a new commit.
+          python scripts/render_changelog.py \
+            --oasdiff-json /tmp/oasdiff-ruby.json \
+            --version "${{ steps.version.outputs.next }}" \
+            --bump "${{ steps.version.outputs.bump }}" \
+            --date "$(git log -1 --format=%cs)" \
+            --current-changelog /tmp/base-ruby-changelog.md \
+            --write-changelog sdks/ruby/v1/CHANGELOG.md
+
+      - name: Commit generated SDK if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add sdks/ruby/v1
+
+          if git diff --cached --quiet; then
+            echo "No changes to generated SDK — skipping commit."
+          else
+            git commit -m "chore: regenerate Ruby SDK at v${{ steps.version.outputs.next }} from openapi/v1/swagger.json"
+            git push origin HEAD:${{ github.head_ref }}
+          fi

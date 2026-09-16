@@ -13,9 +13,11 @@ Required
     Content a consumer needs. Catches a template override that silently stopped
     applying -- otherwise visible only as a wrong page on the registry.
 
-The required list lives here rather than in each caller's argv: three workflows
-run this, and a gate the publish path spells differently from the PR path is a
-gate that does not hold.
+The required list lives here rather than in each caller's argv: several
+workflows run this, and if the gate from the publish path is spelled differently 
+from the PR path it will not hold `--language` selects between the lists; only
+the language name travels in argv, so the two paths for a language cannot
+disagree about the content.
 """
 
 from __future__ import annotations
@@ -30,7 +32,13 @@ PRODUCTION_HOST = "api.movementinfrastructure.org"
 # (compiled pattern, why it must not appear)
 BANNED = [
     (
-        re.compile(r"pip install git\+|gem ['\"]?\w+['\"]?, *git:|npm install git\+"),
+        # The ruby generator writes `gem 'x', :git => '...'`; Bundler also
+        # accepts `git:` and `github:`. All three bypass the registry.
+        re.compile(
+            r"pip install git\+"
+            r"|gem ['\"]?[\w-]+['\"]?,\s*:?(?:git|github)\s*(?:=>|:)"
+            r"|npm install git\+"
+        ),
         "installs from a git URL, bypassing the registry the package is published to",
     ),
     (
@@ -60,16 +68,32 @@ BANNED = [
         re.compile(r"^- Build date:", re.MULTILINE),
         "carries a build date, which churns the README on every run",
     ),
+    # The generator links model and endpoint docs relative to the SDK
+    # directory. This README renders on a registry page, where a relative link
+    # resolves to nothing, and docs/ ships in neither package.
+    (
+        re.compile(r"\]\(docs/[A-Za-z0-9_]+\.md"),
+        "links docs/ relatively; on a registry page that resolves to nothing",
+    ),
 ]
 
-# What templates/python/README.mustache exists to produce. The install command
-# is load-bearing: the built-in template's is a git URL, so its absence means
-# the override stopped applying.
-REQUIRED = [
-    "pip install ddx-interactions-api",
-    "## Installation",
-    "## Changelog",
-]
+# What templates/<language>/README.mustache exists to produce. The install
+# command is load-bearing: each built-in template installs from a git URL or a
+# locally built artifact, so its absence means the override stopped applying.
+REQUIRED_BY_LANGUAGE = {
+    "python": [
+        "pip install ddx-interactions-api",
+        "## Installation",
+        "## Changelog",
+    ],
+    "ruby": [
+        "gem install ddx_interactions_api",
+        "## Installation",
+        "## Changelog",
+    ],
+}
+
+DEFAULT_LANGUAGE = "python"
 
 
 class ReadmeError(ValueError):
@@ -99,16 +123,27 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("readme", type=Path, help="Path to the generated README.md.")
     parser.add_argument(
+        "--language",
+        choices=sorted(REQUIRED_BY_LANGUAGE),
+        default=DEFAULT_LANGUAGE,
+        help=(
+            "Which language's required-content list to apply. "
+            f"Default: {DEFAULT_LANGUAGE}."
+        ),
+    )
+    parser.add_argument(
         "--require",
         action="append",
         metavar="TEXT",
         help=(
-            "Substring that must appear. Repeatable. Replaces the built-in "
-            f"list ({', '.join(REQUIRED)}) rather than adding to it."
+            "Substring that must appear. Repeatable. Replaces the selected "
+            "language's built-in list rather than adding to it."
         ),
     )
     args = parser.parse_args(argv)
-    required = REQUIRED if args.require is None else args.require
+    required = (
+        REQUIRED_BY_LANGUAGE[args.language] if args.require is None else args.require
+    )
 
     try:
         text = args.readme.read_text(encoding="utf-8")

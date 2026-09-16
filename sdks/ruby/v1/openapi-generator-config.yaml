@@ -1,0 +1,30 @@
+# Read by .github/workflows/generate-ruby-sdk.yml, generator 7.10.0.
+
+gemName: ddx_interactions_api
+moduleName: DdxInteractionsApi
+
+# scripts/bump_version.py rewrites this on each sync PR, and needs
+# `--version-key gemVersion`: the Ruby generator does not use packageVersion.
+gemVersion: 0.1.0
+
+# The default, typhoeus, binds libcurl through a native extension and needs a
+# compiler wherever the gem is installed. Faraday is pure Ruby.
+library: faraday
+
+# Unset, these publish as "OpenAPI-Generator" and "unlicense".
+gemAuthor: DDx API Team
+gemAuthorEmail: api@demexchange.com
+gemHomepage: https://github.com/Movement-Infrastructure/interactions-api-sdks
+gemLicense: MIT
+gemSummary: Ruby client for the DDx Interactions API
+gemDescription: Ruby client for the DDx Interactions API, generated from the OpenAPI spec.
+
+# The generator defaults to ">= 2.4", which is out of support.
+gemRequiredRubyVersion: ">= 3.0"
+
+gitUserId: Movement-Infrastructure
+gitRepoId: interactions-api-sdks
+
+globalProperties:
+  apiTests: "false"
+  modelTests: "false"

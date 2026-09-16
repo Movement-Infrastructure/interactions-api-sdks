@@ -1,0 +1,12 @@
+# Files listed here survive regeneration.
+
+# Hand-written; the generated Gemfile has no HTTP stubbing gem.
+spec/**
+Gemfile
+.openapi-generator-ignore
+
+# Unused: the repo has its own CI.
+.travis.yml
+.gitlab-ci.yml
+.rubocop.yml
+git_push.sh

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ddx_interactions_api"
-version = "0.2.0"
+version = "0.3.0"
 description = "Interactions API"
 authors = ["DDx API Team <api@demexchange.com>"]
 license = "MIT"

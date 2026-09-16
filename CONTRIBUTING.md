@@ -14,8 +14,8 @@ A bug in the client surface is nearly always a contract bug. Fix it upstream and
 
 ```
 openapi/v1/swagger.json   # source of truth, synced from mig-readme-docs
-sdks/                     # generated clients (only python is live)
-templates/python/         # mustache overrides for generator defaults
+sdks/                     # generated clients (python and ruby are live)
+templates/<language>/     # mustache overrides for generator defaults
 scripts/                  # version bump, post-generation patches, gates
 docs/                     # publish leak-audit checklist
 .github/workflows/        # sync, generate, test, publish
@@ -29,11 +29,15 @@ docs/                     # publish leak-audit checklist
 4. Sync PRs merge to `develop`, which publishes that version to TestPyPI as a staging release.
 5. Promoting `develop` to `main` publishes the same version to PyPI. That promotion is the release.
 
+RubyGems has no sandbox registry, so the Ruby gem has no `develop` staging step. Every gem publish is a prerelease (`X.Y.Z.pre.<run number>`) instead, which `gem install` and `bundle install` skip unless the caller passes `--pre` or pins an exact version. Cutting a final Ruby version is a deliberate change to that workflow, not a promotion.
+
 Re-running the sync is safe: the branch name (`sync/mercury-<short-sha>`) derives from the upstream commit, so a run that finds an open PR for that SHA leaves it alone. Maintainers can also trigger a sync by hand and point it at an in-flight upstream branch.
 
 ## Versioning
 
-Versions live in each SDK's `openapi-generator-config.yaml` as `packageVersion` and flow into the generated manifest. That field is the source of truth; nothing edits the manifest directly. `scripts/bump_version.py` rewrites it on every sync PR before the generator runs.
+Versions live in each SDK's `openapi-generator-config.yaml` and flow into the generated manifest. That field is the source of truth; nothing edits the manifest directly. `scripts/bump_version.py` rewrites it on every sync PR before the generator runs.
+
+Each generator spells the key differently: `packageVersion` for Python, `gemVersion` for Ruby. The generate workflow passes `--version-key` for that reason. Passing the wrong key is an error rather than a silent no-op, which keeps a stuck version from reaching a registry.
 
 Apply at most one label:
 
@@ -64,12 +68,12 @@ python scripts/bump_version.py \
 
 All unit-tested under `scripts/tests/`:
 
-- `bump_version.py` — computes `packageVersion` from PR labels.
+- `bump_version.py` — computes the next version from PR labels and rewrites it under the key `--version-key` names.
 - `patch_python_sdk.py` — fixes the generator has no config for, mostly `setup()` arguments. Exact-anchor patches fail loudly on a generator upgrade rather than silently dropping the fix.
 - `render_changelog.py` — renders the `CHANGELOG.md` entry and gates label/spec agreement.
-- `verify_readme.py` — checks the generated README before it becomes a registry page, since `setup.py` points `long_description` at it.
+- `verify_readme.py` — checks a generated README before it ships. `setup.py` points `long_description` at the Python one, making it the PyPI project page; the Ruby gemspec ships its README inside the gem. `--language` selects the required-content list, which lives in the script so the PR and publish gates cannot disagree.
 
-Template overrides live in `templates/<language>/`; anything absent falls back to the generator jar. `templates/python/README.mustache` documents why each override exists — read it before adding another.
+Template overrides live in `templates/<language>/`; anything absent falls back to the generator jar. `templates/python/README.mustache` and `templates/ruby/README.mustache` each document why they exist. Read one before adding another. The Ruby override also carries the endpoint, model, and authorization sections verbatim, because the Ruby generator has no `common_README` partial to defer to; a generator upgrade can change them upstream without changing them here.
 
 ## Running tests locally
 
@@ -92,7 +96,19 @@ pip install -r sdks/python/v1/requirements-test.txt
 pytest sdks/python/v1/tests -q
 ```
 
-CI does this in `python-sdk-tests.yml` on every PR, as a required check. It carries no `paths:` filter on purpose — a path-filtered required check shows as perpetually pending on non-matching PRs and blocks merge forever.
+The Ruby suite works the same way, with `bundle` in place of `pip`:
+
+```bash
+java -jar .cache/openapi-generator-cli.jar generate \
+  -i openapi/v1/swagger.json -g ruby \
+  -o sdks/ruby/v1 -c sdks/ruby/v1/openapi-generator-config.yaml
+
+cd sdks/ruby/v1 && bundle install && bundle exec rspec
+```
+
+`consumer-check/ruby/` installs the gem from outside its source tree, which the in-tree suite cannot do. See its README.
+
+CI does this in `python-sdk-tests.yml` and `ruby-sdk-tests.yml` on every PR, as required checks. Neither carries a `paths:` filter, on purpose: a path-filtered required check shows as perpetually pending on non-matching PRs and blocks merge forever.
 
 ## Adding a language
 
