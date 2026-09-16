@@ -28,6 +28,13 @@ using Ddx.InteractionsApi.Client;
 using Ddx.InteractionsApi.Model;
 ```
 
+## Changelog
+
+API changes are recorded in the
+[changelog](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/csharp/v1/CHANGELOG.md),
+regenerated from a diff of the OpenAPI specification on each sync. Entries
+marked **breaking** require a change on the consumer side.
+
 ## Reporting issues
 
 This package is generated; edits to it are overwritten on the next spec sync.

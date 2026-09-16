@@ -21,8 +21,8 @@ SDK_SOURCE=git SDK_BRANCH=<branch> bundle install
 SDK_SOURCE=git SDK_BRANCH=<branch> bundle exec ruby check.rb
 
 # A published version.
-SDK_SOURCE=gem SDK_VERSION=0.2.0.pre.1 bundle install
-SDK_SOURCE=gem SDK_VERSION=0.2.0.pre.1 bundle exec ruby check.rb
+SDK_SOURCE=gem SDK_VERSION=0.1.0 bundle install
+SDK_SOURCE=gem SDK_VERSION=0.1.0 bundle exec ruby check.rb
 ```
 
 `SDK_BRANCH` defaults to `develop`.

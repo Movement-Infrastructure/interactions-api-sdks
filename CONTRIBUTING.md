@@ -29,7 +29,9 @@ docs/                     # publish leak-audit checklist
 4. Sync PRs merge to `develop`, which publishes that version to TestPyPI as a staging release.
 5. Promoting `develop` to `main` publishes the same version to PyPI. That promotion is the release.
 
-RubyGems has no sandbox registry, so the Ruby gem has no `develop` staging step. Every gem publish is a prerelease (`X.Y.Z.pre.<run number>`) instead, which `gem install` and `bundle install` skip unless the caller passes `--pre` or pins an exact version. Cutting a final Ruby version is a deliberate change to that workflow, not a promotion.
+RubyGems has no sandbox registry, so the Ruby gem has no `develop` staging step: promoting `develop` to `main` publishes `gemVersion` straight to RubyGems as a final release. RubyGems refuses to re-push a version and `yank` does not free the number, so a promotion that does not bump `gemVersion` fails the publish rather than overwriting anything.
+
+NuGet has no sandbox registry either, so the C# package follows the same shape as the gem: promoting `develop` to `main` publishes `packageVersion` to NuGet as a final release. `publish-csharp-nuget.yml` deliberately omits `--skip-duplicate`, so a promotion carrying a version already on NuGet fails loudly instead of passing as a no-op.
 
 Re-running the sync is safe: the branch name (`sync/mercury-<short-sha>`) derives from the upstream commit, so a run that finds an open PR for that SHA leaves it alone. Maintainers can also trigger a sync by hand and point it at an in-flight upstream branch.
 
@@ -37,7 +39,7 @@ Re-running the sync is safe: the branch name (`sync/mercury-<short-sha>`) derive
 
 Versions live in each SDK's `openapi-generator-config.yaml` and flow into the generated manifest. That field is the source of truth; nothing edits the manifest directly. `scripts/bump_version.py` rewrites it on every sync PR before the generator runs.
 
-Each generator spells the key differently: `packageVersion` for Python, `gemVersion` for Ruby. The generate workflow passes `--version-key` for that reason. Passing the wrong key is an error rather than a silent no-op, which keeps a stuck version from reaching a registry.
+Each generator spells the key differently: `packageVersion` for Python and C#, `gemVersion` for Ruby. The generate workflow passes `--version-key` where it differs from `bump_version.py`'s `packageVersion` default. Passing the wrong key is an error rather than a silent no-op, which keeps a stuck version from reaching a registry.
 
 Apply at most one label:
 

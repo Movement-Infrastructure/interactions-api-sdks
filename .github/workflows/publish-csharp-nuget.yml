@@ -63,6 +63,11 @@ jobs:
       - name: Patch generated SDK
         run: python scripts/patch_dotnet_sdk.py sdks/csharp/v1/src/Ddx.InteractionsApi/Ddx.InteractionsApi.csproj
 
+      # The PR check sees a regeneration; this sees the bytes about to be
+      # packed.
+      - name: Verify README before publishing
+        run: python scripts/verify_readme.py sdks/csharp/v1/README.md --language csharp
+
       - name: Pack
         run: |
           set -euo pipefail
@@ -97,8 +102,8 @@ jobs:
           pkg=$(ls dist/*.nupkg | head -1)
           unzip -p "$pkg" '*.nuspec' > /tmp/packed.nuspec
 
-          python - <<'PY'
-          import re, sys, xml.etree.ElementTree as ET
+          PKG="$pkg" python - <<'PY'
+          import os, re, sys, xml.etree.ElementTree as ET, zipfile
 
           root = ET.parse("/tmp/packed.nuspec").getroot()
           ns = {"n": root.tag.split("}")[0].strip("{")} if "}" in root.tag else {}
@@ -119,6 +124,14 @@ jobs:
               failures.append(f"Version {version!r} is not a plain A.B.C release version.")
           if not get("licenseExpression") and not get("license"):
               failures.append("No license on the package.")
+
+          # nuget.org renders the readme named here. Without it the package page
+          # shows the one-line description and nothing else.
+          readme = get("readme")
+          if not readme:
+              failures.append("No <readme> on the package. patch_dotnet_sdk.py did not run, or the generator dropped PackageReadmeFile.")
+          elif readme not in zipfile.ZipFile(os.environ["PKG"]).namelist():
+              failures.append(f"<readme> names {readme!r} but the package does not contain it.")
 
           for f in failures:
               print(f"::error::{f}")

@@ -91,6 +91,11 @@ REQUIRED_BY_LANGUAGE = {
         "## Installation",
         "## Changelog",
     ],
+    "csharp": [
+        "dotnet add package Ddx.InteractionsApi",
+        "## Installation",
+        "## Changelog",
+    ],
 }
 
 DEFAULT_LANGUAGE = "python"

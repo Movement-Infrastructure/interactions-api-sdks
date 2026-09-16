@@ -49,13 +49,9 @@ Both must be true.
 ```bash
 mkdir -p /tmp/ddx-uat && cd /tmp/ddx-uat
 
-gem install ddx_interactions_api --pre --install-dir ./vendor
+gem install ddx_interactions_api --install-dir ./vendor
 export GEM_HOME="$PWD/vendor" GEM_PATH="$PWD/vendor"
 ```
-
-**`--pre` is required.** Every release is a prerelease (`X.Y.Z.pre.N`), and both
-`gem install` and Bundler skip prereleases unless asked. Without it the install
-finds nothing.
 
 `--install-dir` keeps the gem out of your system Ruby, which is what makes this
 a clean-environment test.
@@ -64,7 +60,7 @@ a clean-environment test.
 
 ```bash
 gem list ddx_interactions_api
-#   ddx_interactions_api (0.1.0.pre.N)
+#   ddx_interactions_api (0.1.0)
 ```
 
 The gem name is underscored, and so is the require path
@@ -282,7 +278,6 @@ The interactive reference is at
 
 | Symptom | Likely cause |
 |---|---|
-| `gem install` finds nothing | Missing `--pre`. Every release is a prerelease. |
 | `Bundler could not find compatible versions` | Ruby 2.6 (macOS system Ruby). Use 3.0 or later. |
 | `401 Unauthorized`, empty body | Key missing the `<keyId>.` prefix; secret not valid base64; key issued for a different environment; key revoked or expired; workspace suppressed; or the key lacks the required role. |
 | `ArgumentError: ... is not a valid attribute` | A misspelled field name. `build_from_hash` rejects unknown keys. |
@@ -314,7 +309,7 @@ and the interactive reference is at
 
 ## 9. Sign-off checklist
 
-- [ ] Installed from RubyGems with `--pre` into a clean `GEM_HOME`
+- [ ] Installed from RubyGems into a clean `GEM_HOME`
 - [ ] `auth/me` returned the expected workspace
 - [ ] Reviewed `destinations` / `van key` before submitting
 - [ ] Submitted an interaction and received a `correlationId`

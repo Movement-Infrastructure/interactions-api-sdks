@@ -14,9 +14,16 @@ the csproj's comments and reflows the whole document, and the generated file
 carries a comment explaining the GenerateAssemblyInfo workaround. Same reason
 bump_version.py rewrites a line instead of round-tripping YAML.
 
-Idempotent: it sets element text rather than splicing, so re-running changes
-nothing. It does NOT touch `Version` -- that flows from `packageVersion` in the
-generator config via bump_version.py, and overwriting it would undo the bump.
+It also packs the README. The csharp generator emits no `PackageReadmeFile`,
+so an unpatched package renders on nuget.org with only its one-line description
+and no readme at all. That needs both the property and a `<None>` item marking
+the file for packing.
+
+Idempotent: it sets element text rather than splicing, inserts the readme
+property only when absent, and skips the `<None>` item when it is already
+there, so re-running changes nothing. It does NOT touch `Version` -- that flows
+from `packageVersion` in the generator config via bump_version.py, and
+overwriting it would undo the bump.
 """
 
 from __future__ import annotations
@@ -31,6 +38,17 @@ COMPANY = "Movement Infrastructure"
 ASSEMBLY_TITLE = "DDx Interactions API Client"
 DESCRIPTION = "C# client for the DDx Interactions API, generated from the OpenAPI spec."
 COPYRIGHT = "Copyright (c) Movement Infrastructure"
+PACKAGE_README = "README.md"
+
+# Relative to the csproj at src/<PackageId>/, so two levels up to sdks/csharp/v1.
+# Forward slashes: MSBuild accepts them on every platform, backslashes only on
+# Windows.
+README_INCLUDE = "../../README.md"
+README_ITEM_GROUP = (
+    "  <ItemGroup>\n"
+    f'    <None Include="{README_INCLUDE}" Pack="true" PackagePath="/" />\n'
+    "  </ItemGroup>\n"
+)
 
 # Element name -> value we require in the published package.
 PATCHED_PROPERTIES = {
@@ -88,6 +106,35 @@ def set_property(csproj: str, name: str, value: str) -> str:
     )
 
 
+def ensure_property(csproj: str, name: str, value: str) -> str:
+    """Set `name`, inserting the element when the generator did not emit it."""
+    if read_property(csproj, name) is not None:
+        return set_property(csproj, name, value)
+
+    match = re.search(r"\n(?P<indent>[ \t]*)</PropertyGroup>", csproj)
+    if match is None:
+        raise PatchError(
+            "no </PropertyGroup> to insert into; the generator template changed"
+        )
+
+    return (
+        csproj[: match.start()]
+        + f"\n{match.group('indent')}  <{name}>{value}</{name}>"
+        + csproj[match.start() :]
+    )
+
+
+def ensure_readme_item(csproj: str) -> str:
+    """Return `csproj` with the README marked for packing."""
+    if README_INCLUDE in csproj:
+        return csproj
+
+    if "</Project>" not in csproj:
+        raise PatchError("no </Project>; the generator template changed")
+
+    return csproj.replace("</Project>", README_ITEM_GROUP + "</Project>", 1)
+
+
 def patch_csproj(csproj: str) -> str:
     """Return `csproj` with every generator-default identity field replaced."""
     if "<Project" not in csproj:
@@ -95,6 +142,9 @@ def patch_csproj(csproj: str) -> str:
 
     for name, value in PATCHED_PROPERTIES.items():
         csproj = set_property(csproj, name, value)
+
+    csproj = ensure_property(csproj, "PackageReadmeFile", PACKAGE_README)
+    csproj = ensure_readme_item(csproj)
 
     return csproj
 
@@ -120,6 +170,17 @@ def check_no_generated_defaults(csproj: str) -> list[str]:
 
     if read_property(csproj, "PackageLicenseExpression") is None:
         problems.append("<PackageLicenseExpression> is missing; licenseId is unset")
+
+    if read_property(csproj, "PackageReadmeFile") is None:
+        problems.append(
+            "<PackageReadmeFile> is missing; the package would render on nuget.org "
+            "with no readme"
+        )
+    elif README_INCLUDE not in csproj:
+        problems.append(
+            f"<PackageReadmeFile> is set but {README_INCLUDE} is not packed; "
+            "dotnet pack fails on a readme it cannot find"
+        )
 
     return problems
 
