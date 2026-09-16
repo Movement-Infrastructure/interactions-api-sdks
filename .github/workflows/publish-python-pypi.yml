@@ -1,0 +1,170 @@
+name: Publish Python SDK to PyPI
+
+# Builds sdks/python/v1 and publishes it to PyPI on push to the `main` release
+# branch. `develop` is where sync PRs land and where publish-python-testpypi.yml
+# stages every version; promoting develop -> main is the deliberate act that
+# releases it publicly.
+#
+# Authentication is OIDC trusted publishing — there is no token, so nothing to
+# mask, leak, or rotate.
+#
+# IMPORTANT: PyPI's trusted publisher is bound to this file's NAME. Renaming
+# this workflow breaks publishing until the publisher config is updated to match.
+#
+# A PyPI upload is permanent. A release can be yanked, but its version number
+# can never be reused, so a mistake here is not recoverable the way a bad
+# TestPyPI upload is.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sdks/python/v1/**'
+  # Re-run a publish without a new promotion (e.g. after fixing a PyPI-side
+  # config problem).
+  workflow_dispatch:
+
+# One publish at a time. Two overlapping runs could race on the same version.
+concurrency:
+  group: publish-python-pypi
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v4
+        with:
+          # This job never pushes. The default leaves an unmasked live token in
+          # .git/config as an http.extraheader, readable by any build tooling
+          # that runs afterwards.
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The SDK is committed by the generate workflow. If it's absent, the
+      # promotion happened before the first sync PR merged.
+      - name: Verify the generated SDK is present
+        run: |
+          set -euo pipefail
+
+          if [ ! -f sdks/python/v1/setup.py ] && [ ! -f sdks/python/v1/pyproject.toml ]; then
+            echo "::error::No setup.py or pyproject.toml in sdks/python/v1."
+            echo "::error::The generated SDK has not been committed yet; nothing to publish."
+            exit 1
+          fi
+
+      # setup.py points long_description at this file, so it becomes the
+      # project page. The PR check sees a regeneration; this sees the bytes
+      # about to be uploaded. Both call it bare, so the two gates cannot drift.
+      - name: Verify README before publishing
+        run: python scripts/verify_readme.py sdks/python/v1/README.md
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build sdks/python/v1
+
+      # sdist and wheel are built by different code paths and routinely
+      # disagree about what's excluded, so list both on every release.
+      - name: Enumerate artifact contents
+        run: |
+          set -euo pipefail
+
+          cd sdks/python/v1/dist
+
+          echo "## Published artifact contents" >> "$GITHUB_STEP_SUMMARY"
+
+          for archive in *.tar.gz; do
+            echo "### sdist: $archive" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            tar tzf "$archive" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          for archive in *.whl; do
+            echo "### wheel: $archive" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            unzip -l "$archive" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      # `twine check` only validates that the long description renders, so it
+      # misses the generator's placeholder author and version.
+      - name: Check package metadata
+        run: |
+          set -euo pipefail
+
+          pip install --upgrade twine
+          twine check sdks/python/v1/dist/*
+
+          metadata=$(python - <<'PY'
+          import glob, zipfile, sys
+          wheel = glob.glob("sdks/python/v1/dist/*.whl")[0]
+          with zipfile.ZipFile(wheel) as z:
+              name = next(n for n in z.namelist() if n.endswith(".dist-info/METADATA"))
+              sys.stdout.write(z.read(name).decode("utf-8", "replace"))
+          PY
+          )
+
+          fail=0
+          while IFS='|' read -r pattern message; do
+            if printf '%s' "$metadata" | grep -qi "$pattern"; then
+              echo "::error::$message"
+              fail=1
+            fi
+          done <<'BLOCKERS'
+          team@openapitools.org|Author email is the openapi-generator project's address. Set info.contact in the OpenAPI spec.
+          OpenAPI Generator Community|Author is the generator's default. Set info.contact in the OpenAPI spec.
+          ^Version: 0\.0\.0|Version is still the 0.0.0 placeholder; the version-bump workflow did not run.
+          BLOCKERS
+
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::Refusing to publish with generated-default metadata."
+            exit 1
+          fi
+
+          echo "Package metadata checks passed."
+
+      - name: Upload distribution artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-sdk-dist
+          path: sdks/python/v1/dist/
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+
+    # Keeps the publish capability off arbitrary branches, and is where a
+    # required reviewer attaches if we want a human gate before a release.
+    environment:
+      name: pypi
+      url: https://pypi.org/project/ddx-interactions-api/
+
+    permissions:
+      # Mints the short-lived OIDC token PyPI exchanges for an upload grant.
+      id-token: write
+
+    steps:
+      - name: Download distribution artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: python-sdk-dist
+          path: dist/
+
+      # No repository-url: the action defaults to PyPI.
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Deliberately not skip-existing. A promotion carrying a version
+          # already on PyPI is a mistake -- the bump did not run, or the
+          # promotion was opened twice -- and it has to fail rather than pass
+          # green having uploaded nothing.
+          skip-existing: false
+          print-hash: true

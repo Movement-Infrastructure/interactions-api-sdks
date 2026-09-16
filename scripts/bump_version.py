@@ -47,9 +47,6 @@ _KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 def _version_re(key: str) -> re.Pattern[str]:
     """Build the line matcher for `key`.
-
-    A line rewrite rather than a YAML round-trip: PyYAML discards comments on
-    dump, and the config's comments carry the rationale for every field.
     """
     if not _KEY_RE.match(key):
         raise VersionError(

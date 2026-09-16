@@ -1,0 +1,90 @@
+name: SDK bug
+description: Something in the Python or Ruby SDK does not behave as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        SDK code is generated from the Interactions API specification, so a broken
+        client is usually a specification bug rather than a hand-written one. This
+        is still the right place to report it.
+
+        **Do not paste an API key.** The key travels in the password field of HTTP
+        Basic auth, which puts it in configuration snippets, request dumps, and some
+        tracebacks. Replace it with `REDACTED` before you submit. This repository is
+        public and issue history cannot be reliably scrubbed.
+
+  - type: dropdown
+    id: sdk
+    attributes:
+      label: Which SDK
+      options:
+        - "Python (ddx-interactions-api)"
+        - "Ruby (ddx_interactions_api)"
+        - "Not specific to one language"
+    validations:
+      required: true
+
+  - type: input
+    id: sdk-version
+    attributes:
+      label: SDK version
+      description: "From `pip show ddx-interactions-api` or `gem list ddx_interactions_api`."
+      placeholder: "0.2.0"
+    validations:
+      required: true
+
+  - type: input
+    id: runtime
+    attributes:
+      label: Language version
+      placeholder: "Python 3.11.6, or Ruby 3.2.2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Which method you called and what came back.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: The smallest snippet that shows the problem, with the API key redacted.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Error output
+      description: The traceback or response body, with the API key redacted.
+      render: text
+
+  - type: input
+    id: correlation-id
+    attributes:
+      label: Correlation ID
+      description: >
+        If the call reached the API, the response carries an `x-correlation-id`
+        header. Include it if you still have it.
+
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Before submitting
+      options:
+        - label: I removed API keys, and any data belonging to real people, from everything above.
+          required: true

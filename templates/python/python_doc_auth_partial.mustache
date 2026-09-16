@@ -1,0 +1,31 @@
+{{!
+    Overrides the auth block that common_README.mustache pulls into Getting
+    Started. Only this partial is overridden, so the endpoint, model and
+    authorization tables still come from the jar.
+
+    NOTE: a mustache comment ends at its first closing brace pair, so no
+    variable or partial tag may appear in this block.
+
+    Three defects in the built-in partial motivated the override. It calls
+    os.environ without importing os, so the snippet raises NameError as
+    printed; common_README imports only the package, ApiException and pprint.
+    It assigns `configuration` twice, so the host set in the first assignment
+    is silently discarded by the second. And it reads USERNAME and PASSWORD,
+    which is wrong for this API -- the key goes in the password field with an
+    empty username, and USERNAME is a real shell variable on most systems, so
+    the example would quietly send the caller's login name.
+
+    The branches for bearer, API-key, OAuth and HTTP-signature auth are
+    dropped: this spec declares only HTTP basic.
+}}
+# Authentication is HTTP basic, with your API key in the password field and an
+# empty username. The key has the form "<keyId>.<secret>".
+#
+# The host defaults to {{{basePath}}}. Pass host= to target another server.
+# See configuration.py for all supported parameters.
+import os
+
+configuration = {{{packageName}}}.Configuration(
+    username = "",
+    password = os.environ["DDX_API_KEY"],
+)

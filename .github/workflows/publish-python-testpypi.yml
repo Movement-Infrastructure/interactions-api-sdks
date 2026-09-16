@@ -1,8 +1,9 @@
 name: Publish Python SDK to TestPyPI
 
-# Builds sdks/python/v1 and publishes it to TestPyPI on push to the
-# `main` release branch. `develop` is where sync PRs land; promoting develop ->
-# main is the deliberate act that releases.
+# Builds sdks/python/v1 and publishes it to TestPyPI on every push to
+# `develop`, so a version exists on a real registry and can be installed from
+# one before anyone promotes it. The production release is a separate workflow,
+# publish-python-pypi.yml, which runs on `main`.
 #
 # Authentication is OIDC trusted publishing — there is no token, so nothing to
 # mask, leak, or rotate.
@@ -12,11 +13,11 @@ name: Publish Python SDK to TestPyPI
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
     paths:
       - 'sdks/python/v1/**'
-  # Re-run a publish without a new promotion (e.g. after fixing a
-  # TestPyPI-side config problem).
+  # Re-run a publish without a new merge (e.g. after fixing a TestPyPI-side
+  # config problem).
   workflow_dispatch:
 
 # One publish at a time. Two overlapping runs could race on the same version.
@@ -52,6 +53,12 @@ jobs:
             echo "::error::The generated SDK has not been committed yet; nothing to publish."
             exit 1
           fi
+
+      # setup.py points long_description at this file, so it becomes the
+      # project page. The PR check sees a regeneration; this sees the bytes
+      # about to be uploaded. Both call it bare, so the two gates cannot drift.
+      - name: Verify README before publishing
+        run: python scripts/verify_readme.py sdks/python/v1/README.md
 
       - name: Build sdist and wheel
         run: |
@@ -107,8 +114,8 @@ jobs:
               fail=1
             fi
           done <<'BLOCKERS'
-          team@openapitools.org|Author email is the openapi-generator project's address. Set info.contact in mercury.json.
-          OpenAPI Generator Community|Author is the generator's default. Set info.contact in mercury.json.
+          team@openapitools.org|Author email is the openapi-generator project's address. Set info.contact in the OpenAPI spec.
+          OpenAPI Generator Community|Author is the generator's default. Set info.contact in the OpenAPI spec.
           ^Version: 0\.0\.0|Version is still the 0.0.0 placeholder; the version-bump workflow did not run.
           BLOCKERS
 
@@ -151,8 +158,9 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
-          # Re-promoting develop -> main without a version change would
-          # otherwise fail on a duplicate upload. Set this to false for PyPI,
+          # A merge to develop that touches the SDK without bumping the version
+          # would otherwise fail here on a duplicate upload. This is staging,
+          # so skipping is right; publish-python-pypi.yml sets it to false,
           # where a silent skip would hide a real mistake.
           skip-existing: true
           print-hash: true

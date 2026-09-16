@@ -1,9 +1,9 @@
 [tool.poetry]
 name = "ddx_interactions_api"
-version = "0.1.0"
+version = "0.3.0"
 description = "Interactions API"
 authors = ["DDx API Team <api@demexchange.com>"]
-license = "NoLicense"
+license = "MIT"
 readme = "README.md"
 repository = "https://github.com/Movement-Infrastructure/interactions-api-sdks"
 keywords = ["OpenAPI", "OpenAPI-Generator", "Interactions API"]

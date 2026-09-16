@@ -20,7 +20,7 @@ Gem::Specification.new do |s|
   s.version     = DdxInteractionsApi::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["DDx API Team"]
-  s.email       = ["mig-eng-inbox@demexchange.com"]
+  s.email       = ["api@demexchange.com"]
   s.homepage    = "https://github.com/Movement-Infrastructure/interactions-api-sdks"
   s.summary     = "Ruby client for the DDx Interactions API"
   s.description = "Ruby client for the DDx Interactions API, generated from the OpenAPI spec."

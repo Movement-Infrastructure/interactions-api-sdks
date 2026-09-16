@@ -14,7 +14,7 @@ require 'date'
 require 'time'
 
 module DdxInteractionsApi
-  # Represents an identifier and the namespace its value belongs to.
+  # Represents an identifier and the namespace its value belongs to (e.g. an event, one of its shifts, or a signup).
   class EventDetails
     # The identifier value
     attr_accessor :id
