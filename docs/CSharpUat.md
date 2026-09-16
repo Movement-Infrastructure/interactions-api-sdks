@@ -54,9 +54,9 @@ dotnet new console --force
 dotnet add package Ddx.InteractionsApi
 ```
 
-A scratch project outside the repo is what makes this a clean-environment test:
-it resolves the package from NuGet rather than from the source tree, so a file
-the package forgot to include fails here rather than after release.
+A scratch project outside the repo resolves the package from NuGet instead of
+from the source tree. A file the package forgot to include fails here rather
+than after release.
 
 ### Expected result
 
@@ -66,8 +66,8 @@ dotnet list package
 ```
 
 **Before the first release**, the package is not on NuGet yet and
-`dotnet add package` will fail. To rehearse against the artifact that is about
-to be published, pack it locally and add it from a folder feed:
+`dotnet add package` will fail. To rehearse against the artifact about to be
+published, pack it locally and add it from a folder feed:
 
 ```bash
 dotnet pack <repo>/sdks/csharp/v1/src/Ddx.InteractionsApi/Ddx.InteractionsApi.csproj \
@@ -82,8 +82,8 @@ Everything from step 3 on is identical either way.
 
 ## 3. Authenticate, and check what your key can reach
 
-Each step replaces `Program.cs` and re-runs. The quoted `'CS'` matters: unquoted,
-the shell would expand `$` and backticks before C# ever saw them.
+Each step replaces `Program.cs` and re-runs. The quoting around `'CS'` matters.
+Unquoted, the shell would expand `$` and backticks before C# ever saw them.
 
 ```bash
 cat > Program.cs <<'CS'
@@ -154,8 +154,8 @@ what step 4 actually does:
 Authentication is HTTP Basic with the **API key in the password field and an
 empty username**. That surprises people; it is correct.
 
-Note `BasePath` is a full URL including the scheme. The Ruby client splits this
-into `host` and `scheme`; the C# one does not.
+`BasePath` is a full URL including the scheme. The Ruby client splits host and
+scheme into separate fields. The C# one does not.
 
 ---
 
@@ -241,13 +241,12 @@ A `correlationId`, and `accepted` equal to the number of rows you sent.
 The cap is **100 interactions per request**.
 
 `attemptDateTime` is a `DateTime`, not a string. Use `DateTime.UtcNow` or a
-`DateTimeKind.Utc` value; the serializer writes ISO 8601 from it.
+`DateTimeKind.Utc` value. The serializer writes ISO 8601 from it.
 
 ### Valid enum values
 
-The C# client exposes these as typed enums, so the compiler rejects a bad value
-rather than the API doing it. Member names are the PascalCase form of the wire
-value:
+These are typed enums in the C# client, so a bad value is a compile error rather
+than a 400. Member names are the PascalCase form of the wire value:
 
 - `ContactMethod`: `Unknown`, `Mail`, `Letter`, `DigitalAd`, `Email`, `Text`,
   `TextBroadcast`, `RoboCall`, `DialerCall`, `PhoneCall`, `DoorKnock`, `Event`,

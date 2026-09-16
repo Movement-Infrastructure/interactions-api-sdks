@@ -37,7 +37,7 @@ marked **breaking** require a change on the consumer side.
 
 ## Reporting issues
 
-This package is generated; edits to it are overwritten on the next spec sync.
+This package is generated. Edits to it are overwritten on the next spec sync.
 Report problems against the API specification rather than the generated code.
 
 ## Getting Started

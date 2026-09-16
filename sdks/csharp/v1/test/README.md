@@ -38,7 +38,7 @@ dotnet test test/Ddx.InteractionsApi.Test/Ddx.InteractionsApi.Test.csproj
 - These files are protected from regeneration by `../.openapi-generator-ignore`.
 - The test project is deliberately **not** in `Ddx.InteractionsApi.sln`. The
   generator rewrites the solution on every sync, so an entry added there would
-  be clobbered; CI runs the project by path instead.
+  be clobbered. CI runs the project by path instead.
 - The tests live in namespace `InteractionsApiSdkTests`, outside the `Ddx.*`
   tree. Inside it, the namespace `Ddx.InteractionsApi` shadows the class
   `Ddx.InteractionsApi.Api.InteractionsApi` and the type can't be named without

@@ -1,7 +1,7 @@
 name: Publish C# SDK to NuGet
 
 # Builds sdks/csharp/v1 and publishes it to NuGet.org on push to `main`. Sync
-# PRs land on `develop`; promoting develop to main is what releases.
+# PRs merge to `develop`. Promoting develop to main is what releases.
 #
 # Auth is OIDC trusted publishing: NuGet/login exchanges the job's OIDC token
 # for an API key valid about an hour, so there is no stored key to rotate.
@@ -63,8 +63,6 @@ jobs:
       - name: Patch generated SDK
         run: python scripts/patch_dotnet_sdk.py sdks/csharp/v1/src/Ddx.InteractionsApi/Ddx.InteractionsApi.csproj
 
-      # The PR check sees a regeneration; this sees the bytes about to be
-      # packed.
       - name: Verify README before publishing
         run: python scripts/verify_readme.py sdks/csharp/v1/README.md --language csharp
 
@@ -76,7 +74,7 @@ jobs:
             --configuration Release \
             --output dist
 
-      # Package contents are permanent once pushed; unlisting does not remove
+      # Package contents are permanent once pushed. Unlisting does not remove
       # them. Enumerating makes a bad include visible here rather than on the
       # registry. See docs/publish-leak-audit-checklist.md.
       - name: Enumerate artifact contents

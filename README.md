@@ -120,8 +120,8 @@ using Ddx.InteractionsApi.Api;
 using Ddx.InteractionsApi.Client;
 using Ddx.InteractionsApi.Model;
 
-// BasePath is a full URL, scheme included - unlike the Ruby client, which
-// splits host and scheme.
+// BasePath is a full URL, scheme included. The Ruby client splits the two
+// into separate fields.
 var config = new Configuration
 {
     BasePath = "https://api-dev.movementinfrastructure.org",

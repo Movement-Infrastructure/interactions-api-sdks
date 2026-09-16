@@ -31,7 +31,7 @@ docs/                     # publish leak-audit checklist
 
 RubyGems has no sandbox registry, so the Ruby gem has no `develop` staging step: promoting `develop` to `main` publishes `gemVersion` straight to RubyGems as a final release. RubyGems refuses to re-push a version and `yank` does not free the number, so a promotion that does not bump `gemVersion` fails the publish rather than overwriting anything.
 
-NuGet has no sandbox registry either, so the C# package follows the same shape as the gem: promoting `develop` to `main` publishes `packageVersion` to NuGet as a final release. `publish-csharp-nuget.yml` deliberately omits `--skip-duplicate`, so a promotion carrying a version already on NuGet fails loudly instead of passing as a no-op.
+NuGet has no sandbox registry either, so the C# package works the same way as the gem. Promoting `develop` to `main` publishes `packageVersion` to NuGet as a final release. `publish-csharp-nuget.yml` deliberately omits `--skip-duplicate`, which makes a promotion carrying a version already on NuGet fail loudly rather than pass green having uploaded nothing.
 
 Re-running the sync is safe: the branch name (`sync/mercury-<short-sha>`) derives from the upstream commit, so a run that finds an open PR for that SHA leaves it alone. Maintainers can also trigger a sync by hand and point it at an in-flight upstream branch.
 

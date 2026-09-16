@@ -13,7 +13,7 @@ packageVersion: 0.1.0
 # but imposes DI registration on consumers making a single call.
 #
 # The generator marks this template experimental, so its output can change
-# between releases. The jar is pinned, so that only lands on a deliberate
+# between releases. The jar is pinned, so that only happens on a deliberate
 # upgrade.
 library: httpclient
 
