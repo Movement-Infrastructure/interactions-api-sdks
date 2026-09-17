@@ -31,9 +31,6 @@ jobs:
       - name: Check out release branch
         uses: actions/checkout@v4
         with:
-          # This job never pushes. The default leaves a live token in
-          # .git/config as an http.extraheader, readable by anything that
-          # runs afterwards.
           persist-credentials: false
 
       - name: Set up .NET
@@ -46,8 +43,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      # The generate workflow commits the SDK. Absent means the promotion
-      # happened before the first sync PR merged.
       - name: Verify the generated SDK is present
         run: |
           set -euo pipefail
@@ -58,8 +53,6 @@ jobs:
             exit 1
           fi
 
-      # The generator hardcodes the csproj identity fields to "OpenAPI". The PR
-      # check sees a regeneration, this sees the bytes about to be packed.
       - name: Patch generated SDK
         run: python scripts/patch_dotnet_sdk.py sdks/csharp/v1/src/Ddx.InteractionsApi/Ddx.InteractionsApi.csproj
 
@@ -74,9 +67,6 @@ jobs:
             --configuration Release \
             --output dist
 
-      # Package contents are permanent once pushed. Unlisting does not remove
-      # them. Enumerating makes a bad include visible here rather than on the
-      # registry. See docs/publish-leak-audit-checklist.md.
       - name: Enumerate artifact contents
         run: |
           set -euo pipefail
@@ -173,18 +163,12 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      # Exchanges the OIDC token for a short-lived NuGet API key. `user` is the
-      # nuget.org account the trusted publishing policy belongs to, held as a
-      # repo variable so it is not hardcoded here.
       - name: NuGet login
         id: login
         uses: NuGet/login@v1
         with:
           user: ${{ vars.NUGET_USER }}
 
-      # No --skip-duplicate. A promotion carrying a version already on NuGet is
-      # a mistake, and it has to fail rather than pass green having uploaded
-      # nothing.
       - name: Push to NuGet
         run: |
           set -euo pipefail

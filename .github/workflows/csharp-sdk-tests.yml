@@ -70,15 +70,11 @@ jobs:
           python-version: '3.11'
 
       # The same patch generate-csharp-sdk.yml applies, because this job builds
-      # what it just regenerated. Without it CI tests a package still
-      # attributed to "OpenAPI".
+      # what it just regenerated.
       - name: Patch generated SDK
         if: steps.spec.outputs.present == 'true'
         run: python scripts/patch_dotnet_sdk.py sdks/csharp/v1/src/Ddx.InteractionsApi/Ddx.InteractionsApi.csproj
 
-      # A dropped `-t templates/csharp` would silently restore the built-in
-      # template, which loses the changelog pointer and the note that the
-      # package is generated.
       - name: Verify generated README
         if: steps.spec.outputs.present == 'true'
         run: python scripts/verify_readme.py sdks/csharp/v1/README.md --language csharp
