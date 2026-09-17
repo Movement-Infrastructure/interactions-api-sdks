@@ -130,6 +130,7 @@ Class | Method | HTTP request | Description
  - [Model.Outcome](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/csharp/v1/docs/Outcome.md)
  - [Model.OutcomeDetailOperation](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/csharp/v1/docs/OutcomeDetailOperation.md)
  - [Model.PersonIdentifier](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/csharp/v1/docs/PersonIdentifier.md)
+ - [Model.ProblemDetails](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/csharp/v1/docs/ProblemDetails.md)
  - [Model.RejectedInteractionDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/csharp/v1/docs/RejectedInteractionDto.md)
  - [Model.RejectedInteractionsDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/csharp/v1/docs/RejectedInteractionsDto.md)
  - [Model.SimpleDestinationDto](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/csharp/v1/docs/SimpleDestinationDto.md)

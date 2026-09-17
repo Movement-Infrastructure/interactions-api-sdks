@@ -46,6 +46,7 @@ docs/MinervaMetadataDto.md
 docs/Outcome.md
 docs/OutcomeDetailOperation.md
 docs/PersonIdentifier.md
+docs/ProblemDetails.md
 docs/RejectedInteractionDto.md
 docs/RejectedInteractionsDto.md
 docs/SimpleDestinationDto.md
@@ -121,6 +122,7 @@ src/Ddx.InteractionsApi/Model/MinervaMetadataDto.cs
 src/Ddx.InteractionsApi/Model/Outcome.cs
 src/Ddx.InteractionsApi/Model/OutcomeDetailOperation.cs
 src/Ddx.InteractionsApi/Model/PersonIdentifier.cs
+src/Ddx.InteractionsApi/Model/ProblemDetails.cs
 src/Ddx.InteractionsApi/Model/RejectedInteractionDto.cs
 src/Ddx.InteractionsApi/Model/RejectedInteractionsDto.cs
 src/Ddx.InteractionsApi/Model/SimpleDestinationDto.cs
