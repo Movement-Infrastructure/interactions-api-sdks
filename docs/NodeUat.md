@@ -27,18 +27,24 @@ node --version   # expect v18 or later
 Check the shape before going further:
 
 ```bash
-node --input-type=module <<'JS'
-const [kid, secret] = (process.env.DDX_API_KEY ?? '').split(/\.(.*)/s);
+kid=${DDX_API_KEY%%.*}
+secret=${DDX_API_KEY#*.}
 
-console.log('key id numeric:', /^\d+$/.test(kid ?? ''));
+if [ -n "$kid" ] && [ -z "$(printf '%s' "$kid" | tr -d '0-9')" ]; then
+  echo "key id numeric: true"
+else
+  echo "key id numeric: false"
+fi
 
-if (!secret) {
-  console.log('secret is NOT valid base64: no dot separator in key');
-} else {
-  const decoded = Buffer.from(secret, 'base64');
-  console.log('secret is valid base64:', decoded.toString('base64') === secret);
-}
-JS
+if [ "$secret" = "$DDX_API_KEY" ] || [ -z "$secret" ]; then
+  echo "secret is NOT valid base64: no dot separator in key"
+elif ! printf '%s' "$secret" | base64 -d >/dev/null 2>&1; then
+  echo "secret is NOT valid base64: contains non-base64 characters"
+elif [ $(( ${#secret} % 4 )) -ne 0 ]; then
+  echo "secret is NOT valid base64: truncated, length is not a multiple of 4"
+else
+  echo "secret is valid base64: true"
+fi
 ```
 
 Both must be true.
@@ -64,17 +70,6 @@ rather than after release.
 npm ls ddx-interactions-api
 #   └── ddx-interactions-api@0.1.0
 ```
-
-**Before the first release**, the package is not on npm yet and `npm install`
-will fail. To rehearse against the artifact about to be published, pack it and
-install the tarball:
-
-```bash
-npm pack --pack-destination /tmp <repo>/sdks/node/v1
-npm install /tmp/ddx-interactions-api-0.1.0.tgz
-```
-
-Everything from step 3 on is identical either way.
 
 ---
 
