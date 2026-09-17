@@ -27,17 +27,24 @@ ruby -v   # expect 3.0 or later
 Check the shape before going further:
 
 ```bash
-ruby -rbase64 -e '
-  kid, secret = ENV.fetch("DDX_API_KEY").split(".", 2)
-  puts "key id numeric: #{kid.to_s.match?(/\A\d+\z/)}"
-  begin
-    raise "no dot separator in key" if secret.to_s.empty?
-    Base64.strict_decode64(secret)
-    puts "secret is valid base64: true"
-  rescue => e
-    puts "secret is NOT valid base64: #{e.message}"
-  end
-'
+kid=${DDX_API_KEY%%.*}
+secret=${DDX_API_KEY#*.}
+
+if [ -n "$kid" ] && [ -z "$(printf '%s' "$kid" | tr -d '0-9')" ]; then
+  echo "key id numeric: true"
+else
+  echo "key id numeric: false"
+fi
+
+if [ "$secret" = "$DDX_API_KEY" ] || [ -z "$secret" ]; then
+  echo "secret is NOT valid base64: no dot separator in key"
+elif ! printf '%s' "$secret" | base64 -d >/dev/null 2>&1; then
+  echo "secret is NOT valid base64: contains non-base64 characters"
+elif [ $(( ${#secret} % 4 )) -ne 0 ]; then
+  echo "secret is NOT valid base64: truncated, length is not a multiple of 4"
+else
+  echo "secret is valid base64: true"
+fi
 ```
 
 Both must be true.

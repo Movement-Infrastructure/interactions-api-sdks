@@ -30,14 +30,20 @@ Check the shape before going further:
 kid=${DDX_API_KEY%%.*}
 secret=${DDX_API_KEY#*.}
 
-[[ "$kid" =~ ^[0-9]+$ ]] && echo "key id numeric: true" || echo "key id numeric: false"
+if [ -n "$kid" ] && [ -z "$(printf '%s' "$kid" | tr -d '0-9')" ]; then
+  echo "key id numeric: true"
+else
+  echo "key id numeric: false"
+fi
 
 if [ "$secret" = "$DDX_API_KEY" ] || [ -z "$secret" ]; then
   echo "secret is NOT valid base64: no dot separator in key"
-elif printf '%s' "$secret" | base64 -d >/dev/null 2>&1; then
-  echo "secret is valid base64: true"
+elif ! printf '%s' "$secret" | base64 -d >/dev/null 2>&1; then
+  echo "secret is NOT valid base64: contains non-base64 characters"
+elif [ $(( ${#secret} % 4 )) -ne 0 ]; then
+  echo "secret is NOT valid base64: truncated, length is not a multiple of 4"
 else
-  echo "secret is NOT valid base64"
+  echo "secret is valid base64: true"
 fi
 ```
 
@@ -54,29 +60,12 @@ dotnet new console --force
 dotnet add package Ddx.InteractionsApi
 ```
 
-A scratch project outside the repo resolves the package from NuGet instead of
-from the source tree. A file the package forgot to include fails here rather
-than after release.
-
 ### Expected result
 
 ```bash
 dotnet list package
 #   > Ddx.InteractionsApi      0.1.0      0.1.0
 ```
-
-**Before the first release**, the package is not on NuGet yet and
-`dotnet add package` will fail. To rehearse against the artifact about to be
-published, pack it locally and add it from a folder feed:
-
-```bash
-dotnet pack <repo>/sdks/csharp/v1/src/Ddx.InteractionsApi/Ddx.InteractionsApi.csproj \
-  --configuration Release --output /tmp/ddx-feed
-
-dotnet add package Ddx.InteractionsApi --source /tmp/ddx-feed --prerelease
-```
-
-Everything from step 3 on is identical either way.
 
 ---
 
@@ -366,7 +355,6 @@ The interactive reference is at
 | Symptom | Likely cause |
 |---|---|
 | `error NETSDK1045: The current .NET SDK does not support targeting .NET 8.0` | SDK older than 8.0. |
-| `Unable to find package Ddx.InteractionsApi` | Not published yet. Use the local folder feed in step 2. |
 | `401 Unauthorized`, empty body | Key missing the `<keyId>.` prefix; secret not valid base64; key issued for a different environment; key revoked or expired; workspace suppressed; or the key lacks the required role. |
 | Rows rejected with a per-row error | Per-row validation. Read `RejectedInteractions.Data[].Errors`. |
 | `INTERACTION_ID is not a GUID` | You passed the `correlationId`. That route takes a GUID `interactionId` only, and correlation IDs are either a numeric trace ID or `mig-` prefixed. Use an ID from the accepted list in step 4. |

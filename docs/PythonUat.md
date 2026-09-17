@@ -26,20 +26,24 @@ export DDX_API_KEY='12345.your-secret-here'
 Check the shape before going further:
 
 ```bash
-python3 - <<'PY'
-import base64, os
+kid=${DDX_API_KEY%%.*}
+secret=${DDX_API_KEY#*.}
 
-parts = os.environ["DDX_API_KEY"].split(".", 1)
-kid, secret = parts[0], parts[1] if len(parts) > 1 else ""
-print("key id numeric:", kid.isdigit())
-try:
-    if not secret:
-        raise ValueError("no dot separator in key")
-    base64.b64decode(secret, validate=True)
-    print("secret is valid base64: True")
-except Exception as e:
-    print("secret is NOT valid base64:", e)
-PY
+if [ -n "$kid" ] && [ -z "$(printf '%s' "$kid" | tr -d '0-9')" ]; then
+  echo "key id numeric: true"
+else
+  echo "key id numeric: false"
+fi
+
+if [ "$secret" = "$DDX_API_KEY" ] || [ -z "$secret" ]; then
+  echo "secret is NOT valid base64: no dot separator in key"
+elif ! printf '%s' "$secret" | base64 -d >/dev/null 2>&1; then
+  echo "secret is NOT valid base64: contains non-base64 characters"
+elif [ $(( ${#secret} % 4 )) -ne 0 ]; then
+  echo "secret is NOT valid base64: truncated, length is not a multiple of 4"
+else
+  echo "secret is valid base64: true"
+fi
 ```
 
 Both must be true.
