@@ -13,8 +13,9 @@ name: Publish Node SDK to npm
 # binds that publisher to this file's name, so renaming the workflow breaks
 # publishing until the publisher config is updated to match.
 #
-# An npm publish is effectively permanent. A version can be deprecated, and
-# unpublished only within 72 hours and only if nothing depends on it.
+# An npm publish is close to permanent. A version can be deprecated at any
+# time, but unpublished only within 72 hours and only while nothing depends
+# on it.
 
 on:
   push:
@@ -65,7 +66,7 @@ jobs:
           fi
 
       # The generator hardcodes author to "OpenAPI-Generator" and omits the
-      # license, and the committed copy is what gets packed here.
+      # license. The committed copy is what gets packed here.
       - name: Check package metadata
         run: python scripts/patch_node_sdk.py sdks/node/v1 --expect-name ddx-interactions-api --check-only
 
@@ -111,7 +112,7 @@ jobs:
           echo "${PKG_VERSION} is unpublished."
 
       # README.md ships inside the tarball and renders on the package page. The
-      # PR check sees a regeneration, this sees the bytes about to be packed.
+      # PR check sees a regeneration. This sees the bytes about to be packed.
       - name: Verify README before publishing
         run: python scripts/verify_readme.py sdks/node/v1/README.md --language node
 
@@ -133,10 +134,9 @@ jobs:
         working-directory: sdks/node/v1
         run: npm pack --pack-destination "$RUNNER_TEMP"
 
-      # Package contents are permanent once published. Unpublishing is limited
-      # to 72 hours and blocked once anything depends on the version.
       # Enumerating makes a bad `files` entry visible here rather than on the
-      # registry. See docs/publish-leak-audit-checklist.md.
+      # registry, where the 72-hour unpublish window above is the only way back.
+      # See docs/publish-leak-audit-checklist.md.
       - name: Enumerate artifact contents
         run: |
           set -euo pipefail

@@ -361,10 +361,12 @@ line, so read `await e.response.text()` for the API's explanation.
 
 ## 8. Where the model docs live
 
-The typescript-fetch generator emits no separate docs directory. Request and
-response types are exported from the package root, and the field documentation
-from the specification travels with them, so editor autocomplete on
-`InteractionsDto` is the fastest way to read the shape.
+Per-model field lists are generated alongside the client, under
+`sdks/node/v1/docs/Models/`, and the endpoints under `docs/Apis/`.
+`InteractionsDto.md` and `InteractionDto.md` are the two this guide sends.
+
+The same documentation travels with the exported types, so editor autocomplete
+on `InteractionsDto` reads the shape without leaving the file.
 
 ---
 

@@ -59,6 +59,9 @@ try {
 
 ## Documentation
 
-Request and response types are exported from the package root and carry the
-field documentation from the specification. Editor autocomplete on an imported
-type is the fastest way to read it.
+Per-endpoint and per-model pages are generated alongside the client:
+[Apis](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/node/v1/docs/Apis) and [Models](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/node/v1/docs/Models). They are linked absolutely
+because the npm package ships only `dist/`.
+
+The same field documentation travels with the exported types, so editor
+autocomplete on an imported type reads the shape without leaving the file.

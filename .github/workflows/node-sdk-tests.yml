@@ -65,14 +65,13 @@ jobs:
             -t templates/node
 
       # typescript-fetch registers no doc templates, so the per-model and
-      # per-endpoint reference the other SDKs get comes from a second pass with
-      # the same pinned jar. The markdown generator is BETA, which the pin
-      # contains: its output can only change on a deliberate upgrade.
+      # per-endpoint pages the other SDKs get come from a second pass with the
+      # same pinned jar. That generator is BETA upstream; the pin is what keeps
+      # its output from moving underneath us.
       #
-      # Generated into a temp directory and copied in, so a second
-      # .openapi-generator/ metadata tree does not land inside sdks/node/v1.
-      # The directory is replaced rather than merged, so a model dropped from
-      # the spec loses its page.
+      # Output goes to a temp directory to keep a second .openapi-generator/
+      # tree out of sdks/node/v1. The docs directory is replaced rather than
+      # merged, so a model dropped from the spec loses its page.
       - name: Generate API docs
         if: steps.spec.outputs.present == 'true'
         run: |
@@ -118,7 +117,7 @@ jobs:
         with:
           node-version: '20'
 
-      # `npm install`, not `npm ci` -- package.json is regenerated on every sync
+      # `npm install`, not `npm ci`: package.json is regenerated on every sync
       # so no lockfile is committed. See the root .gitignore.
       - name: Install dependencies
         if: steps.spec.outputs.present == 'true'
