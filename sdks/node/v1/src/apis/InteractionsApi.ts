@@ -19,6 +19,7 @@ import type {
   InteractionsBatchResultDto,
   InteractionsDto,
   InteractionsExternalApiTransactionDtoGetResponseDto,
+  ProblemDetails,
 } from '../models/index';
 import {
     ExchangeInteractionStatusDtoCursorPaginatedResponseDtoFromJSON,
@@ -29,6 +30,8 @@ import {
     InteractionsDtoToJSON,
     InteractionsExternalApiTransactionDtoGetResponseDtoFromJSON,
     InteractionsExternalApiTransactionDtoGetResponseDtoToJSON,
+    ProblemDetailsFromJSON,
+    ProblemDetailsToJSON,
 } from '../models/index';
 
 export interface VversionInteractionsExchangeStatusGetRequest {
@@ -263,16 +266,9 @@ export class InteractionsApi extends runtime.BaseAPI {
      * This endpoint is used to post interactions data to the Interactions API that will be published to Pub/Sub.  A maximum of 100 interactions can be submitted per request.
      * Post interactions data
      */
-    async vversionInteractionsPost(requestParameters: VversionInteractionsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<InteractionsBatchResultDto | null | undefined > {
+    async vversionInteractionsPost(requestParameters: VversionInteractionsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<InteractionsBatchResultDto> {
         const response = await this.vversionInteractionsPostRaw(requestParameters, initOverrides);
-        switch (response.raw.status) {
-            case 200:
-                return await response.value();
-            case 207:
-                return null;
-            default:
-                return await response.value();
-        }
+        return await response.value();
     }
 
     /**

@@ -105,6 +105,30 @@ jobs:
             -c sdks/node/v1/openapi-generator-config.yaml \
             -t templates/node
 
+      # typescript-fetch registers no doc templates, so the per-model and
+      # per-endpoint reference the other SDKs get comes from a second pass with
+      # the same pinned jar. The markdown generator is BETA, which the pin
+      # contains: its output can only change on a deliberate upgrade.
+      #
+      # Generated into a temp directory and copied in, so a second
+      # .openapi-generator/ metadata tree does not land inside sdks/node/v1.
+      # The directory is replaced rather than merged, so a model dropped from
+      # the spec loses its page.
+      - name: Generate API docs
+        run: |
+          set -euo pipefail
+
+          docs=$(mktemp -d)
+
+          java -jar .cache/openapi-generator-cli.jar generate \
+            -i openapi/v1/swagger.json \
+            -g markdown \
+            -o "$docs" > /dev/null
+
+          rm -rf sdks/node/v1/docs
+          mkdir -p sdks/node/v1/docs
+          cp -R "$docs/Models" "$docs/Apis" "$docs/README.md" sdks/node/v1/docs/
+
       # Fills in the package.json fields the generator hardcodes or omits, and
       # confines tsc to src/. Both are regenerated on every run, so this is not
       # optional. Shared with node-sdk-tests.yml rather than duplicated, and

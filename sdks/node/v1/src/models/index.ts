@@ -43,6 +43,7 @@ export * from './MinervaMetadataDto';
 export * from './Outcome';
 export * from './OutcomeDetailOperation';
 export * from './PersonIdentifier';
+export * from './ProblemDetails';
 export * from './RejectedInteractionDto';
 export * from './RejectedInteractionsDto';
 export * from './SimpleDestinationDto';

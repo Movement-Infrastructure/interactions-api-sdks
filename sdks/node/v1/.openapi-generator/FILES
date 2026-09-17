@@ -48,6 +48,7 @@ src/models/MinervaMetadataDto.ts
 src/models/Outcome.ts
 src/models/OutcomeDetailOperation.ts
 src/models/PersonIdentifier.ts
+src/models/ProblemDetails.ts
 src/models/RejectedInteractionDto.ts
 src/models/RejectedInteractionsDto.ts
 src/models/SimpleDestinationDto.ts
