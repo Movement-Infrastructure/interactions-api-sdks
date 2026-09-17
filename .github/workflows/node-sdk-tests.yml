@@ -104,13 +104,13 @@ jobs:
         if: steps.spec.outputs.present == 'true'
         run: python scripts/verify_readme.py sdks/node/v1/README.md --language node
 
-      # 20, not the 18 floor in `engines`: 18 is out of support. The floor
-      # states what consumers may use; this is what we test on.
+      # Current active LTS, above the `engines` floor of 18. The floor states
+      # what consumers may use; this is what we test on.
       - name: Set up Node
         if: steps.spec.outputs.present == 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       # `npm install`, not `npm ci`: package.json is regenerated on every sync
       # so no lockfile is committed. See the root .gitignore.

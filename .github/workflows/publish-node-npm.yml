@@ -42,7 +42,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -203,12 +203,12 @@ jobs:
           name: node-sdk-tarball
           path: dist/
 
-      # 22, where the build job uses 20: trusted publishing needs npm 11.5.1+
-      # and Node 22.14+, and only this job talks to the registry.
+      # Matches the build job. Trusted publishing needs npm 11.5.1+ and Node
+      # 22.14+, which the current LTS satisfies.
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Publish to npm
