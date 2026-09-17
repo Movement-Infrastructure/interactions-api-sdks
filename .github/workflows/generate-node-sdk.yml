@@ -63,9 +63,8 @@ jobs:
           git show "FETCH_HEAD:sdks/node/v1/CHANGELOG.md" > /tmp/base-node-changelog.md 2>/dev/null \
             || echo "::notice::No changelog on ${{ github.base_ref }} yet; it will be created."
 
-      # The TypeScript generators spell the version key `npmVersion`, not
-      # `packageVersion`. Passing the wrong key is an error rather than a
-      # silent no-op, so a rename upstream fails the build.
+      # `npmVersion`, not bump_version.py's `packageVersion` default. The
+      # wrong key raises rather than passing as a no-op.
       - name: Compute and apply next version
         id: version
         run: |
@@ -105,14 +104,11 @@ jobs:
             -c sdks/node/v1/openapi-generator-config.yaml \
             -t templates/node
 
-      # typescript-fetch registers no doc templates, so the per-model and
-      # per-endpoint pages the other SDKs get come from a second pass with the
-      # same pinned jar. That generator is BETA upstream; the pin is what keeps
-      # its output from moving underneath us.
-      #
-      # Output goes to a temp directory to keep a second .openapi-generator/
-      # tree out of sdks/node/v1. The docs directory is replaced rather than
-      # merged, so a model dropped from the spec loses its page.
+      # typescript-fetch registers no doc templates, so the per-model pages the
+      # other SDKs get come from a second pass with the same pinned jar, using
+      # its BETA markdown generator. Output goes to a temp directory to keep a
+      # second .openapi-generator/ tree out of sdks/node/v1, and the directory
+      # is replaced rather than merged so a dropped model loses its page.
       - name: Generate API docs
         run: |
           set -euo pipefail
@@ -129,9 +125,7 @@ jobs:
           cp -R "$docs/Models" "$docs/Apis" "$docs/README.md" sdks/node/v1/docs/
 
       # Fills in the package.json fields the generator hardcodes or omits, and
-      # confines tsc to src/. Both are regenerated on every run, so this is not
-      # optional. Shared with node-sdk-tests.yml rather than duplicated, and
-      # unit-tested by tooling-tests.yml.
+      # confines tsc to src/. Both are regenerated on every run.
       - name: Patch generated SDK
         run: python scripts/patch_node_sdk.py sdks/node/v1 --expect-name ddx-interactions-api
 

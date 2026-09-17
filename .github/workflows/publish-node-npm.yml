@@ -3,19 +3,15 @@ name: Publish Node SDK to npm
 # Builds sdks/node/v1 and publishes it to npmjs.com on push to `main`. Sync
 # PRs merge to `develop`. Promoting develop to main is what releases.
 #
-# Publishes the version in `npmVersion` as a final release, so
-# `npm install ddx-interactions-api` resolves it with no `--tag`. npm refuses
-# to republish a version and unpublishing does not free the number, so each
-# release needs an `npmVersion` bump first. generate-node-sdk.yml does that on
-# every sync PR.
+# Publishes `npmVersion` as a final release. npm refuses to republish a version
+# and unpublishing does not free the number, so each release needs a bump first.
+# generate-node-sdk.yml does that on every sync PR.
 #
-# Auth is OIDC trusted publishing. There is no token to leak or rotate. npm
-# binds that publisher to this file's name, so renaming the workflow breaks
-# publishing until the publisher config is updated to match.
+# Auth is OIDC trusted publishing. npm binds the publisher to this file's name,
+# so renaming the workflow breaks publishing until the config is updated.
 #
-# An npm publish is close to permanent. A version can be deprecated at any
-# time, but unpublished only within 72 hours and only while nothing depends
-# on it.
+# A version can be deprecated at any time, but unpublished only within 72 hours
+# and only while nothing depends on it.
 
 on:
   push:
@@ -70,10 +66,9 @@ jobs:
       - name: Check package metadata
         run: python scripts/patch_node_sdk.py sdks/node/v1 --expect-name ddx-interactions-api --check-only
 
-      # The generator writes package.json's version from `npmVersion`, so the
-      # two agreeing is the signal that the SDK was regenerated after the last
-      # bump. If they have drifted, the package would publish under a version
-      # nobody reviewed.
+      # The generator writes package.json's version from `npmVersion`. If they
+      # disagree the SDK was not regenerated after the bump, and the package
+      # would publish under a version nobody reviewed.
       - name: Resolve the release version
         run: |
           set -euo pipefail
@@ -126,10 +121,9 @@ jobs:
         working-directory: sdks/node/v1
         run: npm run build
 
-      # Packed into the runner temp rather than the checkout: anything left
-      # under sdks/node/v1 would read as SDK drift to the PR job's guard, and
-      # sdks/node/v1/.gitignore is regenerated on every sync so it cannot hold
-      # an exclusion.
+      # Packed into the runner temp: anything left under sdks/node/v1 would
+      # read as drift to the PR job's guard, and that directory's .gitignore is
+      # regenerated on every sync so it cannot hold an exclusion.
       - name: Pack
         working-directory: sdks/node/v1
         run: npm pack --pack-destination "$RUNNER_TEMP"

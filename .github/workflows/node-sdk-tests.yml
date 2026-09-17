@@ -3,11 +3,9 @@ name: Node SDK tests
 # On every PR to develop, regenerate sdks/node/v1/ from openapi/v1/swagger.json,
 # build it, and run the smoke + happy-path suite in sdks/node/v1/test/.
 #
-# Runs on ALL PRs (no `paths:` filter) on purpose: a required status check that
-# is path-filtered will show as perpetually pending on PRs that don't match the
-# filter, blocking merge forever. Running unconditionally means the check always
-# reports a result. If a branch has no committed spec yet, the SDK cannot be
-# generated or affected, so the heavy steps are skipped and the job passes.
+# No `paths:` filter, deliberately: a path-filtered required check shows as
+# perpetually pending on PRs that don't match it, blocking merge forever.
+# Branches with no committed spec skip the heavy steps and pass.
 
 on:
   pull_request:
@@ -64,14 +62,11 @@ jobs:
             -c sdks/node/v1/openapi-generator-config.yaml \
             -t templates/node
 
-      # typescript-fetch registers no doc templates, so the per-model and
-      # per-endpoint pages the other SDKs get come from a second pass with the
-      # same pinned jar. That generator is BETA upstream; the pin is what keeps
-      # its output from moving underneath us.
-      #
-      # Output goes to a temp directory to keep a second .openapi-generator/
-      # tree out of sdks/node/v1. The docs directory is replaced rather than
-      # merged, so a model dropped from the spec loses its page.
+      # typescript-fetch registers no doc templates, so the per-model pages the
+      # other SDKs get come from a second pass with the same pinned jar, using
+      # its BETA markdown generator. Output goes to a temp directory to keep a
+      # second .openapi-generator/ tree out of sdks/node/v1, and the directory
+      # is replaced rather than merged so a dropped model loses its page.
       - name: Generate API docs
         if: steps.spec.outputs.present == 'true'
         run: |
@@ -136,16 +131,13 @@ jobs:
         working-directory: sdks/node/v1
         run: npm test
 
-      # The committed SDK can drift from the spec and the templates with
-      # nothing noticing. This job has already regenerated it, so any
-      # difference means the committed copy is stale. Placed last to keep a
-      # drift failure from hiding the test results. Skipped when the spec
-      # changed here, because generate-node-sdk.yml commits the regenerated
-      # SDK on those PRs.
+      # This job already regenerated the SDK, so any difference means the
+      # committed copy is stale. Placed last so a drift failure does not hide
+      # the test results. Skipped when the spec changed here, because
+      # generate-node-sdk.yml commits the regenerated SDK on those PRs.
       #
       # `git status`, not `git diff`: a new model adds an untracked file, which
-      # a diff does not report. Build output needs no exclusion here because
-      # sdks/node/v1/.gitignore already covers node_modules/ and dist/.
+      # a diff does not report.
       - name: Check the committed SDK is up to date
         if: steps.spec.outputs.present == 'true'
         run: |
