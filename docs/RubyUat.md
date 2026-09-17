@@ -27,17 +27,24 @@ ruby -v   # expect 3.0 or later
 Check the shape before going further:
 
 ```bash
-ruby -rbase64 -e '
-  kid, secret = ENV.fetch("DDX_API_KEY").split(".", 2)
-  puts "key id numeric: #{kid.to_s.match?(/\A\d+\z/)}"
-  begin
-    raise "no dot separator in key" if secret.to_s.empty?
-    Base64.strict_decode64(secret)
-    puts "secret is valid base64: true"
-  rescue => e
-    puts "secret is NOT valid base64: #{e.message}"
-  end
-'
+kid=${DDX_API_KEY%%.*}
+secret=${DDX_API_KEY#*.}
+
+if [ -n "$kid" ] && [ -z "$(printf '%s' "$kid" | tr -d '0-9')" ]; then
+  echo "key id numeric: true"
+else
+  echo "key id numeric: false"
+fi
+
+if [ "$secret" = "$DDX_API_KEY" ] || [ -z "$secret" ]; then
+  echo "secret is NOT valid base64: no dot separator in key"
+elif ! printf '%s' "$secret" | base64 -d >/dev/null 2>&1; then
+  echo "secret is NOT valid base64: contains non-base64 characters"
+elif [ $(( ${#secret} % 4 )) -ne 0 ]; then
+  echo "secret is NOT valid base64: truncated, length is not a multiple of 4"
+else
+  echo "secret is valid base64: true"
+fi
 ```
 
 Both must be true.
@@ -49,13 +56,9 @@ Both must be true.
 ```bash
 mkdir -p /tmp/ddx-uat && cd /tmp/ddx-uat
 
-gem install ddx_interactions_api --pre --install-dir ./vendor
+gem install ddx_interactions_api --install-dir ./vendor
 export GEM_HOME="$PWD/vendor" GEM_PATH="$PWD/vendor"
 ```
-
-**`--pre` is required.** Every release is a prerelease (`X.Y.Z.pre.N`), and both
-`gem install` and Bundler skip prereleases unless asked. Without it the install
-finds nothing.
 
 `--install-dir` keeps the gem out of your system Ruby, which is what makes this
 a clean-environment test.
@@ -64,7 +67,7 @@ a clean-environment test.
 
 ```bash
 gem list ddx_interactions_api
-#   ddx_interactions_api (0.1.0.pre.N)
+#   ddx_interactions_api (0.1.0)
 ```
 
 The gem name is underscored, and so is the require path
@@ -74,7 +77,8 @@ The gem name is underscored, and so is the require path
 
 ## 3. Authenticate, and check what your key can reach
 
-```ruby
+```bash
+ruby - <<'RUBY'
 require "ddx_interactions_api"
 
 config = DdxInteractionsApi::Configuration.new
@@ -101,6 +105,7 @@ puts "workspace:    #{me.workspace.display_name} (#{me.workspace.workspace_id})"
 end
 puts "destinations: #{me.destinations&.any? ? 'see above' : 'none'}"
 puts "van key:      #{me.van_api_key ? 'present' : 'none'}"
+RUBY
 ```
 
 ### Expected Result
@@ -130,7 +135,8 @@ separate and defaults to `https`.
 Replace `vendorSource`, `committee`, and `person` with identifiers your
 workspace actually has. Left as placeholders they will be rejected.
 
-```ruby
+```bash
+ruby - <<'RUBY'
 require "ddx_interactions_api"
 require "json"
 
@@ -144,18 +150,20 @@ interactions = DdxInteractionsApi::InteractionsApi.new(
 
 stamp = Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-payload = DdxInteractionsApi::InteractionsDto.build_from_hash({
-  interactions: [{
-    stateCode: "CA",
-    attemptDateTime: stamp,
-    method: "phone_call",
-    outcome: "successful_contact",
-    vendorSource: "<your vendor name>",
+payload = DdxInteractionsApi::InteractionsDto.new(
+  interactions: [
+    DdxInteractionsApi::InteractionDto.new(
+      state_code: "CA",
+      attempt_date_time: stamp,
+      method: "phone_call",
+      outcome: "successful_contact",
+      vendor_source: "<your vendor>",
     committee: [{ type: "<your type>", id: "<your committee id>" }],
     person:    [{ type: "<your type>", id: "<your person id>" }],
-    jsonMetadata: JSON.generate({ uat: true, posted_at: stamp }),
-  }]
-})
+      json_metadata: JSON.generate({ uat: true, posted_at: stamp })
+    )
+  ]
+)
 
 begin
   result = interactions.vversion_interactions_post("1", interactions_dto: payload)
@@ -174,6 +182,7 @@ end
     puts "  rejected idx #{row.index}: #{err.field}: #{err.error_message}"
   end
 end
+RUBY
 ```
 
 ### Expected Result
@@ -201,32 +210,16 @@ The cap is **100 interactions per request**.
 
 ## 5. Put the interaction ID in your environment
 
-Step 4 ran in a subprocess and could not set this for you. Export it the same
-way you exported the key in step 1, using an `interactionId` from the accepted
-list:
-
 ```bash
 export INTERACTION_ID='<interactionId from step 4>'
 ```
-
-Check the shape before going further:
-
-```bash
-ruby -e '
-  value = ENV.fetch("INTERACTION_ID", "")
-  puts "interaction id is a GUID: #{value.match?(/\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/)}"
-  puts "value: #{value.empty? ? "(unset)" : value}"
-'
-```
-
-It has to be a GUID. A `correlationId` will not work: that route accepts a GUID
-only, and correlation IDs are either a numeric trace ID or `mig-` prefixed.
 
 ---
 
 ## 6. Look up the interaction's transaction records
 
-```ruby
+```bash
+ruby - <<'RUBY'
 require "ddx_interactions_api"
 
 config = DdxInteractionsApi::Configuration.new
@@ -254,6 +247,7 @@ puts "count: #{txns.metadata&.count || 0}"
     puts "      HTTP #{log.response_status_code}  #{log.response}"
   end
 end
+RUBY
 ```
 
 ### Expected Result
@@ -291,7 +285,6 @@ The interactive reference is at
 
 | Symptom | Likely cause |
 |---|---|
-| `gem install` finds nothing | Missing `--pre`. Every release is a prerelease. |
 | `Bundler could not find compatible versions` | Ruby 2.6 (macOS system Ruby). Use 3.0 or later. |
 | `401 Unauthorized`, empty body | Key missing the `<keyId>.` prefix; secret not valid base64; key issued for a different environment; key revoked or expired; workspace suppressed; or the key lacks the required role. |
 | `ArgumentError: ... is not a valid attribute` | A misspelled field name. `build_from_hash` rejects unknown keys. |
@@ -323,7 +316,7 @@ and the interactive reference is at
 
 ## 9. Sign-off checklist
 
-- [ ] Installed from RubyGems with `--pre` into a clean `GEM_HOME`
+- [ ] Installed from RubyGems into a clean `GEM_HOME`
 - [ ] `auth/me` returned the expected workspace
 - [ ] Reviewed `destinations` / `van key` before submitting
 - [ ] Submitted an interaction and received a `correlationId`
