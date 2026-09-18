@@ -12,7 +12,7 @@ New to the API itself? Start with the [overview](https://docs.movementinfrastruc
 | --- | --- | --- |
 | Python | [`ddx-interactions-api`](https://pypi.org/project/ddx-interactions-api/) | Available |
 | Ruby | [`ddx_interactions_api`](https://rubygems.org/gems/ddx_interactions_api) | Prerelease |
-| Node.js | — | Planned |
+| Node.js | `ddx-interactions-api` | Unreleased |
 | C# | — | Planned |
 
 Each SDK lives under `sdks/<language>/v1/` and is generated from `openapi/v1/swagger.json`.
@@ -23,10 +23,8 @@ Versions are below 1.0 while the API stabilizes, so pin the minor version if you
 
 HTTP Basic, with your API key in the **password** field and the username left empty. [Authentication](https://docs.movementinfrastructure.org/docs/interactions-api-authentication) covers how to request a key.
 
-| Host | Use |
-| --- | --- |
-| `https://api.movementinfrastructure.org` | Production (SDK default) |
-| `https://api-dev.movementinfrastructure.org` | Public test server |
+Every SDK defaults to `https://api.movementinfrastructure.org`, so none of the
+examples below set a host.
 
 ## Quick start
 
@@ -47,7 +45,6 @@ import ddx_interactions_api
 from ddx_interactions_api.rest import ApiException
 
 configuration = ddx_interactions_api.Configuration(
-    host="https://api-dev.movementinfrastructure.org",
     username="",
     password=os.environ["DDX_API_KEY"],
 )
@@ -81,8 +78,6 @@ gem install ddx_interactions_api --pre
 require "ddx_interactions_api"
 
 config = DdxInteractionsApi::Configuration.new
-# Host only. The scheme is a separate field and defaults to https.
-config.host = "api-dev.movementinfrastructure.org"
 config.username = ""
 config.password = ENV.fetch("DDX_API_KEY")
 
@@ -105,6 +100,50 @@ end
 statuses = interactions.vversion_interactions_exchange_status_get(
   "1", correlation_id: result.correlation_id
 )
+```
+
+### Node.js
+
+Requires Node 18+.
+
+```sh
+npm install ddx-interactions-api
+```
+
+```typescript
+import {
+  Configuration,
+  InteractionsApi,
+  ResponseError,
+  type InteractionsDto,
+} from 'ddx-interactions-api';
+
+const interactions = new InteractionsApi(
+  new Configuration({
+    username: '',
+    password: process.env.DDX_API_KEY,
+  }),
+);
+
+const interactionsDto: InteractionsDto = {
+  // See sdks/node/v1/src/models/InteractionsDto.ts for the full shape.
+  interactions: [],
+};
+
+let result;
+try {
+  result = await interactions.vversionInteractionsPost({ version: '1', interactionsDto });
+} catch (e) {
+  if (!(e instanceof ResponseError)) throw e;
+  // The thrown error carries only the status line. The body says why.
+  throw new Error(`Interactions API returned ${e.response.status}: ${await e.response.text()}`);
+}
+
+// The correlation ID follows the batch through the Exchange.
+const statuses = await interactions.vversionInteractionsExchangeStatusGet({
+  version: '1',
+  correlationId: result?.correlationId,
+});
 ```
 
 ## Endpoints
