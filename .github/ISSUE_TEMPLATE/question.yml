@@ -1,5 +1,5 @@
 name: Question about using an SDK
-description: How to do something with the Python or Ruby SDK.
+description: How to do something with a generated SDK.
 labels: ["question"]
 body:
   - type: markdown
@@ -11,14 +11,11 @@ body:
         **Do not paste an API key.** Replace it with `REDACTED` before you submit.
         This repository is public.
 
-  - type: dropdown
+  - type: input
     id: sdk
     attributes:
       label: Which SDK
-      options:
-        - "Python (ddx-interactions-api)"
-        - "Ruby (ddx_interactions_api)"
-        - "Not specific to one language"
+      description: The package name you installed, or "any" if this is not specific to one.
     validations:
       required: true
 
