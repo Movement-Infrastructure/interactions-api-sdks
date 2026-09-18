@@ -23,10 +23,8 @@ Versions are below 1.0 while the API stabilizes, so pin the minor version if you
 
 HTTP Basic, with your API key in the **password** field and the username left empty. [Authentication](https://docs.movementinfrastructure.org/docs/interactions-api-authentication) covers how to request a key.
 
-| Host | Use |
-| --- | --- |
-| `https://api.movementinfrastructure.org` | Production (SDK default) |
-| `https://api-dev.movementinfrastructure.org` | Public test server |
+Every SDK defaults to `https://api.movementinfrastructure.org`, so none of the
+examples below set a host.
 
 ## Quick start
 
@@ -47,7 +45,6 @@ import ddx_interactions_api
 from ddx_interactions_api.rest import ApiException
 
 configuration = ddx_interactions_api.Configuration(
-    host="https://api-dev.movementinfrastructure.org",
     username="",
     password=os.environ["DDX_API_KEY"],
 )
@@ -81,8 +78,6 @@ gem install ddx_interactions_api --pre
 require "ddx_interactions_api"
 
 config = DdxInteractionsApi::Configuration.new
-# Host only. The scheme is a separate field and defaults to https.
-config.host = "api-dev.movementinfrastructure.org"
 config.username = ""
 config.password = ENV.fetch("DDX_API_KEY")
 
@@ -123,11 +118,8 @@ import {
   type InteractionsDto,
 } from 'ddx-interactions-api';
 
-// basePath is a full URL, scheme included. The Ruby client splits the two
-// into separate fields.
 const interactions = new InteractionsApi(
   new Configuration({
-    basePath: 'https://api-dev.movementinfrastructure.org',
     username: '',
     password: process.env.DDX_API_KEY,
   }),

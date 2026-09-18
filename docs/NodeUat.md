@@ -134,13 +134,12 @@ what step 4 actually does:
   forwarded to VAN as a real canvass response. Coordinate before submitting.
 - **Other destinations** - the Exchange is itself a destination, so a key that
   routes there lists it here like any other.
-- **An empty list** - nothing routes what you submit, the Exchange included.
+- **An empty list** - nothing routes what you submit.
 
 Authentication is HTTP Basic with the **API key in the password field and an
 empty username**. That surprises people; it is correct.
 
-`basePath` is a full URL including the scheme. The Ruby client splits host and
-scheme into separate fields. The Node one does not.
+`basePath` is a full URL including the scheme. The Node one does not.
 
 ---
 
@@ -329,6 +328,9 @@ Exchange delivery is reported by a different endpoint,
 `interactions/exchange-status`. It advances on a scheduled transformation rather
 than on your request and can lag by up to an hour, so it is outside this UAT.
 
+The interactive reference is at
+[docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
+
 ---
 
 ## 7. Common failure modes
@@ -356,12 +358,14 @@ line, so read `await e.response.text()` for the API's explanation.
 
 ## 8. Where the model docs live
 
-Per-model field lists are generated alongside the client, under
-`sdks/node/v1/docs/Models/`, and the endpoints under `docs/Apis/`.
-`InteractionsDto.md` and `InteractionDto.md` are the two this guide sends.
+`package.json` ships `dist/` only, so the `docs/` pages are not inside the
+installed package. The model links in the README point back at
+[this repo](https://github.com/Movement-Infrastructure/interactions-api-sdks/tree/main/sdks/node/v1/docs),
+and the interactive reference is at
+[docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
 
-The same documentation travels with the exported types, so editor autocomplete
-on `InteractionsDto` reads the shape without leaving the file.
+The same field documentation travels with the exported types, so editor
+autocomplete on `InteractionsDto` reads the shape without leaving the file.
 
 ---
 
@@ -370,5 +374,8 @@ on `InteractionsDto` reads the shape without leaving the file.
 - [ ] Installed from npm into a clean scratch project
 - [ ] `auth/me` returned the expected workspace
 - [ ] Reviewed `destinations` / `van key` before submitting
-- [ ] Submitted an interaction and recorded the `correlationId`
-- [ ] Looked up the interaction's transaction records
+- [ ] Submitted an interaction and received a `correlationId`
+- [ ] Rejected rows, if any, reported a usable per-row reason
+- [ ] Retrieved transaction records for an accepted `interactionId`,
+      with `showOnlyFailedTransactions` set to false
+- [ ] Filed anything unexpected, with version and `correlationId`
