@@ -139,7 +139,7 @@ what step 4 actually does:
 Authentication is HTTP Basic with the **API key in the password field and an
 empty username**. That surprises people; it is correct.
 
-`basePath` is a full URL including the scheme. The Node one does not.
+`basePath` is a full URL including the scheme.
 
 ---
 
