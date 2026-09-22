@@ -96,6 +96,11 @@ REQUIRED_BY_LANGUAGE = {
         "## Installation",
         "## Changelog",
     ],
+    "node": [
+        "npm install ddx-interactions-api",
+        "## Installation",
+        "## Changelog",
+    ],
 }
 
 DEFAULT_LANGUAGE = "python"

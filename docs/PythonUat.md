@@ -120,7 +120,7 @@ what step 4 actually does:
   forwarded to VAN as a real canvass response. Coordinate before submitting.
 - **Other destinations** - the Exchange is itself a destination, so a key that
   routes there lists it here like any other.
-- **An empty list** - nothing routes what you submit, the Exchange included.
+- **An empty list** - nothing routes what you submit.
 
 Authentication is HTTP Basic with the **API key in the password field and an
 empty username**. That surprises people; it is correct.
@@ -271,15 +271,7 @@ The interactive reference is at
 
 ---
 
-## 7. Where the model docs live
-
-`docs/*.md` are not shipped inside the package. The model links on the PyPI
-project page point back at this repo, and the interactive reference is at
-[docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
-
----
-
-## 8. Common failure modes
+## 7. Common failure modes
 
 | Symptom | Likely cause |
 |---|---|
@@ -291,11 +283,19 @@ project page point back at this repo, and the interactive reference is at
 
 ### On that 401
 
-The 401 is deliberately generic and covers several distinct causes: including
+The 401 is deliberately generic and covers several distinct causes, including
 a **valid key that simply lacks the required role**, which is an authorization
 failure reported as an authentication one. If the key shape checks out in
 step 1, ask the API team to check server-side logs rather than guessing. Quote
 the `x-correlation-id` response header.
+
+---
+
+## 8. Where the model docs live
+
+`docs/*.md` are not shipped inside the package. The model links on the PyPI
+project page point back at this repo, and the interactive reference is at
+[docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
 
 ---
 

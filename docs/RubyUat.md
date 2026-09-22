@@ -120,7 +120,7 @@ what step 4 actually does:
   forwarded to VAN as a real canvass response. Coordinate before submitting.
 - **Other destinations** - the Exchange is itself a destination, so a key that
   routes there lists it here like any other.
-- **An empty list** - nothing routes what you submit, the Exchange included.
+- **An empty list** - nothing routes what you submit.
 
 Authentication is HTTP Basic with the **API key in the password field and an
 empty username**. That surprises people; it is correct.
@@ -294,7 +294,7 @@ The interactive reference is at
 
 ### On that 401
 
-The 401 is deliberately generic and covers several distinct causes: including
+The 401 is deliberately generic and covers several distinct causes, including
 a **valid key that simply lacks the required role**, which is an authorization
 failure reported as an authentication one. If the key shape checks out in
 step 1, ask the API team to check server-side logs rather than guessing.

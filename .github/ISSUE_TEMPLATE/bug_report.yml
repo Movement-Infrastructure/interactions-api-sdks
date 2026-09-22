@@ -1,5 +1,5 @@
 name: SDK bug
-description: Something in the Python or Ruby SDK does not behave as documented.
+description: Something in a generated SDK does not behave as documented.
 labels: ["bug"]
 body:
   - type: markdown
@@ -14,14 +14,11 @@ body:
         tracebacks. Replace it with `REDACTED` before you submit. This repository is
         public and issue history cannot be reliably scrubbed.
 
-  - type: dropdown
+  - type: input
     id: sdk
     attributes:
       label: Which SDK
-      options:
-        - "Python (ddx-interactions-api)"
-        - "Ruby (ddx_interactions_api)"
-        - "Not specific to one language"
+      description: The package name you installed, or "any" if this is not specific to one.
     validations:
       required: true
 
@@ -29,7 +26,7 @@ body:
     id: sdk-version
     attributes:
       label: SDK version
-      description: "From `pip show ddx-interactions-api` or `gem list ddx_interactions_api`."
+      description: The installed version of the package named above.
       placeholder: "0.2.0"
     validations:
       required: true
@@ -38,7 +35,7 @@ body:
     id: runtime
     attributes:
       label: Language version
-      placeholder: "Python 3.11.6, or Ruby 3.2.2"
+      description: The version of the language runtime you are using.
     validations:
       required: true
 

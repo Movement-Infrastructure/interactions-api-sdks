@@ -33,13 +33,15 @@ RubyGems has no sandbox registry, so the Ruby gem has no `develop` staging step:
 
 NuGet has no sandbox registry either, so the C# package works the same way as the gem. Promoting `develop` to `main` publishes `packageVersion` to NuGet as a final release. `publish-csharp-nuget.yml` deliberately omits `--skip-duplicate`, which makes a promotion carrying a version already on NuGet fail loudly rather than pass green having uploaded nothing.
 
+npm has no sandbox registry either, so the Node package works the same way. Promoting `develop` to `main` publishes `npmVersion` to npmjs.com as a final release. `publish-node-npm.yml` refuses a version that is already published, so a promotion without a bump fails before it reaches the registry rather than 403ing at the push.
+
 Re-running the sync is safe: the branch name (`sync/mercury-<short-sha>`) derives from the upstream commit, so a run that finds an open PR for that SHA leaves it alone. Maintainers can also trigger a sync by hand and point it at an in-flight upstream branch.
 
 ## Versioning
 
 Versions live in each SDK's `openapi-generator-config.yaml` and flow into the generated manifest. That field is the source of truth; nothing edits the manifest directly. `scripts/bump_version.py` rewrites it on every sync PR before the generator runs.
 
-Each generator spells the key differently: `packageVersion` for Python and C#, `gemVersion` for Ruby. The generate workflow passes `--version-key` where it differs from `bump_version.py`'s `packageVersion` default. Passing the wrong key is an error rather than a silent no-op, which keeps a stuck version from reaching a registry.
+Each generator spells the key differently: `packageVersion` for Python and C#, `gemVersion` for Ruby, `npmVersion` for Node. The generate workflow passes `--version-key` for that reason. Passing the wrong key is an error rather than a silent no-op, which keeps a stuck version from reaching a registry.
 
 Apply at most one label:
 
