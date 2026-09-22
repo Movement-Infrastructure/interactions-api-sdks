@@ -60,12 +60,16 @@ dotnet new console --force
 dotnet add package Ddx.InteractionsApi
 ```
 
+
 ### Expected result
 
 ```bash
 dotnet list package
 #   > Ddx.InteractionsApi      0.1.0      0.1.0
 ```
+
+The package ID is dotted, and so are the namespaces you import
+(`using Ddx.InteractionsApi.Api;`, `.Client`, `.Model`).
 
 ---
 
@@ -79,11 +83,9 @@ cat > Program.cs <<'CS'
 using Ddx.InteractionsApi.Api;
 using Ddx.InteractionsApi.Client;
 
+// Configuration takes no BasePath, so it defaults to production.
 var config = new Configuration
 {
-    // BasePath is a full URL, scheme included.
-    BasePath = Environment.GetEnvironmentVariable("DDX_API_BASE_PATH")
-               ?? "https://api.movementinfrastructure.org",
     Username = "",                       // empty on purpose
     Password = Environment.GetEnvironmentVariable("DDX_API_KEY")
                ?? throw new InvalidOperationException("DDX_API_KEY is not set"),
@@ -118,7 +120,7 @@ catch (ApiException e)
 
     Console.Error.WriteLine($"auth/me failed: HTTP {e.ErrorCode}");
     Console.Error.WriteLine($"  x-correlation-id: {cid}");
-    Console.Error.WriteLine($"  body: {e.ErrorContent ?? "(empty)"}");
+    Console.Error.WriteLine($"  body: {(string.IsNullOrEmpty(e.ErrorContent?.ToString()) ? "(empty)" : e.ErrorContent)}");
     Environment.Exit(1);
 }
 CS
@@ -138,13 +140,14 @@ what step 4 actually does:
   forwarded to VAN as a real canvass response. Coordinate before submitting.
 - **Other destinations** - the Exchange is itself a destination, so a key that
   routes there lists it here like any other.
-- **An empty list** - nothing routes what you submit, the Exchange included.
+- **An empty list** - nothing routes what you submit.
 
 Authentication is HTTP Basic with the **API key in the password field and an
-empty username**. That surprises people; it is correct.
+empty username**.
 
-`BasePath` is a full URL including the scheme. The Ruby client splits host and
-scheme into separate fields. The C# one does not.
+`Configuration` takes no `BasePath`, so it defaults to production
+(`https://api.movementinfrastructure.org`). When set, it is a full URL
+including the scheme.
 
 ---
 
@@ -162,8 +165,6 @@ using Ddx.InteractionsApi.Model;
 
 var config = new Configuration
 {
-    BasePath = Environment.GetEnvironmentVariable("DDX_API_BASE_PATH")
-               ?? "https://api.movementinfrastructure.org",
     Username = "",
     Password = Environment.GetEnvironmentVariable("DDX_API_KEY")
                ?? throw new InvalidOperationException("DDX_API_KEY is not set"),
@@ -213,7 +214,7 @@ catch (ApiException e)
 
     Console.Error.WriteLine($"post failed: HTTP {e.ErrorCode}");
     Console.Error.WriteLine($"  x-correlation-id: {cid}");
-    Console.Error.WriteLine($"  body: {e.ErrorContent ?? "(empty)"}");
+    Console.Error.WriteLine($"  body: {(string.IsNullOrEmpty(e.ErrorContent?.ToString()) ? "(empty)" : e.ErrorContent)}");
     Environment.Exit(1);
 }
 CS
@@ -267,21 +268,18 @@ using Ddx.InteractionsApi.Client;
 
 var config = new Configuration
 {
-    BasePath = Environment.GetEnvironmentVariable("DDX_API_BASE_PATH")
-               ?? "https://api.movementinfrastructure.org",
     Username = "",
     Password = Environment.GetEnvironmentVariable("DDX_API_KEY")
                ?? throw new InvalidOperationException("DDX_API_KEY is not set"),
 };
 
-var raw = Environment.GetEnvironmentVariable("INTERACTION_ID")
-          ?? throw new InvalidOperationException("INTERACTION_ID is not set");
+var raw = Environment.GetEnvironmentVariable("INTERACTION_ID") ?? "";
 
 // The route takes a GUID. A correlationId will not parse here, which is a
 // clearer failure than the 404 the server would return for one.
 if (!Guid.TryParse(raw, out var interactionId))
 {
-    Console.Error.WriteLine($"INTERACTION_ID is not a GUID: {raw}");
+    Console.Error.WriteLine($"INTERACTION_ID is not a GUID: {(raw.Length == 0 ? "(unset)" : raw)}");
     Console.Error.WriteLine("Use an interactionId from the accepted list in step 4, not a correlationId.");
     Environment.Exit(1);
 }
@@ -311,7 +309,7 @@ catch (ApiException e)
 
     Console.Error.WriteLine($"transactions lookup failed: HTTP {e.ErrorCode}");
     Console.Error.WriteLine($"  x-correlation-id: {cid}");
-    Console.Error.WriteLine($"  body: {e.ErrorContent ?? "(empty)"}");
+    Console.Error.WriteLine($"  body: {(string.IsNullOrEmpty(e.ErrorContent?.ToString()) ? "(empty)" : e.ErrorContent)}");
     Environment.Exit(1);
 }
 CS

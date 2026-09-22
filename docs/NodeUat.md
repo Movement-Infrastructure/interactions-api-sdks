@@ -60,10 +60,6 @@ npm init -y
 npm install ddx-interactions-api
 ```
 
-A scratch project outside the repo resolves the package from npm instead of
-from the source tree. A file missing from the published tarball fails here
-rather than after release.
-
 ### Expected result
 
 ```bash
@@ -71,6 +67,8 @@ npm ls ddx-interactions-api
 #   └── ddx-interactions-api@0.1.0
 ```
 
+The package name and the import specifier are the same
+(`import { ... } from 'ddx-interactions-api'`).
 ---
 
 ## 3. Authenticate, and check what your key can reach
@@ -84,9 +82,8 @@ saw them.
 node --input-type=module <<'JS'
 import { AuthenticationDetailsApi, Configuration, ResponseError } from 'ddx-interactions-api';
 
-// basePath is a full URL, scheme included.
+// Configuration takes no basePath, so it defaults to production.
 const config = new Configuration({
-  basePath: process.env.DDX_API_BASE_PATH ?? 'https://api.movementinfrastructure.org',
   username: '',                                  // empty on purpose
   password: process.env.DDX_API_KEY,
 });
@@ -137,9 +134,11 @@ what step 4 actually does:
 - **An empty list** - nothing routes what you submit.
 
 Authentication is HTTP Basic with the **API key in the password field and an
-empty username**. That surprises people; it is correct.
+empty username**.
 
-`basePath` is a full URL including the scheme.
+`Configuration` takes no `basePath`, so it defaults to production
+(`https://api.movementinfrastructure.org`). When set, it is a full URL
+including the scheme.
 
 ---
 
@@ -159,7 +158,6 @@ import {
 } from 'ddx-interactions-api';
 
 const config = new Configuration({
-  basePath: process.env.DDX_API_BASE_PATH ?? 'https://api.movementinfrastructure.org',
   username: '',
   password: process.env.DDX_API_KEY,
 });
@@ -268,7 +266,6 @@ if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(inte
 
 const api = new InteractionsApi(
   new Configuration({
-    basePath: process.env.DDX_API_BASE_PATH ?? 'https://api.movementinfrastructure.org',
     username: '',
     password: process.env.DDX_API_KEY,
   }),

@@ -123,7 +123,7 @@ what step 4 actually does:
 - **An empty list** - nothing routes what you submit.
 
 Authentication is HTTP Basic with the **API key in the password field and an
-empty username**. That surprises people; it is correct.
+empty username**.
 
 Note `config.host` takes a bare host with no scheme, `config.scheme` is
 separate and defaults to `https`.

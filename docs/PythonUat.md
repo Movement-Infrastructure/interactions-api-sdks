@@ -110,7 +110,7 @@ PY
 
 ### Expected Result
 
-`target:` prints the production host, and your workspace name and ID print
+`target:` prints `https://api.movementinfrastructure.org`, and your workspace name and ID print
 without an exception.
 
 **Read the `destinations` and `van key` lines before continuing.** They decide
@@ -123,7 +123,7 @@ what step 4 actually does:
 - **An empty list** - nothing routes what you submit.
 
 Authentication is HTTP Basic with the **API key in the password field and an
-empty username**. That surprises people; it is correct.
+empty username**.
 
 ---
 
