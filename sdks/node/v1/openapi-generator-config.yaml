@@ -1,0 +1,40 @@
+# openapi-generator config for the Node v1 SDK.
+#
+# Invoked by .github/workflows/generate-node-sdk.yml as:
+#   openapi-generator generate \
+#     -i openapi/v1/swagger.json \
+#     -g typescript-fetch \
+#     -o sdks/node/v1 \
+#     -c sdks/node/v1/openapi-generator-config.yaml
+#
+# Generator pinned to v7.10.0; see the workflow for the cached jar.
+
+# npm package name. Kebab-case is the npm convention, which matches the Python
+# distribution name rather than the Ruby gem name (ddx_interactions_api).
+npmName: ddx-interactions-api
+
+# Rewritten by the version-bump workflow on each sync PR. The TypeScript
+# generators spell this `npmVersion` rather than `packageVersion`, so the
+# workflow passes `--version-key npmVersion` to scripts/bump_version.py. The
+# wrong key raises there rather than passing as a no-op.
+npmVersion: 0.1.0
+
+# typescript-fetch over typescript-axios: it targets the platform's own fetch,
+# so the published package has zero runtime dependencies and consumers inherit
+# no transitive CVE surface. Costs a Node >= 18 floor, where fetch is global.
+# Same reasoning that put Faraday ahead of Typhoeus in the Ruby config.
+
+# ES6 modules and modern syntax. The generator otherwise emits ES5-targeted
+# output, downlevelled for consumers who all support ES2020+ anyway.
+supportsES6: true
+
+# Runtime response validation is left on (withoutRuntimeChecks defaults to
+# false), so the generated *FromJSON functions raise on a malformed payload
+# instead of handing back a wrongly-typed object.
+
+gitUserId: Movement-Infrastructure
+gitRepoId: interactions-api-sdks
+
+globalProperties:
+  apiTests: "false"
+  modelTests: "false"
