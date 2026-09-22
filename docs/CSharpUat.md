@@ -362,7 +362,7 @@ The interactive reference is at
 
 ### On that 401
 
-The 401 is deliberately generic and covers several distinct causes: including
+The 401 is deliberately generic and covers several distinct causes, including
 a **valid key that simply lacks the required role**, which is an authorization
 failure reported as an authentication one. If the key shape checks out in
 step 1, ask the API team to check server-side logs rather than guessing.
@@ -374,9 +374,13 @@ alone is only the status line.
 
 ## 8. Where the model docs live
 
-Per-model field lists are generated alongside the client, under
-`sdks/csharp/v1/docs/`. `InteractionsDto.md` and `InteractionDto.md` are the two
-this guide sends.
+The package ships the compiled library and `README.md` only, so `docs/*.md`
+are not inside the installed package. The model links in the README point back
+at [this repo](https://github.com/Movement-Infrastructure/interactions-api-sdks/tree/main/sdks/csharp/v1/docs),
+and the interactive reference is at
+[docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
+
+`InteractionsDto.md` and `InteractionDto.md` are the two this guide sends.
 
 ---
 
@@ -385,5 +389,8 @@ this guide sends.
 - [ ] Installed from NuGet into a clean scratch project
 - [ ] `auth/me` returned the expected workspace
 - [ ] Reviewed `destinations` / `van key` before submitting
-- [ ] Submitted an interaction and recorded the `correlationId`
-- [ ] Looked up the interaction's transaction records
+- [ ] Submitted an interaction and received a `correlationId`
+- [ ] Rejected rows, if any, reported a usable per-row reason
+- [ ] Retrieved transaction records for an accepted `interactionId`,
+      with `showOnlyFailedTransactions` set to false
+- [ ] Filed anything unexpected, with version and `correlationId`

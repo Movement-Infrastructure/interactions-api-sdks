@@ -13,7 +13,7 @@ New to the API itself? Start with the [overview](https://docs.movementinfrastruc
 | Python | [`ddx-interactions-api`](https://pypi.org/project/ddx-interactions-api/) | Available |
 | Ruby | [`ddx_interactions_api`](https://rubygems.org/gems/ddx_interactions_api) | Prerelease |
 | Node.js | `ddx-interactions-api` | Unreleased |
-| C# | — | Unreleased |
+| C# | `Ddx.InteractionsApi` | Unreleased |
 
 Each SDK lives under `sdks/<language>/v1/` and is generated from `openapi/v1/swagger.json`.
 

@@ -56,6 +56,56 @@ jobs:
       - name: Patch generated SDK
         run: python scripts/patch_dotnet_sdk.py sdks/csharp/v1/src/Ddx.InteractionsApi/Ddx.InteractionsApi.csproj
 
+      # The generator writes the csproj's <Version> from `packageVersion`. If they
+      # disagree the SDK was not regenerated after the bump, and the package
+      # would publish under a version nobody reviewed.
+      - name: Resolve the release version
+        run: |
+          set -euo pipefail
+
+          csproj=sdks/csharp/v1/src/Ddx.InteractionsApi/Ddx.InteractionsApi.csproj
+
+          base=$(sed -nE 's/^packageVersion:[[:space:]]*"?([^"[:space:]#]+)"?.*/\1/p' \
+                 sdks/csharp/v1/openapi-generator-config.yaml)
+
+          if [ -z "$base" ]; then
+            echo "::error::Could not read packageVersion from openapi-generator-config.yaml."
+            exit 1
+          fi
+
+          pkg=$(sed -nE 's|.*<Version>([^<]+)</Version>.*|\1|p' "$csproj")
+
+          if [ "$base" != "$pkg" ]; then
+            echo "::error::packageVersion is ${base} but the csproj is ${pkg}."
+            echo "::error::Regenerate the SDK so the two agree before promoting."
+            exit 1
+          fi
+
+          echo "PKG_VERSION=${base}" >> "$GITHUB_ENV"
+          echo "Publishing ${base}."
+
+      # NuGet answers a republish with a 409 that reads like a permissions
+      # problem. Failing here instead names the actual fix.
+      - name: Refuse a version that is already published
+        run: |
+          set -euo pipefail
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+                 "https://api.nuget.org/v3-flatcontainer/ddx.interactionsapi/${PKG_VERSION}/ddx.interactionsapi.nuspec")
+
+          if [ "$code" = "200" ]; then
+            echo "::error::${PKG_VERSION} is already published. Bump packageVersion in"
+            echo "::error::sdks/csharp/v1/openapi-generator-config.yaml and regenerate."
+            exit 1
+          fi
+
+          if [ "$code" != "404" ]; then
+            echo "::error::Unexpected HTTP ${code} checking whether ${PKG_VERSION} exists."
+            exit 1
+          fi
+
+          echo "${PKG_VERSION} is unpublished."
+
       - name: Verify README before publishing
         run: python scripts/verify_readme.py sdks/csharp/v1/README.md --language csharp
 

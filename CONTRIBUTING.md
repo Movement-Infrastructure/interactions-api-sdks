@@ -14,7 +14,7 @@ A bug in the client surface is nearly always a contract bug. Fix it upstream and
 
 ```
 openapi/v1/swagger.json   # source of truth, synced from mig-readme-docs
-sdks/                     # generated clients (python and ruby are live)
+sdks/                     # generated clients (python and ruby are published)
 templates/<language>/     # mustache overrides for generator defaults
 scripts/                  # version bump, post-generation patches, gates
 docs/                     # publish leak-audit checklist
@@ -73,11 +73,11 @@ python scripts/bump_version.py \
 All unit-tested under `scripts/tests/`:
 
 - `bump_version.py` — computes the next version from PR labels and rewrites it under the key `--version-key` names.
-- `patch_python_sdk.py` — fixes the generator has no config for, mostly `setup()` arguments. Exact-anchor patches fail loudly on a generator upgrade rather than silently dropping the fix.
+- `patch_python_sdk.py`, `patch_node_sdk.py`, `patch_dotnet_sdk.py` — fixes the generators have no config for: `setup()` arguments, `package.json` fields and the tsconfig `include`, and the csproj identity fields and packed README. Exact-anchor patches fail loudly on a generator upgrade rather than silently dropping the fix.
 - `render_changelog.py` — renders the `CHANGELOG.md` entry and gates label/spec agreement.
-- `verify_readme.py` — checks a generated README before it ships. `setup.py` points `long_description` at the Python one, making it the PyPI project page; the Ruby gemspec ships its README inside the gem. `--language` selects the required-content list, which lives in the script so the PR and publish gates cannot disagree.
+- `verify_readme.py` — checks a generated README before it ships. `setup.py` points `long_description` at the Python one, making it the PyPI project page; the Ruby gemspec ships its README inside the gem. `--language` selects the required-content list, which lives in the script so the PR and publish gates cannot disagree. Every language has an entry.
 
-Template overrides live in `templates/<language>/`; anything absent falls back to the generator jar. `templates/python/README.mustache` and `templates/ruby/README.mustache` each document why they exist. Read one before adding another. The Ruby override also carries the endpoint, model, and authorization sections verbatim, because the Ruby generator has no `common_README` partial to defer to; a generator upgrade can change them upstream without changing them here.
+Template overrides live in `templates/<language>/`; anything absent falls back to the generator jar. All four README overrides document why they exist. Read one before adding another. The Ruby override also carries the endpoint, model, and authorization sections verbatim, because the Ruby generator has no `common_README` partial to defer to; a generator upgrade can change them upstream without changing them here.
 
 ## Running tests locally
 
