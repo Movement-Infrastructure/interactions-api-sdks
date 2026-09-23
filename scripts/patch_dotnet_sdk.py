@@ -2,28 +2,14 @@
 """Apply the identity fields the csharp generator won't emit to the csproj.
 
 The generator hardcodes `Authors` and `Company` to "OpenAPI", `AssemblyTitle`
-to "OpenAPI Library", `Description` to "A library generated from a OpenAPI doc"
-and `Copyright` to "No Copyright". None of it is reachable through generator
-config: `licenseId`, `packageGuid`, `packageName`, `packageTags` and
-`packageVersion` are the only package fields the csharp generator exposes, so
-an unpatched package would publish to NuGet attributed to a third party with
-placeholder text as its description.
-
-A targeted element rewrite rather than an XML round-trip: ElementTree discards
-the csproj's comments and reflows the whole document, and the generated file
-carries a comment explaining the GenerateAssemblyInfo workaround. Same reason
-bump_version.py rewrites a line instead of round-tripping YAML.
+to "OpenAPI Library", `Description`, as these are not reachable through the 
+generator config. An unpatched package would publish to Nuget with placeholder
+text as its description.
 
 It also packs the README. The csharp generator emits no `PackageReadmeFile`,
 so an unpatched package renders on nuget.org with only its one-line description
 and no readme at all. That needs both the property and a `<None>` item marking
 the file for packing.
-
-Idempotent: it sets element text rather than splicing, inserts the readme
-property only when absent, and skips the `<None>` item when it is already
-there, so re-running changes nothing. It does NOT touch `Version` -- that flows
-from `packageVersion` in the generator config via bump_version.py, and
-overwriting it would undo the bump.
 """
 
 from __future__ import annotations
