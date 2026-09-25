@@ -113,11 +113,10 @@ RUBY
 `target:` prints `https://api.movementinfrastructure.org`, and your workspace
 name and ID print without an exception.
 
-**Read the `destinations` and `van key` lines before continuing.** They decide
-what step 4 actually does:
+**Read the `destinations` and `van key` lines before continuing.** They determine where data is actually sent:
 
 - **A destination with `is_van_destination=true`** - what you submit is
-  forwarded to VAN as a real canvass response. Coordinate before submitting.
+  forwarded to VAN as a real canvass response.
 - **Other destinations** - the Exchange is itself a destination, so a key that
   routes there lists it here like any other.
 - **An empty list** - nothing routes what you submit.
@@ -134,6 +133,43 @@ separate and defaults to `https`.
 
 Replace `vendorSource`, `committee`, and `person` with identifiers your
 workspace actually has. Left as placeholders they will be rejected.
+
+| Placeholder | Comes from | Required |
+| --- | --- | --- |
+| `vendorSource` | You. The canonical name of the platform the outreach actually went through, which is not always the tool making this request. | Always |
+| `committee[].type` / `.id` | You. Your own identifier for the entity that ran or logged the outreach: a campaign, a state party, and so on. Any `type`/`id` pair is accepted, and DDx checks only that both are non-empty. | Always, at least one |
+| `person[].type` / `.id` | The system that issued the ID. `type` names that system (`VAN`, `DNC`, `SOS`, `phone`, your own CRM) and `id` is the ID it gave out. | Unless you send `contactInfo` instead |
+| `vanFields.*` | VAN, scoped to the committee your VAN key is attached to. | Only for a key with a VAN destination |
+
+### If Van is a Destination
+
+Only relevant if step 3 showed a destination with `is_van_destination` set. Two
+things change in the payload below:
+
+- `person` must include an entry of type `VAN` carrying that person's VAN ID. It
+  is required even when you also send `contactInfo`, and a given identifier type
+  may appear only once in the array.
+- `vanFields` is required, and both fields are validated:
+  - `contactTypeId` must be a positive integer, matching a Contact Type the
+    destination VAN committee can reach
+    ([contact types](https://docs.ngpvan.com/reference/canvassresponsescontacttypes)).
+  - `resultCodeId` must be a positive integer available to that contact type
+    ([result codes](https://docs.ngpvan.com/reference/canvassresponsesresultcodes)).
+    One exception: if `outcomesDetailed` carries an `activist_code` or
+    `survey_response` entry, `resultCodeId` must instead be null or `14`
+    (Canvassed).
+
+```ruby
+      person: [{ type: "VAN", id: "<their VAN id>" }],
+      van_fields: DdxInteractionsApi::InteractionVanFieldsDto.new(
+        contact_type_id: "<contact type id>",
+        result_code_id: "<result code id>"
+      ),
+```
+
+`vendorSource`, `committee`, `stateCode`, `method`, and `outcome` do not change
+for a VAN key. The VAN committee that receives this is the one attached to your
+VAN key, not anything you put in `committee`.
 
 ```bash
 ruby - <<'RUBY'
@@ -292,7 +328,7 @@ The interactive reference is at
 | `404` from step 6 | You passed the `correlationId`. That route takes a GUID `interactionId` only, and correlation IDs are either a numeric trace ID or `mig-` prefixed. Use an ID from the accepted list in step 4. |
 | Step 6 returns `count: 0` | The key has no destination with `is_van_destination` set, so no transaction record exists; or `show_only_failed_transactions` was left at its default of true. |
 
-### On that 401
+### Causes of 401 Errors
 
 The 401 is deliberately generic and covers several distinct causes, including
 a **valid key that simply lacks the required role**, which is an authorization
@@ -304,17 +340,7 @@ alone is only the status line.
 
 ---
 
-## 8. Where the model docs live
-
-The gemspec ships `lib/**` and `README.md` only, so `docs/*.md` are not inside
-the installed gem. The model links in the README point back at
-[this repo](https://github.com/Movement-Infrastructure/interactions-api-sdks/tree/main/sdks/ruby/v1/docs),
-and the interactive reference is at
-[docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
-
----
-
-## 9. Sign-off checklist
+## 8. Sign-off checklist
 
 - [ ] Installed from RubyGems into a clean `GEM_HOME`
 - [ ] `auth/me` returned the expected workspace
