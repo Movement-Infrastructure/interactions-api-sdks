@@ -14,7 +14,7 @@ A bug in the client surface is nearly always a contract bug. Fix it upstream and
 
 ```
 openapi/v1/swagger.json   # source of truth, synced from mig-readme-docs
-sdks/                     # generated clients (python and ruby are live)
+sdks/                     # generated clients (python and ruby are published)
 templates/<language>/     # mustache overrides for generator defaults
 scripts/                  # version bump, post-generation patches, gates
 docs/                     # publish leak-audit checklist
@@ -29,7 +29,9 @@ docs/                     # publish leak-audit checklist
 4. Sync PRs merge to `develop`, which publishes that version to TestPyPI as a staging release.
 5. Promoting `develop` to `main` publishes the same version to PyPI. That promotion is the release.
 
-RubyGems has no sandbox registry, so the Ruby gem has no `develop` staging step. Every gem publish is a prerelease (`X.Y.Z.pre.<run number>`) instead, which `gem install` and `bundle install` skip unless the caller passes `--pre` or pins an exact version. Cutting a final Ruby version is a deliberate change to that workflow, not a promotion.
+RubyGems has no sandbox registry, so the Ruby gem has no `develop` staging step: promoting `develop` to `main` publishes `gemVersion` straight to RubyGems as a final release. RubyGems refuses to re-push a version and `yank` does not free the number, so a promotion that does not bump `gemVersion` fails the publish rather than overwriting anything.
+
+NuGet has no sandbox registry either, so the C# package works the same way as the gem. Promoting `develop` to `main` publishes `packageVersion` to NuGet as a final release. `publish-csharp-nuget.yml` deliberately omits `--skip-duplicate`, which makes a promotion carrying a version already on NuGet fail loudly rather than pass green having uploaded nothing.
 
 npm has no sandbox registry either, so the Node package works the same way. Promoting `develop` to `main` publishes `npmVersion` to npmjs.com as a final release. `publish-node-npm.yml` refuses a version that is already published, so a promotion without a bump fails before it reaches the registry rather than 403ing at the push.
 
@@ -39,7 +41,7 @@ Re-running the sync is safe: the branch name (`sync/mercury-<short-sha>`) derive
 
 Versions live in each SDK's `openapi-generator-config.yaml` and flow into the generated manifest. That field is the source of truth; nothing edits the manifest directly. `scripts/bump_version.py` rewrites it on every sync PR before the generator runs.
 
-Each generator spells the key differently: `packageVersion` for Python, `gemVersion` for Ruby, `npmVersion` for Node. The generate workflow passes `--version-key` for that reason. Passing the wrong key is an error rather than a silent no-op, which keeps a stuck version from reaching a registry.
+Each generator spells the key differently: `packageVersion` for Python and C#, `gemVersion` for Ruby, `npmVersion` for Node. The generate workflow passes `--version-key` for that reason. Passing the wrong key is an error rather than a silent no-op, which keeps a stuck version from reaching a registry.
 
 Apply at most one label:
 
@@ -71,11 +73,11 @@ python scripts/bump_version.py \
 All unit-tested under `scripts/tests/`:
 
 - `bump_version.py` — computes the next version from PR labels and rewrites it under the key `--version-key` names.
-- `patch_python_sdk.py` — fixes the generator has no config for, mostly `setup()` arguments. Exact-anchor patches fail loudly on a generator upgrade rather than silently dropping the fix.
+- `patch_python_sdk.py`, `patch_node_sdk.py`, `patch_dotnet_sdk.py` — fixes the generators have no config for: `setup()` arguments, `package.json` fields and the tsconfig `include`, and the csproj identity fields and packed README. Exact-anchor patches fail loudly on a generator upgrade rather than silently dropping the fix.
 - `render_changelog.py` — renders the `CHANGELOG.md` entry and gates label/spec agreement.
-- `verify_readme.py` — checks a generated README before it ships. `setup.py` points `long_description` at the Python one, making it the PyPI project page; the Ruby gemspec ships its README inside the gem. `--language` selects the required-content list, which lives in the script so the PR and publish gates cannot disagree.
+- `verify_readme.py` — checks a generated README before it ships. `setup.py` points `long_description` at the Python one, making it the PyPI project page; the Ruby gemspec ships its README inside the gem. `--language` selects the required-content list, which lives in the script so the PR and publish gates cannot disagree. Every language has an entry.
 
-Template overrides live in `templates/<language>/`; anything absent falls back to the generator jar. `templates/python/README.mustache` and `templates/ruby/README.mustache` each document why they exist. Read one before adding another. The Ruby override also carries the endpoint, model, and authorization sections verbatim, because the Ruby generator has no `common_README` partial to defer to; a generator upgrade can change them upstream without changing them here.
+Template overrides live in `templates/<language>/`; anything absent falls back to the generator jar. All four README overrides document why they exist. Read one before adding another. The Ruby override also carries the endpoint, model, and authorization sections verbatim, because the Ruby generator has no `common_README` partial to defer to; a generator upgrade can change them upstream without changing them here.
 
 ## Running tests locally
 

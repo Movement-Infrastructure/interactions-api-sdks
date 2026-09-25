@@ -20,10 +20,10 @@ RSpec.describe "generated gem" do
     expect(DdxInteractionsApi::WhoAmIApiKeyDto).to be_a(Class)
   end
 
-  # The suffix is optional because publish-ruby-rubygems.yml stamps
-  # `X.Y.Z.pre.<run>` into version.rb before building.
+  # Plain `A.B.C`: the publish workflow ships `gemVersion` as written and
+  # refuses a prerelease, so a suffix here means version.rb drifted.
   it "reports the version the generator config set" do
-    expect(DdxInteractionsApi::VERSION).to match(/\A\d+\.\d+\.\d+(\.[A-Za-z0-9]+)*\z/)
+    expect(DdxInteractionsApi::VERSION).to match(/\A\d+\.\d+\.\d+\z/)
   end
 
   it "defaults to the production host" do
