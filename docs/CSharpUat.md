@@ -76,7 +76,7 @@ The package ID is dotted, and so are the namespaces you import
 ## 3. Authenticate, and check what your key can reach
 
 Each step replaces `Program.cs` and re-runs. The quoting around `'CS'` matters.
-Unquoted, the shell would expand `$` and backticks before C# ever saw them.
+Each step replaces `Program.cs` and re-runs.
 
 ```bash
 cat > Program.cs <<'CS'
