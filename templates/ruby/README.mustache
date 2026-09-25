@@ -46,18 +46,9 @@ Ruby {{{gemRequiredRubyVersion}}}
 gem install {{{gemName}}}
 ```
 
-Every published version is currently a prerelease (`X.Y.Z.pre.N`), and both
-`gem install` and Bundler skip prereleases unless asked. Add `--pre` to take
-the most recent one:
+In a Gemfile:
 
-```shell
-gem install {{{gemName}}} --pre
-```
-
-In a Gemfile, pin the exact version. A pessimistic constraint (`~>`) will not
-select a prerelease:
-
-    gem '{{{gemName}}}', '{{{gemVersion}}}.pre.<build>'
+    gem '{{{gemName}}}', '~> {{{gemVersion}}}'
 
 [RubyGems](https://rubygems.org/gems/{{{gemName}}}/versions) lists what is
 published.

@@ -23,18 +23,9 @@ Ruby >= 3.0
 gem install ddx_interactions_api
 ```
 
-Every published version is currently a prerelease (`X.Y.Z.pre.N`), and both
-`gem install` and Bundler skip prereleases unless asked. Add `--pre` to take
-the most recent one:
+In a Gemfile:
 
-```shell
-gem install ddx_interactions_api --pre
-```
-
-In a Gemfile, pin the exact version. A pessimistic constraint (`~>`) will not
-select a prerelease:
-
-    gem 'ddx_interactions_api', '0.1.0.pre.<build>'
+    gem 'ddx_interactions_api', '~> 0.1.0'
 
 [RubyGems](https://rubygems.org/gems/ddx_interactions_api/versions) lists what is
 published.

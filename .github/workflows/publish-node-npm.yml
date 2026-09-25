@@ -1,0 +1,218 @@
+name: Publish Node SDK to npm
+
+# Builds sdks/node/v1 and publishes it to npmjs.com on push to `main`. Sync
+# PRs merge to `develop`. Promoting develop to main is what releases.
+#
+# Publishes `npmVersion` as a final release. npm refuses to republish a version
+# and unpublishing does not free the number, so each release needs a bump first.
+# generate-node-sdk.yml does that on every sync PR.
+#
+# Auth is OIDC trusted publishing. npm binds the publisher to this file's name,
+# so renaming the workflow breaks publishing until the config is updated.
+#
+# A version can be deprecated at any time, but unpublished only within 72 hours
+# and only while nothing depends on it.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sdks/node/v1/**'
+  # Re-runs a publish without a new promotion, after fixing a registry-side
+  # problem. It cannot republish a version that already exists.
+  workflow_dispatch:
+
+# One publish at a time. Two overlapping runs could race on the same version.
+concurrency:
+  group: publish-node-npm
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v4
+        with:
+          # This job never pushes. The default leaves a live token in
+          # .git/config as an http.extraheader, readable by anything that
+          # runs afterwards.
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The generate workflow commits the SDK. Absent means the promotion
+      # happened before the first sync PR merged.
+      - name: Verify the generated SDK is present
+        run: |
+          set -euo pipefail
+
+          if [ ! -f sdks/node/v1/package.json ]; then
+            echo "::error::No package.json in sdks/node/v1."
+            echo "::error::The generated SDK has not been committed yet; nothing to publish."
+            exit 1
+          fi
+
+      # The generator hardcodes author to "OpenAPI-Generator" and omits the
+      # license. The committed copy is what gets packed here.
+      - name: Check package metadata
+        run: python scripts/patch_node_sdk.py sdks/node/v1 --expect-name ddx-interactions-api --check-only
+
+      # The generator writes package.json's version from `npmVersion`. If they
+      # disagree the SDK was not regenerated after the bump, and the package
+      # would publish under a version nobody reviewed.
+      - name: Resolve the release version
+        run: |
+          set -euo pipefail
+
+          base=$(sed -nE 's/^npmVersion:[[:space:]]*"?([^"[:space:]#]+)"?.*/\1/p' \
+                 sdks/node/v1/openapi-generator-config.yaml)
+
+          if [ -z "$base" ]; then
+            echo "::error::Could not read npmVersion from openapi-generator-config.yaml."
+            exit 1
+          fi
+
+          pkg=$(node -p "require('./sdks/node/v1/package.json').version")
+
+          if [ "$base" != "$pkg" ]; then
+            echo "::error::npmVersion is ${base} but package.json is ${pkg}."
+            echo "::error::Regenerate the SDK so the two agree before promoting."
+            exit 1
+          fi
+
+          echo "PKG_VERSION=${base}" >> "$GITHUB_ENV"
+          echo "Publishing ${base}."
+
+      # npm answers a republish with a 403 that reads like a permissions
+      # problem. Failing here instead names the actual fix.
+      - name: Refuse a version that is already published
+        run: |
+          set -euo pipefail
+
+          if npm view "ddx-interactions-api@${PKG_VERSION}" version >/dev/null 2>&1; then
+            echo "::error::${PKG_VERSION} is already published. Bump npmVersion in"
+            echo "::error::sdks/node/v1/openapi-generator-config.yaml and regenerate."
+            exit 1
+          fi
+
+          echo "${PKG_VERSION} is unpublished."
+
+      # README.md ships inside the tarball and renders on the package page. The
+      # PR check sees a regeneration. This sees the bytes about to be packed.
+      - name: Verify README before publishing
+        run: python scripts/verify_readme.py sdks/node/v1/README.md --language node
+
+      - name: Install dependencies
+        working-directory: sdks/node/v1
+        run: npm install
+
+      # `npm install` already ran this via `prepare`; repeated so a compile
+      # failure is attributed to its own step rather than to dependency install.
+      - name: Build
+        working-directory: sdks/node/v1
+        run: npm run build
+
+      # Packed into the runner temp: anything left under sdks/node/v1 would
+      # read as drift to the PR job's guard, and that directory's .gitignore is
+      # regenerated on every sync so it cannot hold an exclusion.
+      - name: Pack
+        working-directory: sdks/node/v1
+        run: npm pack --pack-destination "$RUNNER_TEMP"
+
+      # Enumerating makes a bad `files` entry visible here rather than on the
+      # registry, where the 72-hour unpublish window above is the only way back.
+      # See docs/publish-leak-audit-checklist.md.
+      - name: Enumerate artifact contents
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Published artifact contents"
+            for archive in "$RUNNER_TEMP"/*.tgz; do
+              echo "### tarball: $(basename "$archive")"
+              echo '```'
+              tar -tzf "$archive" | sort
+              echo '```'
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Reads the packed tarball, not the source tree, since that is what gets
+      # published.
+      - name: Check the packed tarball
+        run: |
+          set -euo pipefail
+
+          archive=$(ls "$RUNNER_TEMP"/*.tgz | head -1)
+          contents=$(tar -tzf "$archive")
+          failed=0
+
+          require() {
+            grep -qE "$1" <<< "$contents" || { echo "::error::$2"; failed=1; }
+          }
+
+          forbid() {
+            if grep -qE "$1" <<< "$contents"; then echo "::error::$2"; failed=1; fi
+          }
+
+          require '^package/README\.md$' "No README.md in the tarball; the package page would render empty."
+          require '^package/dist/' "No dist/ in the tarball; the build did not run before packing."
+          forbid '^package/test/' "test/ is in the tarball; the files allowlist is wrong."
+          forbid 'openapi-generator-config' "The generator config is in the tarball; the files allowlist is wrong."
+
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::Refusing to publish this tarball."
+            exit 1
+          fi
+
+          echo "Tarball checks passed: $(basename "$archive")"
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-sdk-tarball
+          path: ${{ runner.temp }}/*.tgz
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+
+    # Keeps publishing off arbitrary branches, and is where a required
+    # reviewer attaches.
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/ddx-interactions-api
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: node-sdk-tarball
+          path: dist/
+
+      # Matches the build job. Trusted publishing needs npm 11.5.1+ and Node
+      # 22.14+, which the current LTS satisfies.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish to npm
+        run: |
+          set -euo pipefail
+
+          npm publish dist/*.tgz --access public

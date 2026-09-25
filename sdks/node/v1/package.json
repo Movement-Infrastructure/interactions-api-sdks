@@ -1,0 +1,32 @@
+{
+  "name": "ddx-interactions-api",
+  "version": "0.1.0",
+  "description": "Node client for the DDx Interactions API, generated from the OpenAPI spec.",
+  "author": "DDx API Team",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Movement-Infrastructure/interactions-api-sdks.git"
+  },
+  "main": "./dist/index.js",
+  "typings": "./dist/index.d.ts",
+  "module": "./dist/esm/index.js",
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc && tsc -p tsconfig.esm.json",
+    "prepare": "npm run build",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^4.0 || ^5.0",
+    "vitest": "^2.1.0",
+    "msw": "^2.6.0"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/Movement-Infrastructure/interactions-api-sdks",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist"
+  ]
+}
