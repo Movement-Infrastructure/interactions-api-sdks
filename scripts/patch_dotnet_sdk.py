@@ -20,10 +20,10 @@ import sys
 from pathlib import Path
 
 AUTHORS = "DDx API Team"
-COMPANY = "Movement Infrastructure"
+COMPANY = "Democratic Data Exchange"
 ASSEMBLY_TITLE = "DDx Interactions API Client"
 DESCRIPTION = "C# client for the DDx Interactions API, generated from the OpenAPI spec."
-COPYRIGHT = "Copyright (c) Movement Infrastructure"
+COPYRIGHT = "Copyright (c) Democratic Data Exchange"
 PACKAGE_README = "README.md"
 
 # Relative to the csproj at src/<PackageId>/, so two levels up to sdks/csharp/v1.
