@@ -275,8 +275,7 @@ var config = new Configuration
 
 var raw = Environment.GetEnvironmentVariable("INTERACTION_ID") ?? "";
 
-// The route takes a GUID. A correlationId will not parse here, which is a
-// clearer failure than the 404 the server would return for one.
+// Interaction ID should be a GUID. Accidentally pasting in a Correlation ID instead will give you a parse error here
 if (!Guid.TryParse(raw, out var interactionId))
 {
     Console.Error.WriteLine($"INTERACTION_ID is not a GUID: {(raw.Length == 0 ? "(unset)" : raw)}");
