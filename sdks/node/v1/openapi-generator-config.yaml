@@ -17,7 +17,7 @@ npmName: ddx-interactions-api
 # generators spell this `npmVersion` rather than `packageVersion`, so the
 # workflow passes `--version-key npmVersion` to scripts/bump_version.py. The
 # wrong key raises there rather than passing as a no-op.
-npmVersion: 0.1.0
+npmVersion: 0.2.0
 
 # typescript-fetch over typescript-axios: it targets the platform's own fetch,
 # so the published package has zero runtime dependencies and consumers inherit
