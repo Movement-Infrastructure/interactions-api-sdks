@@ -15,7 +15,7 @@
 """  # noqa: E501
 
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 # import apis into sdk package
 from ddx_interactions_api.api.authentication_details_api import AuthenticationDetailsApi

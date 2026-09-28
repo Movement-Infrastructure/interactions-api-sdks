@@ -27,7 +27,7 @@ from typing_extensions import Self
 
 class ExchangeInteractionStatusDtoCursorPaginatedResponseDto(BaseModel):
     """
-    Extends Minerva.Dto.Api.GetResponseDto`1 with cursor-based pagination support.
+    A paged response with an opaque cursor for fetching the next page.
     """ # noqa: E501
     metadata: Optional[MinervaMetadataDto] = None
     data: Optional[List[ExchangeInteractionStatusDto]] = None
