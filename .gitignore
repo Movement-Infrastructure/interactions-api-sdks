@@ -11,5 +11,12 @@ venv/
 # Local openapi-generator jar cache (downloaded by CI/workflows at runtime;
 # see .github/workflows/*.yml). Not the generated SDK, which IS committed.
 .cache/
+
+# The Node SDK's package.json is regenerated on every spec sync, so a committed
+# lock would go stale whenever its dependencies change. It would only pin test
+# tooling in any case, since the published package has no runtime dependencies.
+# CI installs fresh instead. Listed here rather than in sdks/node/v1/.gitignore,
+# which the generator overwrites.
+sdks/node/v1/package-lock.json
 .shared
 

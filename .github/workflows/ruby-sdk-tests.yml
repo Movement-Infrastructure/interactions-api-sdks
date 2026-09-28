@@ -78,7 +78,7 @@ jobs:
 
       # The same patch generate-ruby-sdk.yml applies, because this job
       # installs what it just regenerated. Keep the two copies in sync.
-      - name: Patch generated gemspec file list
+      - name: Patch generated gemspec
         if: steps.spec.outputs.present == 'true'
         run: |
           python - <<'PY'
@@ -111,6 +111,35 @@ jobs:
                   )
               GEMSPEC.write_text(text.replace(ANCHOR, REPLACEMENT), encoding="utf-8")
               print("patched: gemspec file list")
+
+          META_MARKER = '"documentation_uri"'
+          META_ANCHOR = "  s.metadata    = {}\n"
+          META_REPLACEMENT = (
+              '  # RubyGems builds the gem page link list from these. Left empty, the\n'
+              '  # Documentation link falls back to a rubydoc.info URL that resolves only\n'
+              '  # if and when rubydoc gets around to building the gem.\n'
+              '  s.metadata    = {\n'
+              '    "homepage_uri"      => s.homepage,\n'
+              '    "source_code_uri"   => "#{s.homepage}/tree/main/sdks/ruby/v1",\n'
+              '    "documentation_uri" => "#{s.homepage}/blob/main/sdks/ruby/v1/README.md",\n'
+              '    "changelog_uri"     => "#{s.homepage}/blob/main/sdks/ruby/v1/CHANGELOG.md",\n'
+              '    "bug_tracker_uri"   => "#{s.homepage}/issues"\n'
+              '  }\n'
+          )
+
+          text = GEMSPEC.read_text(encoding="utf-8")
+          if META_MARKER in text:
+              print("already applied: gemspec metadata")
+          else:
+              hits = text.count(META_ANCHOR)
+              if hits != 1:
+                  sys.exit(
+                      f"::error::{GEMSPEC}: metadata anchor matched {hits} times, "
+                      f"expected 1. Generator template changed; update this step and "
+                      f"its copy in generate-ruby-sdk.yml."
+                  )
+              GEMSPEC.write_text(text.replace(META_ANCHOR, META_REPLACEMENT), encoding="utf-8")
+              print("patched: gemspec metadata")
           PY
 
       # README.md ships inside the gem. A dropped `-t templates/ruby` would

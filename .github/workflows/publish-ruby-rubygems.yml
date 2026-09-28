@@ -3,9 +3,10 @@ name: Publish Ruby SDK to RubyGems
 # Publishes sdks/ruby/v1 to RubyGems on push to `main`. Promoting develop to
 # main is what releases.
 #
-# Every publish is a prerelease (`X.Y.Z.pre.<run>`). RubyGems has no sandbox
-# registry, so the version is what keeps these builds off consumers: installers
-# skip prereleases unless asked with `--pre` or an exact pin.
+# Publishes the version in `gemVersion` as a final release, so `gem install
+# ddx_interactions_api` resolves it with no `--pre`. RubyGems refuses to re-push
+# a version and `yank` does not free the number, so each release needs a
+# `gemVersion` bump first. generate-ruby-sdk.yml does that on every sync PR.
 #
 # Auth is OIDC trusted publishing. There is no token to leak or rotate.
 # RubyGems binds that publisher to this file's name, so renaming the workflow
@@ -16,7 +17,8 @@ on:
     branches: [main]
     paths:
       - 'sdks/ruby/v1/**'
-  # Re-runs a publish without a new promotion, on a fresh run number.
+  # Re-runs a publish without a new promotion, after fixing a registry-side
+  # problem. It cannot republish a version that already exists.
   workflow_dispatch:
 
 # One publish at a time. Two overlapping runs could race on the same version.
@@ -48,10 +50,10 @@ jobs:
             exit 1
           fi
 
-      # Never committed: scripts/bump_version.py exits 2 on a suffix in
-      # `gemVersion`. run_number is monotonic because RubyGems refuses to
-      # re-push a version and `yank` does not free it.
-      - name: Stamp the prerelease version
+      # The generator writes version.rb from `gemVersion`, so the two agreeing is
+      # the signal that the SDK was regenerated after the last bump. If they have
+      # drifted, the gem would publish under a version nobody reviewed.
+      - name: Resolve the release version
         run: |
           set -euo pipefail
 
@@ -63,12 +65,39 @@ jobs:
             exit 1
           fi
 
-          pre="${base}.pre.${GITHUB_RUN_NUMBER}"
-          sed -i "s/VERSION = '.*'/VERSION = '${pre}'/" \
-            sdks/ruby/v1/lib/ddx_interactions_api/version.rb
+          rb=$(sed -nE "s/^[[:space:]]*VERSION = '([^']+)'.*/\1/p" \
+               sdks/ruby/v1/lib/ddx_interactions_api/version.rb)
 
-          echo "GEM_VERSION=${pre}" >> "$GITHUB_ENV"
-          echo "Publishing ${pre} (base ${base})."
+          if [ "$base" != "$rb" ]; then
+            echo "::error::gemVersion is ${base} but version.rb is ${rb}."
+            echo "::error::Regenerate the SDK so the two agree before promoting."
+            exit 1
+          fi
+
+          echo "GEM_VERSION=${base}" >> "$GITHUB_ENV"
+          echo "Publishing ${base}."
+
+      # RubyGems answers a re-push with a 409 that reads like a permissions
+      # problem. Failing here instead names the actual fix.
+      - name: Refuse a version that is already published
+        run: |
+          set -euo pipefail
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+                 "https://rubygems.org/api/v2/rubygems/ddx_interactions_api/versions/${GEM_VERSION}.json")
+
+          if [ "$code" = "200" ]; then
+            echo "::error::${GEM_VERSION} is already published. Bump gemVersion in"
+            echo "::error::sdks/ruby/v1/openapi-generator-config.yaml and regenerate."
+            exit 1
+          fi
+
+          if [ "$code" != "404" ]; then
+            echo "::error::Unexpected HTTP ${code} checking whether ${GEM_VERSION} exists."
+            exit 1
+          fi
+
+          echo "${GEM_VERSION} is unpublished."
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -127,8 +156,8 @@ jobs:
                        "Version is the 0.0.0 placeholder; the version bump did not run.")
             check.call(spec.homepage.to_s.empty?,
                        "Homepage is unset. Set gemHomepage.")
-            check.call(!spec.version.prerelease?,
-                       "Version #{spec.version} is not a prerelease. This workflow only publishes prereleases.")
+            check.call(spec.version.prerelease?,
+                       "Version #{spec.version} is a prerelease. This workflow publishes final releases.")
 
             if fails.zero?
               puts "Metadata checks passed: #{spec.name} #{spec.version} (#{spec.license})"

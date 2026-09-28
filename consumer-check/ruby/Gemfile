@@ -13,7 +13,8 @@ when "git"
       branch: ENV.fetch("SDK_BRANCH", "develop"),
       glob: "sdks/ruby/v1/*.gemspec"
 when "gem"
-  # An exact pin is what makes Bundler consider a prerelease.
+  # An exact pin, so the build under test is the one named and not whatever
+  # Bundler would otherwise resolve.
   gem "ddx_interactions_api", ENV.fetch("SDK_VERSION")
 else
   raise "SDK_SOURCE must be one of: path, git, gem (got #{source.inspect})"

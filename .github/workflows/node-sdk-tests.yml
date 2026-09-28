@@ -1,0 +1,157 @@
+name: Node SDK tests
+
+# On every PR to develop, regenerate sdks/node/v1/ from openapi/v1/swagger.json,
+# build it, and run the smoke + happy-path suite in sdks/node/v1/test/.
+#
+# No `paths:` filter, deliberately: a path-filtered required check shows as
+# perpetually pending on PRs that don't match it, blocking merge forever.
+# Branches with no committed spec skip the heavy steps and pass.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [develop]
+
+jobs:
+  node-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PR
+        uses: actions/checkout@v4
+
+      - name: Check for committed OpenAPI spec
+        id: spec
+        run: |
+          if [ -f openapi/v1/swagger.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No openapi/v1/swagger.json on this branch; the Node SDK cannot change without a spec, so smoke tests are skipped (pass)."
+          fi
+
+      - name: Set up Java
+        if: steps.spec.outputs.present == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Cache openapi-generator jar
+        if: steps.spec.outputs.present == 'true'
+        id: cache-generator
+        uses: actions/cache@v4
+        with:
+          path: .cache/openapi-generator-cli.jar
+          key: openapi-generator-7.10.0
+
+      - name: Download openapi-generator jar
+        if: steps.spec.outputs.present == 'true' && steps.cache-generator.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .cache
+          curl -sSL \
+            https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/7.10.0/openapi-generator-cli-7.10.0.jar \
+            -o .cache/openapi-generator-cli.jar
+
+      - name: Generate Node SDK
+        if: steps.spec.outputs.present == 'true'
+        run: |
+          java -jar .cache/openapi-generator-cli.jar generate \
+            -i openapi/v1/swagger.json \
+            -g typescript-fetch \
+            -o sdks/node/v1 \
+            -c sdks/node/v1/openapi-generator-config.yaml \
+            -t templates/node
+
+      # typescript-fetch registers no doc templates, so the per-model pages the
+      # other SDKs get come from a second pass with the same pinned jar, using
+      # its BETA markdown generator. Output goes to a temp directory to keep a
+      # second .openapi-generator/ tree out of sdks/node/v1, and the directory
+      # is replaced rather than merged so a dropped model loses its page.
+      - name: Generate API docs
+        if: steps.spec.outputs.present == 'true'
+        run: |
+          set -euo pipefail
+
+          docs=$(mktemp -d)
+
+          java -jar .cache/openapi-generator-cli.jar generate \
+            -i openapi/v1/swagger.json \
+            -g markdown \
+            -o "$docs" > /dev/null
+
+          rm -rf sdks/node/v1/docs
+          mkdir -p sdks/node/v1/docs
+          cp -R "$docs/Models" "$docs/Apis" "$docs/README.md" sdks/node/v1/docs/
+
+      - name: Set up Python
+        if: steps.spec.outputs.present == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Same patch generate-node-sdk.yml applies, because this job builds what
+      # it just regenerated. Without it the build fails outright: an unpatched
+      # tsconfig has no `include`, so tsc type-checks the test dependencies and
+      # errors on their moduleResolution.
+      - name: Patch generated SDK
+        if: steps.spec.outputs.present == 'true'
+        run: python scripts/patch_node_sdk.py sdks/node/v1 --expect-name ddx-interactions-api
+
+      # A dropped `-t templates/node` would silently restore the built-in
+      # template, which walks consumers through building from source and
+      # running `npm publish`.
+      - name: Verify generated README
+        if: steps.spec.outputs.present == 'true'
+        run: python scripts/verify_readme.py sdks/node/v1/README.md --language node
+
+      # Current active LTS, above the `engines` floor of 18. The floor states
+      # what consumers may use; this is what we test on.
+      - name: Set up Node
+        if: steps.spec.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # `npm install`, not `npm ci`: package.json is regenerated on every sync
+      # so no lockfile is committed. See the root .gitignore.
+      - name: Install dependencies
+        if: steps.spec.outputs.present == 'true'
+        working-directory: sdks/node/v1
+        run: npm install
+
+      # `npm install` already ran this via `prepare`; repeated so a compile
+      # failure is attributed to its own step rather than to dependency install.
+      - name: Build
+        if: steps.spec.outputs.present == 'true'
+        working-directory: sdks/node/v1
+        run: npm run build
+
+      - name: Run smoke tests
+        if: steps.spec.outputs.present == 'true'
+        working-directory: sdks/node/v1
+        run: npm test
+
+      # This job already regenerated the SDK, so any difference means the
+      # committed copy is stale. Placed last so a drift failure does not hide
+      # the test results. Skipped when the spec changed here, because
+      # generate-node-sdk.yml commits the regenerated SDK on those PRs.
+      #
+      # `git status`, not `git diff`: a new model adds an untracked file, which
+      # a diff does not report.
+      - name: Check the committed SDK is up to date
+        if: steps.spec.outputs.present == 'true'
+        run: |
+          set -euo pipefail
+
+          if ! git diff --quiet "origin/${{ github.base_ref }}" -- openapi/v1/swagger.json; then
+            echo "::notice::Spec changed in this PR; the generate workflow commits the regenerated SDK."
+            exit 0
+          fi
+
+          drift=$(git status --porcelain -- sdks/node/v1)
+
+          if [ -n "$drift" ]; then
+            echo "$drift"
+            echo "::error::sdks/node/v1 does not match a fresh generation. Regenerate and commit it."
+            exit 1
+          fi

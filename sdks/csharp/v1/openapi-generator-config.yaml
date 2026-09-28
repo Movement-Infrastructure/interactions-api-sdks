@@ -1,0 +1,38 @@
+# Read by .github/workflows/generate-csharp-sdk.yml, generator 7.10.0.
+
+# NuGet id and root namespace.
+packageName: Ddx.InteractionsApi
+
+# scripts/bump_version.py rewrites this on each sync PR. The C# generator uses
+# `packageVersion`, the script's default, so no --version-key is passed.
+packageVersion: 0.1.0
+
+# HttpClient from the BCL rather than the generator's restsharp default. Both
+# pull in JsonSubTypes, Newtonsoft.Json and Polly; restsharp adds RestSharp on
+# top, so httpclient is a strict subset. generichost would drop Newtonsoft.Json
+# but imposes DI registration on consumers making a single call.
+#
+# The generator marks this template experimental, so its output can change
+# between releases. The jar is pinned, so that only happens on a deliberate
+# upgrade.
+library: httpclient
+
+# Current LTS, and the highest this generator offers. Excludes .NET Framework
+# consumers; revisit with a netstandard2.0 multi-target if one asks.
+targetFramework: net8.0
+
+# Pinned because the generator emits a fresh GUID each run, churning the csproj.
+packageGuid: '{9FF6EDD8-40C6-4E7F-BA23-B53A45144D41}'
+
+licenseId: MIT
+
+# The generator defaults to false, the pre-.NET-6 behaviour, which pushes
+# avoidable null checks onto consumers.
+nullableReferenceTypes: true
+
+gitUserId: Movement-Infrastructure
+gitRepoId: interactions-api-sdks
+
+globalProperties:
+  apiTests: "false"
+  modelTests: "false"

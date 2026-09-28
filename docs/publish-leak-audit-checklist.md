@@ -75,8 +75,8 @@ with each other about what "excluded" means.
 - [ ] No local or runner filesystem paths (`/Users/…`, `/home/runner/…`, `/github/workspace/…`,
       `C:\…`). These leak developer identities and CI layout.
 - [ ] No internal hostnames or non-production environment URLs. **Check the spec's `servers:` block** —
-      it is copied verbatim into the client. The Python SDK currently ships
-      `api-dev.movementinfrastructure.org` in its host list.
+      it is copied verbatim into the client, so a non-production entry there reaches every
+      generated SDK that keeps the full server list.
 - [ ] No internal implementation details in public docstrings — backend type names, namespaces, table
       or queue names. These come from the spec's schema `description` fields.
 - [ ] Package metadata is real: author, author email, license, repository URL, version. Generated

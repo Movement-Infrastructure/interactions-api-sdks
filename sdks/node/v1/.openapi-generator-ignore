@@ -1,0 +1,24 @@
+# openapi-generator ignore file.
+#
+# Files listed here are NOT written or overwritten when the SDK is regenerated
+# (.github/workflows/generate-node-sdk.yml and node-sdk-tests.yml both run the
+# generator into this directory). This protects the hand-written smoke-test
+# suite and its supporting files from being clobbered by regeneration.
+
+test/**
+vitest.config.ts
+.openapi-generator-ignore
+
+# The generator's .npmignore lists only README.md, which is both wrong (npm
+# never excludes a README) and dangerously incomplete (everything else --
+# src/, tsconfig, this repo's generator config -- would ship). Publishing is
+# controlled by the `files` allowlist that the workflow patches into
+# package.json instead, so the file is not generated at all.
+.npmignore
+
+# The generator emits these supporting files, but we don't use them (we have
+# our own CI and test suite). Not generating them keeps them out of the repo
+# and out of any published tarball.
+.travis.yml
+.gitlab-ci.yml
+git_push.sh

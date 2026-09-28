@@ -1,0 +1,178 @@
+name: Generate Node SDK
+
+# On every PR that touches openapi/v1/swagger.json, computes the next package
+# version from the PR's labels, regenerates sdks/node/v1/, and commits both back
+# to the PR branch so the version reaches the generated manifest.
+
+on:
+  pull_request:
+    # `labeled`/`unlabeled` are here so adding or removing a version label
+    # after the PR opens recomputes the version.
+    types: [opened, synchronize, labeled, unlabeled]
+    # The PR that merges develop into main has `develop` as its head ref, so
+    # without this filter the job would compute the version from `main` and
+    # push to a protected branch, failing with GH006.
+    branches: [develop]
+    paths:
+      - openapi/v1/swagger.json
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # One fetch for three steps: the bump reads the base config, the
+      # changelog reads the base spec and changelog.
+      - name: Read base-branch package version
+        id: base
+        run: |
+          set -euo pipefail
+
+          config=sdks/node/v1/openapi-generator-config.yaml
+
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+
+          if ! git show "FETCH_HEAD:$config" > /tmp/base-node-config.yaml; then
+            echo "::error::$config not found on ${{ github.base_ref }}; cannot determine the current version."
+            exit 1
+          fi
+
+          # Absent on the bootstrap sync. With no baseline to diff, the
+          # changelog steps below skip instead of failing.
+          if git show "FETCH_HEAD:openapi/v1/swagger.json" > /tmp/base-node-swagger.json 2>/dev/null; then
+            echo "has_spec=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_spec=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No spec on ${{ github.base_ref }}; skipping the changelog."
+          fi
+
+          # Absent until the first sync creates it, which the renderer handles.
+          git show "FETCH_HEAD:sdks/node/v1/CHANGELOG.md" > /tmp/base-node-changelog.md 2>/dev/null \
+            || echo "::notice::No changelog on ${{ github.base_ref }} yet; it will be created."
+
+      # `npmVersion`, not bump_version.py's `packageVersion` default. The
+      # wrong key raises rather than passing as a no-op.
+      - name: Compute and apply next version
+        id: version
+        run: |
+          python scripts/bump_version.py \
+            --current-config /tmp/base-node-config.yaml \
+            --write-config sdks/node/v1/openapi-generator-config.yaml \
+            --labels-json '${{ toJSON(github.event.pull_request.labels.*.name) }}' \
+            --version-key npmVersion
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Cache openapi-generator jar
+        id: cache-generator
+        uses: actions/cache@v4
+        with:
+          path: .cache/openapi-generator-cli.jar
+          key: openapi-generator-7.10.0
+
+      - name: Download openapi-generator jar
+        if: steps.cache-generator.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .cache
+          curl -sSL \
+            https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/7.10.0/openapi-generator-cli-7.10.0.jar \
+            -o .cache/openapi-generator-cli.jar
+
+      - name: Generate Node SDK
+        run: |
+          java -jar .cache/openapi-generator-cli.jar generate \
+            -i openapi/v1/swagger.json \
+            -g typescript-fetch \
+            -o sdks/node/v1 \
+            -c sdks/node/v1/openapi-generator-config.yaml \
+            -t templates/node
+
+      # typescript-fetch registers no doc templates, so the per-model pages the
+      # other SDKs get come from a second pass with the same pinned jar, using
+      # its BETA markdown generator. Output goes to a temp directory to keep a
+      # second .openapi-generator/ tree out of sdks/node/v1, and the directory
+      # is replaced rather than merged so a dropped model loses its page.
+      - name: Generate API docs
+        run: |
+          set -euo pipefail
+
+          docs=$(mktemp -d)
+
+          java -jar .cache/openapi-generator-cli.jar generate \
+            -i openapi/v1/swagger.json \
+            -g markdown \
+            -o "$docs" > /dev/null
+
+          rm -rf sdks/node/v1/docs
+          mkdir -p sdks/node/v1/docs
+          cp -R "$docs/Models" "$docs/Apis" "$docs/README.md" sdks/node/v1/docs/
+
+      # Fills in the package.json fields the generator hardcodes or omits, and
+      # confines tsc to src/. Both are regenerated on every run.
+      - name: Patch generated SDK
+        run: python scripts/patch_node_sdk.py sdks/node/v1 --expect-name ddx-interactions-api
+
+      # Pinned so an upstream release cannot change changelog wording.
+      - name: Install oasdiff
+        if: steps.base.outputs.has_spec == 'true'
+        env:
+          OASDIFF_VERSION: 1.30.0
+        run: |
+          set -euo pipefail
+
+          curl -sSL \
+            "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin oasdiff
+
+          oasdiff --version
+
+      # `--bump` makes this a gate: labels give the version, the spec gives the
+      # breaking changes, and a disagreement fails the run before the commit
+      # below. Applying `interactions-api-major` reruns the workflow.
+      - name: Update CHANGELOG.md
+        if: steps.base.outputs.has_spec == 'true'
+        run: |
+          set -euo pipefail
+
+          oasdiff changelog /tmp/base-node-swagger.json openapi/v1/swagger.json \
+            -f json > /tmp/oasdiff-node.json
+
+          # The head commit's date, so a rerun days later does not churn.
+          python scripts/render_changelog.py \
+            --oasdiff-json /tmp/oasdiff-node.json \
+            --version "${{ steps.version.outputs.next }}" \
+            --bump "${{ steps.version.outputs.bump }}" \
+            --date "$(git log -1 --format=%cs)" \
+            --current-changelog /tmp/base-node-changelog.md \
+            --write-changelog sdks/node/v1/CHANGELOG.md
+
+      - name: Commit generated SDK if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add sdks/node/v1
+
+          if git diff --cached --quiet; then
+            echo "No changes to generated SDK — skipping commit."
+          else
+            git commit -m "chore: regenerate Node SDK at v${{ steps.version.outputs.next }} from openapi/v1/swagger.json"
+            git push origin HEAD:${{ github.head_ref }}
+          fi

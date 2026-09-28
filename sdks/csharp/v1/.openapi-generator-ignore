@@ -1,0 +1,13 @@
+# Files listed here survive regeneration.
+
+# Hand-written smoke suite.
+test/**
+.openapi-generator-ignore
+
+# Unused: the repo has its own CI.
+appveyor.yml
+git_push.sh
+
+# A second, generator-normalised copy of the spec. openapi/v1/swagger.json is
+# the source of truth and the only copy worth reviewing in a sync PR.
+api/openapi.yaml

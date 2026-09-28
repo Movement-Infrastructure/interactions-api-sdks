@@ -26,7 +26,16 @@ Gem::Specification.new do |s|
   s.description = "Ruby client for the DDx Interactions API, generated from the OpenAPI spec."
   s.license     = "MIT"
   s.required_ruby_version = ">= 3.0"
-  s.metadata    = {}
+  # RubyGems builds the gem page link list from these. Left empty, the
+  # Documentation link falls back to a rubydoc.info URL that resolves only
+  # if and when rubydoc gets around to building the gem.
+  s.metadata    = {
+    "homepage_uri"      => s.homepage,
+    "source_code_uri"   => "#{s.homepage}/tree/main/sdks/ruby/v1",
+    "documentation_uri" => "#{s.homepage}/blob/main/sdks/ruby/v1/README.md",
+    "changelog_uri"     => "#{s.homepage}/blob/main/sdks/ruby/v1/CHANGELOG.md",
+    "bug_tracker_uri"   => "#{s.homepage}/issues"
+  }
 
   s.add_runtime_dependency 'faraday', '>= 1.0.1', '< 3.0'
   s.add_runtime_dependency 'faraday-multipart'
