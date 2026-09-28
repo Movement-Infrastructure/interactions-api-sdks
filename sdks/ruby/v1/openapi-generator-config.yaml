@@ -5,7 +5,7 @@ moduleName: DdxInteractionsApi
 
 # scripts/bump_version.py rewrites this on each sync PR, and needs
 # `--version-key gemVersion`: the Ruby generator does not use packageVersion.
-gemVersion: 0.1.0
+gemVersion: 0.2.0
 
 # The default, typhoeus, binds libcurl through a native extension and needs a
 # compiler wherever the gem is installed. Faraday is pure Ruby.

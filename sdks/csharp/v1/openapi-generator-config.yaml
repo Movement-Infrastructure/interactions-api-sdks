@@ -5,7 +5,7 @@ packageName: Ddx.InteractionsApi
 
 # scripts/bump_version.py rewrites this on each sync PR. The C# generator uses
 # `packageVersion`, the script's default, so no --version-key is passed.
-packageVersion: 0.1.0
+packageVersion: 0.2.0
 
 # HttpClient from the BCL rather than the generator's restsharp default. Both
 # pull in JsonSubTypes, Newtonsoft.Json and Polly; restsharp adds RestSharp on
