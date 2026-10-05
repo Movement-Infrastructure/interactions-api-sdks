@@ -65,6 +65,8 @@ with each other about what "excluded" means.
       - C#: `unzip -l *.nupkg`
       - Kotlin/Java: `unzip -l *.jar` (and the `-sources.jar`)
       - Swift: the published source tree is the git tag itself — audit `git archive` output
+      - Go: the module zip holds every tracked file under `sdks/go` at the tag. Audit
+        `git ls-files sdks/go`, then `unzip -Z1` the zip that `go mod download -json` reports
 - [ ] **sdist and wheel audited separately.** They are built by different code paths and routinely
       differ. Confirmed on the Python SDK: `find_packages(exclude=[...])` keeps tests out of the wheel
       while setuptools' default sdist manifest ships `tests/test*.py` anyway.

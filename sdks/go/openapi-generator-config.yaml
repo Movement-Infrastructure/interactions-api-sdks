@@ -1,0 +1,24 @@
+# Read by .github/workflows/generate-go-sdk.yml, generator 7.10.0.
+
+# Mirrors the other SDKs' names: ddx_interactions_api, Ddx.InteractionsApi.
+packageName: ddxinteractionsapi
+
+# scripts/bump_version.py rewrites this on each sync PR. The Go generator
+# spells it packageVersion, the bump script's default key.
+packageVersion: 0.1.0
+
+# Several enums share member names such as UNKNOWN, and Go puts every enum
+# constant in one package namespace. Unprefixed, they collide and the package
+# does not compile.
+enumClassPrefix: true
+
+# The generator builds the module path as github.com/<user>/<repo>, and Go
+# requires it to match the module's directory in the repo. The repo id carries
+# the subdirectory for that reason. Go rejects a module path ending in /v1,
+# which is why this SDK sits at sdks/go and not sdks/go/v1 like the others.
+gitUserId: Movement-Infrastructure
+gitRepoId: interactions-api-sdks/sdks/go
+
+globalProperties:
+  apiTests: "false"
+  modelTests: "false"

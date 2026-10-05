@@ -14,8 +14,9 @@ New to the API itself? Start with the [overview](https://docs.movementinfrastruc
 | Ruby | [`ddx_interactions_api`](https://rubygems.org/gems/ddx_interactions_api) | Prerelease |
 | Node.js | `ddx-interactions-api` | Unreleased |
 | C# | `Ddx.InteractionsApi` | Unreleased |
+| Go | `github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go` | Unreleased |
 
-Each SDK lives under `sdks/<language>/v1/` and is generated from `openapi/v1/swagger.json`.
+Each SDK lives under `sdks/<language>/v1/` and is generated from `openapi/v1/swagger.json`. Go is the exception, at `sdks/go/`, because a Go module path cannot end in `/v1`.
 
 Versions are below 1.0 while the API stabilizes, so pin the minor version if you need a stable surface.
 
@@ -115,10 +116,8 @@ using Ddx.InteractionsApi.Api;
 using Ddx.InteractionsApi.Client;
 using Ddx.InteractionsApi.Model;
 
-// BasePath is a full URL, scheme included
 var config = new Configuration
 {
-    BasePath = "https://api-dev.movementinfrastructure.org",
     Username = "",
     Password = Environment.GetEnvironmentVariable("DDX_API_KEY"),
 };
@@ -143,6 +142,7 @@ catch (ApiException e)
 // The correlation ID follows the batch through the Exchange.
 var statuses = interactions.VversionInteractionsExchangeStatusGet(
     "1", correlationId: result.CorrelationId);
+```
 
 ### Node.js
 
@@ -188,6 +188,52 @@ const statuses = await interactions.vversionInteractionsExchangeStatusGet({
 });
 ```
 
+### Go
+
+Requires Go 1.22+.
+
+```sh
+go get github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go@latest
+```
+
+```go
+import (
+	"context"
+	"errors"
+	"log"
+	"os"
+
+	ddx "github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
+)
+
+client := ddx.NewAPIClient(ddx.NewConfiguration())
+
+// Credentials travel on the context passed to each call.
+ctx := context.WithValue(context.Background(), ddx.ContextBasicAuth, ddx.BasicAuth{
+	UserName: "",
+	Password: os.Getenv("DDX_API_KEY"),
+})
+
+payload := ddx.NewInteractionsDto()
+// See sdks/go/docs/InteractionsDto.md for the full shape.
+payload.SetInteractions([]ddx.InteractionDto{})
+
+result, _, err := client.InteractionsAPI.VversionInteractionsPost(ctx, "1").InteractionsDto(*payload).Execute()
+if err != nil {
+	// The error string is just the status line; Body() says why.
+	var apiErr *ddx.GenericOpenAPIError
+	if errors.As(err, &apiErr) {
+		log.Fatalf("Interactions API returned %s: %s", apiErr.Error(), apiErr.Body())
+	}
+	log.Fatal(err)
+}
+
+// The correlation ID follows the batch through the Exchange.
+statuses, _, err := client.InteractionsAPI.VversionInteractionsExchangeStatusGet(ctx, "1").
+	CorrelationId(result.GetCorrelationId()).
+	Execute()
+```
+
 ## Endpoints
 
 Method names are derived from the path and the verb, so they are the same in every language:
@@ -201,11 +247,11 @@ Method names are derived from the path and the verb, so they are the same in eve
 | `vversion_interactions_transactions_get` | `GET /v1/interactions/transactions` |
 | `vversion_auth_me_get` | `GET /v1/auth/me` |
 
-Full models are documented in each SDK's own README: [Python](sdks/python/v1/README.md), [Ruby](sdks/ruby/v1/README.md). A corresponding `docs/` directory can be found alongside the README. The interactive reference is at [docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
+Full models are documented in each SDK's own README: [Python](sdks/python/v1/README.md), [Ruby](sdks/ruby/v1/README.md), [Go](sdks/go/README.md). A corresponding `docs/` directory can be found alongside the README. The interactive reference is at [docs.movementinfrastructure.org/reference](https://docs.movementinfrastructure.org/reference/interactions).
 
 ## Versioning
 
-SDK versions are semantic; a major bump means the API changed in a way that requires work on your side. Each SDK ships a changelog generated from a diff of the specification, with breaking entries marked: [Python](sdks/python/v1/CHANGELOG.md), [Ruby](sdks/ruby/v1/CHANGELOG.md).
+SDK versions are semantic; a major bump means the API changed in a way that requires work on your side. Each SDK ships a changelog generated from a diff of the specification, with breaking entries marked: [Python](sdks/python/v1/CHANGELOG.md), [Ruby](sdks/ruby/v1/CHANGELOG.md). The Go changelog appears at `sdks/go/CHANGELOG.md` after its first spec sync.
 
 The SDK version tracks the package, not the API. The API version (`v1`) appears in the request path and changes far less often.
 

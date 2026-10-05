@@ -1,0 +1,99 @@
+{{!
+    Overrides the go generator's built-in README.mustache, passed as
+    -t templates/go. Anything absent from this directory falls back to the
+    jar's copy.
+
+    A mustache comment ends at its first closing brace pair. A variable or
+    partial tag in this block would silently end it.
+
+    The built-in template has consumers go get testify and x/net, which this
+    client never imports, then copy the package into their own tree. Its auth
+    example passes a literal "username", where this API wants it empty.
+
+    pkg.go.dev renders this file as the module page and cannot resolve relative
+    links, which is why doc links are absolute. Getting Started sets no server
+    because the client defaults to production, and scripts/verify_readme.py
+    rejects any other host.
+}}
+# {{packageName}}
+
+Go client for the DDx Interactions API, generated from its OpenAPI
+specification.
+
+- API version: {{appVersion}}
+- Package version: {{packageVersion}}
+- Generator version: {{generatorVersion}}
+
+## Requirements
+
+Go 1.22 or later.
+
+## Installation
+
+```shell
+go get {{gitHost}}/{{gitUserId}}/{{gitRepoId}}@latest
+```
+
+```go
+import {{packageName}} "{{gitHost}}/{{gitUserId}}/{{gitRepoId}}"
+```
+
+## Changelog
+
+API changes are recorded in the
+[changelog](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/go/CHANGELOG.md),
+regenerated from a diff of the OpenAPI specification on each sync. Entries
+marked **breaking** require a change on the consumer side.
+
+## Reporting issues
+
+This package is generated. Edits to it are overwritten on the next spec sync.
+Report problems against the API specification rather than the generated code.
+
+## Getting Started
+
+```go
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"os"
+
+	{{packageName}} "{{gitHost}}/{{gitUserId}}/{{gitRepoId}}"
+)
+
+func main() {
+	client := {{packageName}}.NewAPIClient({{packageName}}.NewConfiguration())
+
+	// HTTP basic auth, API key in the password field, empty username.
+	// The client already defaults to the production API.
+	ctx := context.WithValue(context.Background(), {{packageName}}.ContextBasicAuth, {{packageName}}.BasicAuth{
+		UserName: "",
+		Password: os.Getenv("DDX_API_KEY"),
+	})
+
+	me, _, err := client.AuthenticationDetailsAPI.VversionAuthMeGet(ctx, "1").Execute()
+	if err != nil {
+		// The error string carries only the status line. The body says why.
+		var apiErr *{{packageName}}.GenericOpenAPIError
+		if errors.As(err, &apiErr) {
+			log.Fatalf("Interactions API returned %s: %s", apiErr.Error(), apiErr.Body())
+		}
+		log.Fatal(err)
+	}
+	fmt.Println(me)
+}
+```
+
+Model fields are pointers so that an unset field can be told apart from a zero
+value. The `PtrString`, `PtrInt32`, `PtrBool` and `PtrTime` helpers build them
+inline.
+
+## Documentation
+
+Per-endpoint and per-model pages are generated alongside the client in
+[docs](https://github.com/Movement-Infrastructure/interactions-api-sdks/blob/main/sdks/go/docs).
+The same field documentation is on [pkg.go.dev](https://pkg.go.dev/{{gitHost}}/{{gitUserId}}/{{gitRepoId}}).

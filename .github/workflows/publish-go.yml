@@ -1,0 +1,243 @@
+name: Publish Go SDK
+
+# Tags sdks/go at `packageVersion` on push to `main`. Sync PRs merge to
+# `develop`. Promoting develop to main is what releases.
+#
+# Go has no package registry. A release is a git tag named sdks/go/vX.Y.Z, the
+# form Go requires for a module in a subdirectory. The Go module proxy keeps
+# every version it fetches, and deleting or moving the tag afterwards changes
+# nothing for consumers. A bad version can only be retracted in a later
+# release, which is why every check runs before the tag is pushed.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sdks/go/**'
+  # Re-runs a release without a new promotion. It cannot re-tag a version
+  # that already exists.
+  workflow_dispatch:
+
+# One release at a time. Two overlapping runs could race on the same tag.
+concurrency:
+  group: publish-go
+  cancel-in-progress: false
+
+env:
+  MODULE: github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    # Keeps releases off arbitrary branches, and is where a required reviewer
+    # attaches.
+    environment:
+      name: pkg-go-dev
+      url: https://pkg.go.dev/github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go
+
+    permissions:
+      # Pushing the release tag.
+      contents: write
+
+    steps:
+      # Credentials are kept because this job pushes the tag.
+      - name: Check out release branch
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: sdks/go/go.sum
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The generate workflow commits the SDK. Absent means the promotion
+      # happened before the first sync PR merged.
+      - name: Verify the generated SDK is present
+        run: |
+          set -euo pipefail
+
+          if [ ! -f sdks/go/go.mod ] || [ ! -f sdks/go/client.go ]; then
+            echo "::error::No generated client in sdks/go."
+            echo "::error::The generated SDK has not been committed yet; nothing to release."
+            exit 1
+          fi
+
+      # The generator writes `packageVersion` into the client's User-Agent. If
+      # they disagree the SDK was not regenerated after the bump, and the tag
+      # would name a version nobody reviewed.
+      - name: Resolve the release version
+        run: |
+          set -euo pipefail
+
+          base=$(sed -nE 's/^packageVersion:[[:space:]]*"?([^"[:space:]#]+)"?.*/\1/p' \
+                 sdks/go/openapi-generator-config.yaml)
+
+          if [ -z "$base" ]; then
+            echo "::error::Could not read packageVersion from openapi-generator-config.yaml."
+            exit 1
+          fi
+
+          client=$(sed -nE 's|.*"OpenAPI-Generator/([^/]+)/go".*|\1|p' sdks/go/configuration.go)
+
+          if [ "$base" != "$client" ]; then
+            echo "::error::packageVersion is ${base} but the generated client says ${client}."
+            echo "::error::Regenerate the SDK so the two agree before promoting."
+            exit 1
+          fi
+
+          echo "VERSION=${base}" >> "$GITHUB_ENV"
+          echo "TAG=sdks/go/v${base}" >> "$GITHUB_ENV"
+          echo "Releasing ${base}."
+
+      # From v2 on, Go requires the module path to end in /vN. `go get` refuses
+      # a v2.0.0 tag on this module path.
+      - name: Refuse a major version the module path cannot carry
+        run: |
+          set -euo pipefail
+
+          major=${VERSION%%.*}
+          path=$(sed -nE 's/^module[[:space:]]+//p' sdks/go/go.mod)
+
+          if [ "$path" != "$MODULE" ]; then
+            echo "::error::go.mod declares ${path}, expected ${MODULE}."
+            exit 1
+          fi
+
+          if [ "$major" -ge 2 ]; then
+            echo "::error::${VERSION} is a v${major} release, which needs the module at sdks/go/v${major}"
+            echo "::error::with a /v${major} module path. Move the module before releasing."
+            exit 1
+          fi
+
+      # Fails with the fix named rather than at the push.
+      - name: Refuse a version that is already tagged
+        run: |
+          set -euo pipefail
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null; then
+            echo "::error::${TAG} already exists. Bump packageVersion in"
+            echo "::error::sdks/go/openapi-generator-config.yaml and regenerate."
+            exit 1
+          fi
+
+          echo "${TAG} is untagged."
+
+      # README.md renders as the module page on pkg.go.dev.
+      - name: Verify README before releasing
+        run: python scripts/verify_readme.py sdks/go/README.md --language go
+
+      # pkg.go.dev hides documentation for a module it finds no license in.
+      - name: Check the module license matches the repo's
+        run: |
+          if ! cmp -s LICENSE sdks/go/LICENSE; then
+            echo "::error::sdks/go/LICENSE differs from LICENSE."
+            exit 1
+          fi
+
+      - name: Vet
+        working-directory: sdks/go
+        run: go vet ./...
+
+      - name: Run smoke tests
+        working-directory: sdks/go
+        run: go test ./...
+
+      # The module zip holds every tracked file under sdks/go.
+      # See docs/publish-leak-audit-checklist.md.
+      - name: Check the module contents
+        run: |
+          set -euo pipefail
+
+          contents=$(git ls-files sdks/go)
+          failed=0
+
+          require() {
+            grep -qE "$1" <<< "$contents" || { echo "::error::$2"; failed=1; }
+          }
+
+          forbid() {
+            if grep -qE "$1" <<< "$contents"; then echo "::error::$2"; failed=1; fi
+          }
+
+          require '^sdks/go/README\.md$' "No README.md; the pkg.go.dev page would render empty."
+          require '^sdks/go/LICENSE$' "No LICENSE; pkg.go.dev would hide the documentation."
+          forbid '(^|/)\.env|\.pem$|\.key$|credentials' "A credential-shaped file is tracked under sdks/go."
+          forbid '^sdks/go/.+/go\.mod$' "A nested go.mod would split files out of the module."
+
+          {
+            echo "## Module contents for ${TAG}"
+            echo '```'
+            echo "$contents"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::Refusing to tag this tree."
+            exit 1
+          fi
+
+      # An annotated tag records who released and when.
+      - name: Tag the release
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git tag -a "${TAG}" -m "Go SDK v${VERSION}"
+          git push origin "refs/tags/${TAG}"
+
+      # pkg.go.dev lists what the proxy has, and the proxy fetches a version on
+      # its first request. Requesting it here publishes the release now instead
+      # of at the first consumer's `go get`. The proxy can lag a fresh tag
+      # briefly, hence the retries.
+      - name: Request the version from the Go module proxy
+        env:
+          GOPROXY: https://proxy.golang.org
+          GOFLAGS: -mod=mod
+        run: |
+          set -euo pipefail
+
+          served=false
+          for attempt in 1 2 3 4 5; do
+            if go list -m -json "${MODULE}@v${VERSION}"; then
+              served=true
+              break
+            fi
+            echo "Proxy has not picked up v${VERSION} yet (attempt ${attempt}); retrying."
+            sleep $((attempt * 15))
+          done
+
+          if [ "$served" = true ]; then
+            exit 0
+          fi
+
+          # A job re-run would stop at the already-tagged check. The recovery is
+          # the same request made by hand.
+          echo "::error::The proxy did not serve v${VERSION}, but the tag is pushed. Request it by hand:"
+          echo "::error::GOPROXY=https://proxy.golang.org go list -m ${MODULE}@v${VERSION}"
+          exit 1
+
+      # The pre-tag check read the tracked tree. This lists the zip the proxy
+      # serves, which is what consumers download.
+      - name: Enumerate the published module zip
+        env:
+          GOPROXY: https://proxy.golang.org
+          GOFLAGS: -mod=mod
+        run: |
+          set -euo pipefail
+
+          zip=$(go mod download -json "${MODULE}@v${VERSION}" | python -c 'import json,sys; print(json.load(sys.stdin)["Zip"])')
+
+          {
+            echo "## Published module zip for ${TAG}"
+            echo '```'
+            unzip -Z1 "$zip" | sort
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

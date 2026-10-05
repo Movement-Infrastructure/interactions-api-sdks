@@ -14,7 +14,8 @@ the base branch while writing the PR branch. That keeps re-runs idempotent: a
 PR whose labels change three times still lands one bump ahead of its base.
 
 Each generator names its version key differently -- `packageVersion` for Python,
-`gemVersion` for Ruby, `npmVersion` for TypeScript -- so the key is a parameter.
+C# and Go, `gemVersion` for Ruby, `npmVersion` for TypeScript -- so the key is a
+parameter.
 It defaults to `packageVersion` because that is the most common spelling, but
 passing the wrong one is an error rather than a silent no-op.
 """
@@ -209,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_VERSION_KEY,
         help=(
             "Config key holding the version. Differs per generator: "
-            "packageVersion (Python, C#), gemVersion (Ruby), npmVersion "
+            "packageVersion (Python, C#, Go), gemVersion (Ruby), npmVersion "
             f"(TypeScript). Default: {DEFAULT_VERSION_KEY}."
         ),
     )
