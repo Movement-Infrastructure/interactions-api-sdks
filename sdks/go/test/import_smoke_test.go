@@ -9,11 +9,11 @@ package test
 import (
 	"testing"
 
-	ddx "github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
+	"github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
 )
 
 func TestClientExposesBothAPIServices(t *testing.T) {
-	client := ddx.NewAPIClient(ddx.NewConfiguration())
+	client := ddxinteractionsapi.NewAPIClient(ddxinteractionsapi.NewConfiguration())
 
 	if client.InteractionsAPI == nil {
 		t.Fatal("InteractionsAPI is nil; the Interactions tag did not generate a service")
@@ -26,7 +26,7 @@ func TestClientExposesBothAPIServices(t *testing.T) {
 func TestDefaultsToTheProductionHost(t *testing.T) {
 	// Index 0 of the spec's servers block is what a client uses unless the
 	// caller picks another.
-	url, err := ddx.NewConfiguration().ServerURL(0, nil)
+	url, err := ddxinteractionsapi.NewConfiguration().ServerURL(0, nil)
 	if err != nil {
 		t.Fatalf("ServerURL(0): %v", err)
 	}
@@ -36,8 +36,8 @@ func TestDefaultsToTheProductionHost(t *testing.T) {
 }
 
 func TestTakesAServerOverride(t *testing.T) {
-	cfg := ddx.NewConfiguration()
-	cfg.Servers = ddx.ServerConfigurations{{URL: "http://localhost:4010"}}
+	cfg := ddxinteractionsapi.NewConfiguration()
+	cfg.Servers = ddxinteractionsapi.ServerConfigurations{{URL: "http://localhost:4010"}}
 
 	url, err := cfg.ServerURL(0, nil)
 	if err != nil {
@@ -51,7 +51,7 @@ func TestTakesAServerOverride(t *testing.T) {
 func TestEnumConstantsArePrefixedWithTheirType(t *testing.T) {
 	// Without enumClassPrefix the UNKNOWN members collide and the package does
 	// not compile. This test mostly records why the option is set.
-	if ddx.OUTCOME_UNKNOWN != "unknown" || ddx.CONTACTMETHOD_UNKNOWN != "unknown" {
+	if ddxinteractionsapi.OUTCOME_UNKNOWN != "unknown" || ddxinteractionsapi.CONTACTMETHOD_UNKNOWN != "unknown" {
 		t.Fatal("prefixed enum constants have unexpected values")
 	}
 }

@@ -18,7 +18,7 @@ go get github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go@latest
 ```
 
 ```go
-import ddxinteractionsapi "github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
+import "github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
 ```
 
 ## Changelog
@@ -45,7 +45,7 @@ import (
 	"log"
 	"os"
 
-	ddxinteractionsapi "github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
+	"github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
 )
 
 func main() {

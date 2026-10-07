@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	ddx "github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
+	"github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
 )
 
 const (
@@ -58,36 +58,36 @@ func newServer(t *testing.T, status int, body string) (*httptest.Server, *captur
 	return srv, seen
 }
 
-func newClient(baseURL string) *ddx.APIClient {
-	cfg := ddx.NewConfiguration()
-	cfg.Servers = ddx.ServerConfigurations{{URL: baseURL}}
-	return ddx.NewAPIClient(cfg)
+func newClient(baseURL string) *ddxinteractionsapi.APIClient {
+	cfg := ddxinteractionsapi.NewConfiguration()
+	cfg.Servers = ddxinteractionsapi.ServerConfigurations{{URL: baseURL}}
+	return ddxinteractionsapi.NewAPIClient(cfg)
 }
 
 // authContext carries the API key as basic auth with an empty username.
 func authContext() context.Context {
-	return context.WithValue(context.Background(), ddx.ContextBasicAuth, ddx.BasicAuth{
+	return context.WithValue(context.Background(), ddxinteractionsapi.ContextBasicAuth, ddxinteractionsapi.BasicAuth{
 		UserName: "",
 		Password: apiKey,
 	})
 }
 
 // minimalRequest is the smallest body the API accepts.
-func minimalRequest() ddx.InteractionsDto {
-	interaction := ddx.NewInteractionDto(
+func minimalRequest() ddxinteractionsapi.InteractionsDto {
+	interaction := ddxinteractionsapi.NewInteractionDto(
 		"CA",
 		time.Date(2026, 7, 30, 10, 0, 0, 0, time.UTC),
-		ddx.CONTACTMETHOD_PHONE_CALL,
-		[]ddx.CommitteeDetails{*ddx.NewCommitteeDetails("Matchbook", "1")},
+		ddxinteractionsapi.CONTACTMETHOD_PHONE_CALL,
+		[]ddxinteractionsapi.CommitteeDetails{*ddxinteractionsapi.NewCommitteeDetails("Matchbook", "1")},
 		"Matchbook",
-		ddx.OUTCOME_SUCCESSFUL_CONTACT,
+		ddxinteractionsapi.OUTCOME_SUCCESSFUL_CONTACT,
 	)
-	body := ddx.NewInteractionsDto()
-	body.SetInteractions([]ddx.InteractionDto{*interaction})
+	body := ddxinteractionsapi.NewInteractionsDto()
+	body.SetInteractions([]ddxinteractionsapi.InteractionDto{*interaction})
 	return *body
 }
 
-func post(t *testing.T, baseURL string) (*ddx.InteractionsBatchResultDto, *http.Response, error) {
+func post(t *testing.T, baseURL string) (*ddxinteractionsapi.InteractionsBatchResultDto, *http.Response, error) {
 	t.Helper()
 	return newClient(baseURL).InteractionsAPI.
 		VversionInteractionsPost(authContext(), apiVersion).
@@ -191,7 +191,7 @@ func TestSurfacesTheResponseBodyOnAnErrorStatus(t *testing.T) {
 		t.Fatalf("response = %v, want status 400", resp)
 	}
 
-	var apiErr *ddx.GenericOpenAPIError
+	var apiErr *ddxinteractionsapi.GenericOpenAPIError
 	if !errors.As(err, &apiErr) {
 		t.Fatalf("error is %T, want *GenericOpenAPIError so callers can read the body", err)
 	}

@@ -203,25 +203,25 @@ import (
 	"log"
 	"os"
 
-	ddx "github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
+	"github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
 )
 
-client := ddx.NewAPIClient(ddx.NewConfiguration())
+client := ddxinteractionsapi.NewAPIClient(ddxinteractionsapi.NewConfiguration())
 
 // Credentials travel on the context passed to each call.
-ctx := context.WithValue(context.Background(), ddx.ContextBasicAuth, ddx.BasicAuth{
+ctx := context.WithValue(context.Background(), ddxinteractionsapi.ContextBasicAuth, ddxinteractionsapi.BasicAuth{
 	UserName: "",
 	Password: os.Getenv("DDX_API_KEY"),
 })
 
-payload := ddx.NewInteractionsDto()
+payload := ddxinteractionsapi.NewInteractionsDto()
 // See sdks/go/docs/InteractionsDto.md for the full shape.
-payload.SetInteractions([]ddx.InteractionDto{})
+payload.SetInteractions([]ddxinteractionsapi.InteractionDto{})
 
 result, _, err := client.InteractionsAPI.VversionInteractionsPost(ctx, "1").InteractionsDto(*payload).Execute()
 if err != nil {
 	// The error string is just the status line; Body() says why.
-	var apiErr *ddx.GenericOpenAPIError
+	var apiErr *ddxinteractionsapi.GenericOpenAPIError
 	if errors.As(err, &apiErr) {
 		log.Fatalf("Interactions API returned %s: %s", apiErr.Error(), apiErr.Body())
 	}

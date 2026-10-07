@@ -53,22 +53,47 @@ Both must be true.
 
 ## 2. Install from the Go module proxy into a clean environment
 
+Write a program that imports the package, then let `go mod tidy` fetch the
+latest release for it.
+
 ```bash
 mkdir -p /tmp/ddx-uat && cd /tmp/ddx-uat
-
 go mod init ddx-uat
-go get github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go@latest
+
+mkdir -p install && cat > install/main.go <<'GO'
+package main
+
+import (
+	"fmt"
+
+	"github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
+)
+
+func main() {
+	fmt.Println("client:", ddxinteractionsapi.NewConfiguration().UserAgent)
+}
+GO
+
+go mod tidy
+go run ./install
 ```
 
 ### Expected result
 
+`go mod tidy` ends its output with the release it picked:
+
 ```bash
+#   go: found github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go in github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go v0.1.0
+```
+
+The program prints the same version:
+
+```bash
+#   client: OpenAPI-Generator/0.1.0/go
+
 go list -m github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go
 #   github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go v0.1.0
 ```
-
-The package is named `ddxinteractionsapi`. Each step below imports it under the
-shorter name `ddx`.
 
 ---
 
@@ -89,21 +114,21 @@ import (
 	"net/http"
 	"os"
 
-	ddx "github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
+	"github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
 )
 
 func main() {
 	// No server override, so the client defaults to production.
-	cfg := ddx.NewConfiguration()
+	cfg := ddxinteractionsapi.NewConfiguration()
 	target, _ := cfg.ServerURL(0, nil)
 	fmt.Println("target:", target)
 
-	ctx := context.WithValue(context.Background(), ddx.ContextBasicAuth, ddx.BasicAuth{
+	ctx := context.WithValue(context.Background(), ddxinteractionsapi.ContextBasicAuth, ddxinteractionsapi.BasicAuth{
 		UserName: "", // empty on purpose
 		Password: os.Getenv("DDX_API_KEY"),
 	})
 
-	me, resp, err := ddx.NewAPIClient(cfg).AuthenticationDetailsAPI.VversionAuthMeGet(ctx, "1").Execute()
+	me, resp, err := ddxinteractionsapi.NewAPIClient(cfg).AuthenticationDetailsAPI.VversionAuthMeGet(ctx, "1").Execute()
 	if err != nil {
 		report("auth/me", resp, err)
 	}
@@ -125,7 +150,7 @@ func main() {
 }
 
 func report(call string, resp *http.Response, err error) {
-	var apiErr *ddx.GenericOpenAPIError
+	var apiErr *ddxinteractionsapi.GenericOpenAPIError
 	if resp == nil || !errors.As(err, &apiErr) {
 		fmt.Fprintf(os.Stderr, "%s failed: %v\n", call, err)
 		os.Exit(1)
@@ -202,9 +227,9 @@ things change in the payload below:
     (Canvassed).
 
 ```go
-	interaction.SetPerson([]ddx.PersonIdentifier{*ddx.NewPersonIdentifier("<their VAN id>", "VAN")})
+	interaction.SetPerson([]ddxinteractionsapi.PersonIdentifier{*ddxinteractionsapi.NewPersonIdentifier("<their VAN id>", "VAN")})
 
-	vanFields := ddx.NewInteractionVanFieldsDto()
+	vanFields := ddxinteractionsapi.NewInteractionVanFieldsDto()
 	vanFields.SetContactTypeId("<contact type id>")
 	vanFields.SetResultCodeId("<result code id>")
 	interaction.SetVanFields(*vanFields)
@@ -226,11 +251,11 @@ import (
 	"os"
 	"time"
 
-	ddx "github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
+	"github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
 )
 
 func main() {
-	ctx := context.WithValue(context.Background(), ddx.ContextBasicAuth, ddx.BasicAuth{
+	ctx := context.WithValue(context.Background(), ddxinteractionsapi.ContextBasicAuth, ddxinteractionsapi.BasicAuth{
 		UserName: "",
 		Password: os.Getenv("DDX_API_KEY"),
 	})
@@ -238,29 +263,29 @@ func main() {
 
 	// The constructor takes the required fields in order: stateCode,
 	// attemptDateTime, method, committee, vendorSource, outcome.
-	interaction := ddx.NewInteractionDto(
+	interaction := ddxinteractionsapi.NewInteractionDto(
 		"CA",
 		stamp,
-		ddx.CONTACTMETHOD_PHONE_CALL,
-		[]ddx.CommitteeDetails{*ddx.NewCommitteeDetails("<your type>", "<your committee id>")},
+		ddxinteractionsapi.CONTACTMETHOD_PHONE_CALL,
+		[]ddxinteractionsapi.CommitteeDetails{*ddxinteractionsapi.NewCommitteeDetails("<your type>", "<your committee id>")},
 		"<your vendor name>",
-		ddx.OUTCOME_SUCCESSFUL_CONTACT,
+		ddxinteractionsapi.OUTCOME_SUCCESSFUL_CONTACT,
 	)
 	// NewPersonIdentifier takes the id first, then the type.
-	interaction.SetPerson([]ddx.PersonIdentifier{*ddx.NewPersonIdentifier("<your person id>", "<your type>")})
+	interaction.SetPerson([]ddxinteractionsapi.PersonIdentifier{*ddxinteractionsapi.NewPersonIdentifier("<your person id>", "<your type>")})
 
 	metadata, _ := json.Marshal(map[string]any{"uat": true, "posted_at": stamp.Format(time.RFC3339)})
 	interaction.SetJsonMetadata(string(metadata))
 
-	body := ddx.NewInteractionsDto()
-	body.SetInteractions([]ddx.InteractionDto{*interaction})
+	body := ddxinteractionsapi.NewInteractionsDto()
+	body.SetInteractions([]ddxinteractionsapi.InteractionDto{*interaction})
 
-	result, resp, err := ddx.NewAPIClient(ddx.NewConfiguration()).InteractionsAPI.
+	result, resp, err := ddxinteractionsapi.NewAPIClient(ddxinteractionsapi.NewConfiguration()).InteractionsAPI.
 		VversionInteractionsPost(ctx, "1").
 		InteractionsDto(*body).
 		Execute()
 	if err != nil {
-		var apiErr *ddx.GenericOpenAPIError
+		var apiErr *ddxinteractionsapi.GenericOpenAPIError
 		if resp == nil || !errors.As(err, &apiErr) {
 			fmt.Fprintf(os.Stderr, "post failed: %v\n", err)
 			os.Exit(1)
@@ -348,7 +373,7 @@ import (
 	"os"
 	"regexp"
 
-	ddx "github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
+	"github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go"
 )
 
 var guid = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
@@ -364,17 +389,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctx := context.WithValue(context.Background(), ddx.ContextBasicAuth, ddx.BasicAuth{
+	ctx := context.WithValue(context.Background(), ddxinteractionsapi.ContextBasicAuth, ddxinteractionsapi.BasicAuth{
 		UserName: "",
 		Password: os.Getenv("DDX_API_KEY"),
 	})
 
-	txns, resp, err := ddx.NewAPIClient(ddx.NewConfiguration()).InteractionsAPI.
+	txns, resp, err := ddxinteractionsapi.NewAPIClient(ddxinteractionsapi.NewConfiguration()).InteractionsAPI.
 		VversionInteractionsInteractionIdTransactionsGet(ctx, interactionID, "1").
 		ShowOnlyFailedTransactions(false).
 		Execute()
 	if err != nil {
-		var apiErr *ddx.GenericOpenAPIError
+		var apiErr *ddxinteractionsapi.GenericOpenAPIError
 		if resp == nil || !errors.As(err, &apiErr) {
 			fmt.Fprintf(os.Stderr, "transactions lookup failed: %v\n", err)
 			os.Exit(1)
@@ -434,7 +459,7 @@ The interactive reference is at
 | Symptom | Likely cause |
 |---|---|
 | `module ... requires go >= 1.22` | Go older than 1.22, with automatic toolchain downloads turned off (`GOTOOLCHAIN=local`). |
-| `no required module provides package` | Running `go run` outside `/tmp/ddx-uat`, or `go get` skipped, so the import does not resolve. |
+| `no required module provides package` | Running `go run` outside `/tmp/ddx-uat`, or `go mod tidy` skipped, so the import does not resolve. |
 | `401 Unauthorized`, empty body | Key missing the `<keyId>.` prefix; secret not valid base64; key issued for a different environment; key revoked or expired; workspace suppressed; or the key lacks the required role. |
 | Rows rejected with a per-row error | Per-row validation. Read `rejectedInteractions.data[].errors`. |
 | `INTERACTION_ID is not a GUID` | You passed the `correlationId`. That route takes a GUID `interactionId` only, and correlation IDs are either a numeric trace ID or `mig-` prefixed. Use an ID from the accepted list in step 4. |
@@ -447,7 +472,7 @@ a **valid key that simply lacks the required role**, which is an authorization
 failure reported as an authentication one. If the key shape checks out in
 step 1, ask the API team to check server-side logs rather than guessing.
 
-`Body()` on the returned `*ddx.GenericOpenAPIError` carries the API's
+`Body()` on the returned `*ddxinteractionsapi.GenericOpenAPIError` carries the API's
 explanation; the error message alone is only the status line.
 
 ---
