@@ -243,3 +243,53 @@ class TestRuby:
         target.write_text(GOOD_RUBY, encoding="utf-8")
         with pytest.raises(SystemExit):
             main([str(target), "--language", "cobol"])
+
+
+# What templates/go/README.mustache produces.
+GOOD_GO = """\
+# ddxinteractionsapi
+
+Go client for the DDx Interactions API, generated from its OpenAPI
+specification.
+
+## Installation
+
+```shell
+go get github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go@latest
+```
+
+## Changelog
+
+API changes are recorded in the changelog.
+"""
+
+# The built-in go template's install section. It fetches dependencies this
+# client never imports, then has consumers copy the package into their tree.
+DEFAULT_GO_INSTALL = """\
+## Installation
+
+Install the following dependencies:
+
+```sh
+go get github.com/stretchr/testify/assert
+go get golang.org/x/net/context
+```
+
+Put the package under your project folder and add the following in import:
+"""
+
+
+class TestGo:
+    GO = REQUIRED_BY_LANGUAGE["go"]
+
+    def test_a_good_go_readme_has_no_problems(self):
+        assert check(GOOD_GO, self.GO) == []
+
+    def test_the_built_in_install_does_not_satisfy_the_requirement(self):
+        problems = check(DEFAULT_GO_INSTALL, self.GO)
+        assert any("go get github.com/Movement-Infrastructure" in p for p in problems)
+
+    def test_main_applies_the_go_list(self, tmp_path):
+        target = tmp_path / "README.md"
+        target.write_text(GOOD_GO, encoding="utf-8")
+        assert main([str(target), "--language", "go"]) == 0

@@ -199,7 +199,11 @@ jobs:
             --current-changelog /tmp/base-ruby-changelog.md \
             --write-changelog sdks/ruby/v1/CHANGELOG.md
 
+      # Passed through env, where a crafted branch name cannot inject shell.
       - name: Commit generated SDK if changed
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          NEXT_VERSION: ${{ steps.version.outputs.next }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -209,6 +213,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to generated SDK — skipping commit."
           else
-            git commit -m "chore: regenerate Ruby SDK at v${{ steps.version.outputs.next }} from openapi/v1/swagger.json"
-            git push origin HEAD:${{ github.head_ref }}
+            git commit -m "chore: regenerate Ruby SDK at v${NEXT_VERSION} from openapi/v1/swagger.json"
+            git push origin "HEAD:${HEAD_REF}"
           fi
