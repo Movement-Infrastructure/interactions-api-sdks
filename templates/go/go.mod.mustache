@@ -1,0 +1,16 @@
+{{!
+    Overrides the go generator's built-in go.mod.mustache, passed as
+    -t templates/go.
+
+    Generator 7.10.0 imports gopkg.in/validator.v2 from every oneOf model but
+    leaves it out of go.mod, and the built-in output does not compile. Change
+    the pinned version here and in go.sum.mustache together.
+
+    The go directive is the oldest Go consumers can build with. go-sdk-tests.yml
+    tests that version and the current stable release.
+}}
+module {{gitHost}}/{{gitUserId}}/{{gitRepoId}}
+
+go 1.22
+
+require gopkg.in/validator.v2 v2.0.1

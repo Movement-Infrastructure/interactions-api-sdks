@@ -112,7 +112,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          if ! git diff --quiet "origin/${{ github.base_ref }}" -- openapi/v1/swagger.json; then
+          # The shallow PR checkout has no origin/<base>. Diffing a missing ref
+          # fails, and the `!` would read that as "spec changed" and skip.
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+
+          if ! git diff --quiet FETCH_HEAD -- openapi/v1/swagger.json; then
             echo "::notice::Spec changed in this PR; the generate workflow commits the regenerated SDK."
             exit 0
           fi

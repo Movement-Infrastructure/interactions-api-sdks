@@ -1,5 +1,5 @@
 # Ddx.InteractionsApi.Model.ExchangeInteractionStatusDtoCursorPaginatedResponseDto
-Extends Minerva.Dto.Api.GetResponseDto`1 with cursor-based pagination support.
+A paged response with an opaque cursor for fetching the next page.
 
 ## Properties
 

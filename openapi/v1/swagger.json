@@ -983,7 +983,7 @@
           }
         },
         "additionalProperties": false,
-        "description": "Extends Minerva.Dto.Api.GetResponseDto`1 with cursor-based pagination support."
+        "description": "A paged response with an opaque cursor for fetching the next page."
       },
       "ExternalApiKeyStatus": {
         "enum": [

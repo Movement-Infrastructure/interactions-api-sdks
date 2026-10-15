@@ -101,6 +101,11 @@ REQUIRED_BY_LANGUAGE = {
         "## Installation",
         "## Changelog",
     ],
+    "go": [
+        "go get github.com/Movement-Infrastructure/interactions-api-sdks/sdks/go",
+        "## Installation",
+        "## Changelog",
+    ],
 }
 
 DEFAULT_LANGUAGE = "python"

@@ -28,7 +28,7 @@ using OpenAPIDateConverter = Ddx.InteractionsApi.Client.OpenAPIDateConverter;
 namespace Ddx.InteractionsApi.Model
 {
     /// <summary>
-    /// Extends Minerva.Dto.Api.GetResponseDto&#x60;1 with cursor-based pagination support.
+    /// A paged response with an opaque cursor for fetching the next page.
     /// </summary>
     [DataContract(Name = "ExchangeInteractionStatusDtoCursorPaginatedResponseDto")]
     public partial class ExchangeInteractionStatusDtoCursorPaginatedResponseDto : IValidatableObject

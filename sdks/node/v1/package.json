@@ -1,6 +1,6 @@
 {
   "name": "ddx-interactions-api",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Node client for the DDx Interactions API, generated from the OpenAPI spec.",
   "author": "DDx API Team",
   "repository": {

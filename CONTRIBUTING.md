@@ -33,6 +33,8 @@ RubyGems has no sandbox registry, so the Ruby gem has no `develop` staging step:
 
 NuGet has no sandbox registry either, so the C# package works the same way as the gem. Promoting `develop` to `main` publishes `packageVersion` to NuGet as a final release. `publish-csharp-nuget.yml` deliberately omits `--skip-duplicate`, which makes a promotion carrying a version already on NuGet fail loudly rather than pass green having uploaded nothing.
 
+Go has no registry to upload to. `publish-go.yml` releases by pushing the tag `sdks/go/vX.Y.Z`, the form Go requires for a module in a subdirectory, and then requesting that version from the Go module proxy. pkg.go.dev lists whatever the proxy has. The proxy keeps every version it serves, and deleting or moving a tag afterwards unpublishes nothing. A bad version can only be retracted in a later release. The workflow refuses a version that is already tagged. It also refuses 2.0.0 and later, because Go requires a v2 module to move to a `sdks/go/v2` path first.
+
 npm has no sandbox registry either, so the Node package works the same way. Promoting `develop` to `main` publishes `npmVersion` to npmjs.com as a final release. `publish-node-npm.yml` refuses a version that is already published, so a promotion without a bump fails before it reaches the registry rather than 403ing at the push.
 
 Re-running the sync is safe: the branch name (`sync/mercury-<short-sha>`) derives from the upstream commit, so a run that finds an open PR for that SHA leaves it alone. Maintainers can also trigger a sync by hand and point it at an in-flight upstream branch.
@@ -41,7 +43,7 @@ Re-running the sync is safe: the branch name (`sync/mercury-<short-sha>`) derive
 
 Versions live in each SDK's `openapi-generator-config.yaml` and flow into the generated manifest. That field is the source of truth; nothing edits the manifest directly. `scripts/bump_version.py` rewrites it on every sync PR before the generator runs.
 
-Each generator spells the key differently: `packageVersion` for Python and C#, `gemVersion` for Ruby, `npmVersion` for Node. The generate workflow passes `--version-key` for that reason. Passing the wrong key is an error rather than a silent no-op, which keeps a stuck version from reaching a registry.
+Each generator spells the key differently: `packageVersion` for Python, C# and Go, `gemVersion` for Ruby, `npmVersion` for Node. The generate workflow passes `--version-key` for that reason. Passing the wrong key is an error rather than a silent no-op, which keeps a stuck version from reaching a registry.
 
 Apply at most one label:
 
@@ -110,9 +112,21 @@ java -jar .cache/openapi-generator-cli.jar generate \
 cd sdks/ruby/v1 && bundle install && bundle exec rspec
 ```
 
+The Go suite needs no install step:
+
+```bash
+java -jar .cache/openapi-generator-cli.jar generate \
+  -i openapi/v1/swagger.json -g go \
+  -o sdks/go -c sdks/go/openapi-generator-config.yaml -t templates/go
+
+cd sdks/go && gofmt -w . && gofmt -w . && go vet ./... && go test ./...
+```
+
+`gofmt` runs twice because the generator's doc comments take two passes to settle. CI does the same.
+
 `consumer-check/ruby/` installs the gem from outside its source tree, which the in-tree suite cannot do. See its README.
 
-CI does this in `python-sdk-tests.yml` and `ruby-sdk-tests.yml` on every PR, as required checks. Neither carries a `paths:` filter, on purpose: a path-filtered required check shows as perpetually pending on non-matching PRs and blocks merge forever.
+CI does this in `python-sdk-tests.yml`, `ruby-sdk-tests.yml` and `go-sdk-tests.yml` on every PR, as required checks. None of them carries a `paths:` filter, on purpose: a path-filtered required check shows as perpetually pending on non-matching PRs and blocks merge forever.
 
 ## Adding a language
 

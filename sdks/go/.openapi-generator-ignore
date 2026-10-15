@@ -1,0 +1,13 @@
+# Files listed here survive regeneration.
+
+# Hand-written.
+test/**
+LICENSE
+.openapi-generator-ignore
+
+# Unused: the repo has its own CI.
+.travis.yml
+git_push.sh
+
+# A copy of openapi/v1/swagger.json that would otherwise ship in the module.
+api/openapi.yaml

@@ -5,7 +5,7 @@ Ruby client for the DDx Interactions API, generated from its OpenAPI
 specification.
 
 - API version: v1
-- Gem version: 0.1.0
+- Gem version: 0.2.0
 - Generator version: 7.10.0
 
 For more information, please visit [https://demexchange.com/](https://demexchange.com/).
@@ -25,7 +25,7 @@ gem install ddx_interactions_api
 
 In a Gemfile:
 
-    gem 'ddx_interactions_api', '~> 0.1.0'
+    gem 'ddx_interactions_api', '~> 0.2.0'
 
 [RubyGems](https://rubygems.org/gems/ddx_interactions_api/versions) lists what is
 published.

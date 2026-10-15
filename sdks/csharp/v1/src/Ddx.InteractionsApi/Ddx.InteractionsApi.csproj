@@ -7,12 +7,12 @@
     <PackageId>Ddx.InteractionsApi</PackageId>
     <OutputType>Library</OutputType>
     <Authors>DDx API Team</Authors>
-    <Company>Movement Infrastructure</Company>
+    <Company>Democratic Data Exchange</Company>
     <AssemblyTitle>DDx Interactions API Client</AssemblyTitle>
     <Description>C# client for the DDx Interactions API, generated from the OpenAPI spec.</Description>
-    <Copyright>Copyright (c) Movement Infrastructure</Copyright>
+    <Copyright>Copyright (c) Democratic Data Exchange</Copyright>
     <RootNamespace>Ddx.InteractionsApi</RootNamespace>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\Ddx.InteractionsApi.xml</DocumentationFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/Movement-Infrastructure/interactions-api-sdks.git</RepositoryUrl>
