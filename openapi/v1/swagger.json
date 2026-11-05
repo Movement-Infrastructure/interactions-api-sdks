@@ -18,10 +18,6 @@
     {
       "url": "https://api.movementinfrastructure.org",
       "description": "Production server"
-    },
-    {
-      "url": "https://api-dev.movementinfrastructure.org",
-      "description": "Public test server"
     }
   ],
   "paths": {
@@ -1171,7 +1167,7 @@
                 }
               }
             },
-            "description": "Optional array of objects that provide additional context around the results of an interaction, such as activist codes or survey responses.\r\nIf the type is recognized as an Activist Code Outcome (type = \"activist_code\"),\r\nCommunication Consent Outcome (type = \"communication_consent\"), Survey Response Outcome\r\n(type = \"survey_response\"), or Event Signup (type = \"event_signup\") it will be deserialized to that type.\r\nIf the type is unrecognized, it will be deserialized to an unvalidated, loosely typed object for flexibility.",
+            "description": "Optional array of objects that provide additional context around the results of an interaction, such as activist codes or survey responses.\r\nIf the type is recognized as an Activist Code Outcome (type = \"activist_code\"),\r\nCommunication Consent Outcome (type = \"communication_consent\"), Survey Response Outcome\r\n(type = \"survey_response\"), or Event Signup (type = \"event_signup\") it will be deserialized to that type.\r\nIf the type is unrecognized, it will be deserialized to an unvalidated, loosely typed object for flexibility.\r\nType validation for some fields may be narrower based on destination; for example, survey response `questionId` and `responseId`\r\nmust be integers when sent to VAN or DDx Exchange. See\r\n[VAN Canvass Responses as a Destination](/docs/detailed-guide-integrating-with-van-canvass-response-endpoint) and\r\n[DDx Exchange as a Destination](/docs/tech-partners-detailed-guide-integrating-with-ddx-exchange).",
             "nullable": true
           },
           "threadId": {
@@ -1555,7 +1551,7 @@
         "properties": {
           "questionId": {
             "type": "string",
-            "description": "Unique identifier for the survey question being asked;\r\nthe value may be retrieved from the system that sourced the question",
+            "description": "Unique identifier for the survey question being asked;\r\nthe value may be retrieved from the system that sourced the question.\r\nMust be an integer when VAN or DDx Exchange is a destination.",
             "nullable": true
           },
           "questionText": {
@@ -1565,7 +1561,7 @@
           },
           "responseId": {
             "type": "string",
-            "description": "Unique identifier for the survey response associated with the question;\r\nthe value may be retrieved from the system that sourced the question",
+            "description": "Unique identifier for the survey response associated with the question;\r\nthe value may be retrieved from the system that sourced the question.\r\nMust be an integer when VAN or DDx Exchange is a destination.",
             "nullable": true
           },
           "responseText": {
