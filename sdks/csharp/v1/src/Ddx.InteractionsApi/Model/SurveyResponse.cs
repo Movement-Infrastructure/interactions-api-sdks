@@ -41,9 +41,9 @@ namespace Ddx.InteractionsApi.Model
         /// <summary>
         /// Initializes a new instance of the <see cref="SurveyResponse" /> class.
         /// </summary>
-        /// <param name="questionId">Unique identifier for the survey question being asked;  the value may be retrieved from the system that sourced the question.</param>
+        /// <param name="questionId">Unique identifier for the survey question being asked;  the value may be retrieved from the system that sourced the question.  Must be an integer when VAN or DDx Exchange is a destination..</param>
         /// <param name="questionText">The question text presented during an interaction (required).</param>
-        /// <param name="responseId">Unique identifier for the survey response associated with the question;  the value may be retrieved from the system that sourced the question.</param>
+        /// <param name="responseId">Unique identifier for the survey response associated with the question;  the value may be retrieved from the system that sourced the question.  Must be an integer when VAN or DDx Exchange is a destination..</param>
         /// <param name="responseText">An answer to the question.  Required when Survey Question text is provided. (required).</param>
         public SurveyResponse(string questionId = default(string), string questionText = default(string), string responseId = default(string), string responseText = default(string))
         {
@@ -64,9 +64,9 @@ namespace Ddx.InteractionsApi.Model
         }
 
         /// <summary>
-        /// Unique identifier for the survey question being asked;  the value may be retrieved from the system that sourced the question
+        /// Unique identifier for the survey question being asked;  the value may be retrieved from the system that sourced the question.  Must be an integer when VAN or DDx Exchange is a destination.
         /// </summary>
-        /// <value>Unique identifier for the survey question being asked;  the value may be retrieved from the system that sourced the question</value>
+        /// <value>Unique identifier for the survey question being asked;  the value may be retrieved from the system that sourced the question.  Must be an integer when VAN or DDx Exchange is a destination.</value>
         [DataMember(Name = "questionId", EmitDefaultValue = true)]
         public string QuestionId { get; set; }
 
@@ -78,9 +78,9 @@ namespace Ddx.InteractionsApi.Model
         public string QuestionText { get; set; }
 
         /// <summary>
-        /// Unique identifier for the survey response associated with the question;  the value may be retrieved from the system that sourced the question
+        /// Unique identifier for the survey response associated with the question;  the value may be retrieved from the system that sourced the question.  Must be an integer when VAN or DDx Exchange is a destination.
         /// </summary>
-        /// <value>Unique identifier for the survey response associated with the question;  the value may be retrieved from the system that sourced the question</value>
+        /// <value>Unique identifier for the survey response associated with the question;  the value may be retrieved from the system that sourced the question.  Must be an integer when VAN or DDx Exchange is a destination.</value>
         [DataMember(Name = "responseId", EmitDefaultValue = true)]
         public string ResponseId { get; set; }
 
