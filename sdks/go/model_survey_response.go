@@ -22,11 +22,11 @@ var _ MappedNullable = &SurveyResponse{}
 
 // SurveyResponse struct for SurveyResponse
 type SurveyResponse struct {
-	// Unique identifier for the survey question being asked;  the value may be retrieved from the system that sourced the question
+	// Unique identifier for the survey question being asked;  the value may be retrieved from the system that sourced the question.  Must be an integer when VAN or DDx Exchange is a destination.
 	QuestionId NullableString `json:"questionId,omitempty"`
 	// The question text presented during an interaction
 	QuestionText string `json:"questionText"`
-	// Unique identifier for the survey response associated with the question;  the value may be retrieved from the system that sourced the question
+	// Unique identifier for the survey response associated with the question;  the value may be retrieved from the system that sourced the question.  Must be an integer when VAN or DDx Exchange is a destination.
 	ResponseId NullableString `json:"responseId,omitempty"`
 	// An answer to the question.  Required when Survey Question text is provided.
 	ResponseText string `json:"responseText"`
