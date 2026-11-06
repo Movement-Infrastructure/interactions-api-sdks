@@ -264,10 +264,6 @@ module DdxInteractionsApi
         {
           url: "https://api.movementinfrastructure.org",
           description: "Production server",
-        },
-        {
-          url: "https://api-dev.movementinfrastructure.org",
-          description: "Public test server",
         }
       ]
     end

@@ -34,7 +34,7 @@ namespace Ddx.InteractionsApi.Client
         /// Version of the package.
         /// </summary>
         /// <value>Version of the package.</value>
-        public const string Version = "0.2.0";
+        public const string Version = "0.3.0";
 
         /// <summary>
         /// Identifier for ISO 8601 DateTime Format
@@ -118,7 +118,7 @@ namespace Ddx.InteractionsApi.Client
         public Configuration()
         {
             Proxy = null;
-            UserAgent = WebUtility.UrlEncode("OpenAPI-Generator/0.2.0/csharp");
+            UserAgent = WebUtility.UrlEncode("OpenAPI-Generator/0.3.0/csharp");
             BasePath = "https://api.movementinfrastructure.org";
             DefaultHeaders = new ConcurrentDictionary<string, string>();
             ApiKey = new ConcurrentDictionary<string, string>();
@@ -129,12 +129,6 @@ namespace Ddx.InteractionsApi.Client
                     new Dictionary<string, object> {
                         {"url", "https://api.movementinfrastructure.org"},
                         {"description", "Production server"},
-                    }
-                },
-                {
-                    new Dictionary<string, object> {
-                        {"url", "https://api-dev.movementinfrastructure.org"},
-                        {"description", "Public test server"},
                     }
                 }
             };
@@ -547,7 +541,7 @@ namespace Ddx.InteractionsApi.Client
             report += "    OS: " + System.Environment.OSVersion + "\n";
             report += "    .NET Framework Version: " + System.Environment.Version  + "\n";
             report += "    Version of the API: v1\n";
-            report += "    SDK Package Version: 0.2.0\n";
+            report += "    SDK Package Version: 0.3.0\n";
 
             return report;
         }

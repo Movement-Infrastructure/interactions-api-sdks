@@ -21,7 +21,8 @@ import { mapValues } from '../runtime';
 export interface SurveyResponse {
     /**
      * Unique identifier for the survey question being asked;
-     * the value may be retrieved from the system that sourced the question
+     * the value may be retrieved from the system that sourced the question.
+     * Must be an integer when VAN or DDx Exchange is a destination.
      * @type {string}
      * @memberof SurveyResponse
      */
@@ -34,7 +35,8 @@ export interface SurveyResponse {
     questionText: string;
     /**
      * Unique identifier for the survey response associated with the question;
-     * the value may be retrieved from the system that sourced the question
+     * the value may be retrieved from the system that sourced the question.
+     * Must be an integer when VAN or DDx Exchange is a destination.
      * @type {string}
      * @memberof SurveyResponse
      */

@@ -175,6 +175,10 @@ export interface InteractionDto {
      * Communication Consent Outcome (type = "communication_consent"), Survey Response Outcome
      * (type = "survey_response"), or Event Signup (type = "event_signup") it will be deserialized to that type.
      * If the type is unrecognized, it will be deserialized to an unvalidated, loosely typed object for flexibility.
+     * Type validation for some fields may be narrower based on destination; for example, survey response `questionId` and `responseId`
+     * must be integers when sent to VAN or DDx Exchange. See
+     * [VAN Canvass Responses as a Destination](/docs/detailed-guide-integrating-with-van-canvass-response-endpoint) and
+     * [DDx Exchange as a Destination](/docs/tech-partners-detailed-guide-integrating-with-ddx-exchange).
      * @type {Array<InteractionDtoOutcomesDetailedInner>}
      * @memberof InteractionDto
      */

@@ -28,9 +28,9 @@ class SurveyResponse(BaseModel):
     """
     SurveyResponse
     """ # noqa: E501
-    question_id: Optional[StrictStr] = Field(default=None, description="Unique identifier for the survey question being asked;  the value may be retrieved from the system that sourced the question", alias="questionId")
+    question_id: Optional[StrictStr] = Field(default=None, description="Unique identifier for the survey question being asked;  the value may be retrieved from the system that sourced the question.  Must be an integer when VAN or DDx Exchange is a destination.", alias="questionId")
     question_text: Annotated[str, Field(min_length=1, strict=True)] = Field(description="The question text presented during an interaction", alias="questionText")
-    response_id: Optional[StrictStr] = Field(default=None, description="Unique identifier for the survey response associated with the question;  the value may be retrieved from the system that sourced the question", alias="responseId")
+    response_id: Optional[StrictStr] = Field(default=None, description="Unique identifier for the survey response associated with the question;  the value may be retrieved from the system that sourced the question.  Must be an integer when VAN or DDx Exchange is a destination.", alias="responseId")
     response_text: Annotated[str, Field(min_length=1, strict=True)] = Field(description="An answer to the question.  Required when Survey Question text is provided.", alias="responseText")
     __properties: ClassVar[List[str]] = ["questionId", "questionText", "responseId", "responseText"]
 

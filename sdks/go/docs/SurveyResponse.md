@@ -4,9 +4,9 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**QuestionId** | Pointer to **NullableString** | Unique identifier for the survey question being asked;  the value may be retrieved from the system that sourced the question | [optional] 
+**QuestionId** | Pointer to **NullableString** | Unique identifier for the survey question being asked;  the value may be retrieved from the system that sourced the question.  Must be an integer when VAN or DDx Exchange is a destination. | [optional] 
 **QuestionText** | **string** | The question text presented during an interaction | 
-**ResponseId** | Pointer to **NullableString** | Unique identifier for the survey response associated with the question;  the value may be retrieved from the system that sourced the question | [optional] 
+**ResponseId** | Pointer to **NullableString** | Unique identifier for the survey response associated with the question;  the value may be retrieved from the system that sourced the question.  Must be an integer when VAN or DDx Exchange is a destination. | [optional] 
 **ResponseText** | **string** | An answer to the question.  Required when Survey Question text is provided. | 
 
 ## Methods
