@@ -15,13 +15,13 @@ require 'time'
 
 module DdxInteractionsApi
   class SurveyResponse
-    # Unique identifier for the survey question being asked;  the value may be retrieved from the system that sourced the question
+    # Unique identifier for the survey question being asked;  the value may be retrieved from the system that sourced the question.  Must be an integer when VAN or DDx Exchange is a destination.
     attr_accessor :question_id
 
     # The question text presented during an interaction
     attr_accessor :question_text
 
-    # Unique identifier for the survey response associated with the question;  the value may be retrieved from the system that sourced the question
+    # Unique identifier for the survey response associated with the question;  the value may be retrieved from the system that sourced the question.  Must be an integer when VAN or DDx Exchange is a destination.
     attr_accessor :response_id
 
     # An answer to the question.  Required when Survey Question text is provided.
